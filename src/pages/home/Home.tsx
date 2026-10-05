@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertCircle, ArrowUpRight, Check, Copy, X } from 'lucide-react';
 import { routes } from '../../router/routes';
+import QrisCard from './QrisCard';
 
 // ============================================================
 // SECTION: Types & Constants
@@ -81,6 +82,8 @@ export default function Home() {
           <h1 className="text-2xl font-bold tracking-tight">HK Hub Station</h1>
           <p className="mt-2 text-sm text-slate-300">Kumpulan aplikasi web praktis dalam satu tautan.</p>
         </header>
+
+        <QrisCard />
 
         <ul className="space-y-3">
           {apps.map((app) => (
