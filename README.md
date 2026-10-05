@@ -1,4 +1,4 @@
-Hub SPA 
+# SPBU — Hub SPA (Linktree-style)
 
 Aturan: **1 slug = 1 folder** di `src/pages/`. Root hanya `public/` dan `src/`.
 
