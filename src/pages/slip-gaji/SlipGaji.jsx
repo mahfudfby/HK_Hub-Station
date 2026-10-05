@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { uploadImage } from '../../shared/lib/cloudinary';
 import './SlipGaji.css';
 
 // ============================================================
@@ -198,7 +200,8 @@ function resizeImage(file, maxWidth, maxHeight) {
         canvas.width = w;
         canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/png'));
+        const dataUrl = canvas.toDataURL('image/png');
+        canvas.toBlob((blob) => resolve({ dataUrl, blob }), 'image/png');
       };
       img.src = e.target.result;
     };
@@ -439,7 +442,7 @@ function SlipPreview({ slipRef, form, calc, logo, signature }) {
             </div>
             <div className="ml-4 flex-shrink-0">
               {logo ? (
-                <img src={logo} alt="Logo Perusahaan" className="slip-logo" />
+                <img src={logo} crossOrigin="anonymous" alt="Logo Perusahaan" className="slip-logo" />
               ) : (
                 <div className="slip-logo-text font-extrabold text-red-700">LOGO</div>
               )}
@@ -533,7 +536,7 @@ function SlipPreview({ slipRef, form, calc, logo, signature }) {
             <div className="text-right" style={{ width: '40%' }}>
               <p>Tanda Tangan,</p>
               <div className="relative h-10 mb-1">
-                {signature && <img src={signature} alt="Tanda Tangan Karyawan" className="slip-signature" />}
+                {signature && <img src={signature} crossOrigin="anonymous" alt="Tanda Tangan Karyawan" className="slip-signature" />}
               </div>
               <div className="pt-1">
                 <p className="border-b border-black font-semibold inline-block pb-1">{form.name}</p>
@@ -581,7 +584,7 @@ export default function SlipGaji() {
   }, []);
 
   // --- Handler: Upload & resize gambar (logo / tanda tangan) ---
-  const handleImage = async (event, setter, maxW, maxH, label) => {
+  const handleImage = async (event, setter, maxW, maxH, label, folder) => {
     const file = event.target.files && event.target.files[0];
     if (!file) {
       setter('');
@@ -594,16 +597,23 @@ export default function SlipGaji() {
     }
     setUploading(true);
     try {
-      setter(await resizeImage(file, maxW, maxH));
-      pushToast('success', `${label} berhasil diunggah dan disesuaikan ukurannya.`);
+      const { dataUrl, blob } = await resizeImage(file, maxW, maxH);
+      setter(dataUrl); // pratinjau instan (lokal)
+      try {
+        const { url } = await uploadImage(blob, `hk-hub-station/slip-gaji/${folder}`); // Cloudinary = penyimpanan utama
+        setter(url);
+        pushToast('success', `${label} berhasil diunggah ke Cloudinary.`);
+      } catch (cloudErr) {
+        pushToast('error', `${label} dipakai secara lokal (Cloudinary gagal: ${cloudErr.message}).`);
+      }
     } catch (err) {
       pushToast('error', `Gagal mengunggah ${label}: ${err.message}`);
     } finally {
       setUploading(false);
     }
   };
-  const handleLogoChange = (e) => handleImage(e, setLogo, LOGO_MAX_WIDTH, LOGO_MAX_HEIGHT, 'Logo perusahaan');
-  const handleSignatureChange = (e) => handleImage(e, setSignature, SIGNATURE_MAX_WIDTH, SIGNATURE_MAX_HEIGHT, 'Tanda tangan');
+  const handleLogoChange = (e) => handleImage(e, setLogo, LOGO_MAX_WIDTH, LOGO_MAX_HEIGHT, 'Logo perusahaan', 'logo');
+  const handleSignatureChange = (e) => handleImage(e, setSignature, SIGNATURE_MAX_WIDTH, SIGNATURE_MAX_HEIGHT, 'Tanda tangan', 'tanda-tangan');
 
   // --- Handler: Export PNG ---
   const handleExport = async () => {
@@ -641,6 +651,7 @@ export default function SlipGaji() {
       <ToastStack toasts={toasts} onClose={removeToast} />
 
       <div className="max-w-7xl mx-auto">
+        <Link to="/" className="inline-block mb-3 text-sm font-medium text-blue-700 hover:text-blue-900">&larr; Kembali ke HK Hub Station</Link>
         <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
           Aplikasi Pembuat Slip Gaji Terintegrasi (BPJS &amp; PPh 21)
         </h1>
