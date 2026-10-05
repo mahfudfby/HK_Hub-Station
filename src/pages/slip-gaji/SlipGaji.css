@@ -1,0 +1,107 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+
+/* ============================================================
+   SECTION: Root & Tokens (scoped agar tidak bocor ke HK HUB)
+   ============================================================ */
+.slip-app {
+  --text-shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.15);
+  font-family: 'Inter', sans-serif;
+  background-color: #f3f4f6;
+  min-height: 100vh;
+}
+.slip-app h1, .slip-app h2, .slip-app h3, .slip-app p, .slip-app span,
+.slip-app button, .slip-app label, .slip-app input, .slip-app select {
+  text-shadow: var(--text-shadow-subtle);
+}
+/* Dokumen slip (hasil export) dibiarkan bersih tanpa text-shadow */
+.slip-box, .slip-box * { text-shadow: none; }
+
+/* ============================================================
+   SECTION: Slip container (21cm x 12cm, ukuran terkunci)
+   ============================================================ */
+.slip-scroll { overflow-x: auto; padding-bottom: 4px; }
+.slip-box {
+  width: 794px;
+  height: 454px;
+  flex-shrink: 0;
+  margin: 2rem auto;
+  background-color: #fff;
+  color: #000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+.slip-logo { height: 60px; max-width: 300px; width: auto; object-fit: contain; }
+.slip-logo-text { font-size: 1.5rem; font-family: serif; }
+.slip-signature {
+  height: 70px; max-width: 120px; object-fit: contain;
+  position: absolute; bottom: 0; right: 0; opacity: 0.8;
+}
+.slip-pre { white-space: pre-line; }
+
+/* ============================================================
+   SECTION: Form (input-group, number input)
+   ============================================================ */
+.slip-app input[type='number']::-webkit-outer-spin-button,
+.slip-app input[type='number']::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.slip-app input[type='number'] { -moz-appearance: textfield; }
+
+.input-group { display: flex; align-items: center; gap: 1rem; }
+.input-group label { width: 35%; flex-shrink: 0; }
+.input-group input, .input-group select { width: 65%; }
+.earnings-item, .deduction-item { display: flex; justify-content: space-between; align-items: center; }
+
+@media (max-width: 639px) {
+  .input-group { flex-direction: column; align-items: stretch; gap: 0.25rem; }
+  .input-group label, .input-group input, .input-group select { width: 100%; }
+  .slip-app input, .slip-app select, .slip-app .slip-btn { min-height: 44px; }
+}
+
+/* ============================================================
+   SECTION: Interaksi (hover / active / focus)
+   ============================================================ */
+.slip-app input, .slip-app select, .slip-card, .slip-btn {
+  transition: transform 200ms ease, box-shadow 200ms ease, background-color 200ms ease, border-color 200ms ease;
+}
+.slip-card:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); }
+.slip-app input:hover:not([readonly]), .slip-app select:hover { border-color: #2563eb; }
+.slip-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18); }
+.slip-btn:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+.slip-btn:disabled { opacity: 0.75; cursor: not-allowed; }
+.slip-app :focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
+
+/* ============================================================
+   SECTION: Spinner & Progress
+   ============================================================ */
+.slip-spinner {
+  width: 18px; height: 18px; flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.35); border-top-color: currentColor;
+  border-radius: 50%; animation: slip-spin 0.7s linear infinite;
+}
+.slip-spinner-dark { border-color: rgba(0, 0, 0, 0.12); border-top-color: #1d4ed8; }
+@keyframes slip-spin { to { transform: rotate(360deg); } }
+
+.slip-progress-track { width: 100%; height: 4px; background: rgba(0, 0, 0, 0.08); border-radius: 999px; overflow: hidden; margin-top: 12px; }
+.slip-progress-fill { height: 100%; width: 40%; background: #1d4ed8; border-radius: 999px; animation: slip-indeterminate 1.1s ease-in-out infinite; }
+@keyframes slip-indeterminate { 0% { margin-left: -40%; } 100% { margin-left: 100%; } }
+
+/* ============================================================
+   SECTION: Toast
+   ============================================================ */
+.slip-toast-wrap { position: fixed; top: 16px; right: 16px; left: 16px; z-index: 50; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; pointer-events: none; }
+.slip-toast {
+  pointer-events: auto; display: flex; gap: 10px; align-items: flex-start;
+  width: 100%; max-width: 380px; padding: 12px 14px; border-radius: 10px; border: 1px solid;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); animation: slip-toast-in 250ms ease forwards;
+}
+.slip-toast.leaving { animation: slip-toast-out 220ms ease forwards; }
+.slip-toast-success { background: #ecfdf5; border-color: #047857; color: #064e3b; }
+.slip-toast-error { background: #fef2f2; border-color: #b91c1c; color: #7f1d1d; }
+.slip-toast p { font-size: 13px; margin: 2px 0 0; }
+.slip-toast-close { margin-left: auto; min-width: 28px; min-height: 28px; border-radius: 6px; line-height: 1; background: transparent; cursor: pointer; }
+.slip-toast-close:hover { background: rgba(0, 0, 0, 0.08); }
+@keyframes slip-toast-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes slip-toast-out { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(24px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .slip-app *, .slip-toast { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
