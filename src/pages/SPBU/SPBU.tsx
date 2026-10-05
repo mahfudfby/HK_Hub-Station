@@ -1,5 +1,7 @@
 // @ts-nocheck
 import { firebaseConfig } from '../../shared/lib/firebase';
+import QrisCard from '../../shared/components/QrisCard';
+import { ADDRESS_TEMPLATES, PRICE_TEMPLATES, PLATE_REGIONS, GENERIC_LOGOS, buildPlate, randomRegionCode, svgToDataUri } from './SPBU.templates';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
@@ -208,22 +210,30 @@ const App = () => {
             setDb(dbInstance);
 
             const unsubscribe = onAuthStateChanged(authInstance, async (user) => {
-                if (user) {
-                    setUserId(user.uid);
-                } else if (initialAuthToken) {
-                    try {
-                        await signInWithCustomToken(authInstance, initialAuthToken);
+                try {
+                    if (user) {
+                        setUserId(user.uid);
+                    } else if (initialAuthToken) {
+                        try {
+                            await signInWithCustomToken(authInstance, initialAuthToken);
+                        } catch (e) {
+                            console.error('Custom token sign-in failed, signing in anonymously.', e);
+                            await signInAnonymously(authInstance);
+                        }
                         setUserId(authInstance.currentUser?.uid);
-                    } catch (e) {
-                        console.error('Custom token sign-in failed, signing in anonymously.', e);
+                    } else {
                         await signInAnonymously(authInstance);
                         setUserId(authInstance.currentUser?.uid);
                     }
-                } else {
-                    await signInAnonymously(authInstance);
-                    setUserId(authInstance.currentUser?.uid);
+                } catch (e) {
+                    console.error('Login Firebase gagal:', e);
+                    const msg = e?.code === 'auth/operation-not-allowed' ? 'Login Anonymous belum diaktifkan di Firebase Console (Authentication > Sign-in method).'
+                        : e?.code === 'auth/unauthorized-domain' ? 'Domain ini belum ditambahkan di Firebase (Authentication > Settings > Authorized domains).'
+                        : `Login Firebase gagal: ${e?.message || e}`;
+                    setFeedback({ message: msg, type: 'error' });
+                } finally {
+                    setIsAuthReady(true); // selalu keluar dari layar loading
                 }
-                setIsAuthReady(true);
             });
 
             return () => unsubscribe();
@@ -251,7 +261,7 @@ const App = () => {
                 return isCurrentStillInList && prevId ? prevId : list.length > 0 ? list[0].id : '';
             });
 
-        }, (e) => console.error('Gagal memuat data SPBU:', e));
+        }, (e) => { console.error('Gagal memuat data SPBU:', e); setFeedback({ message: `Gagal memuat data: ${e.code === 'permission-denied' ? 'akses ditolak oleh Firestore Rules / login belum berhasil.' : e.message}`, type: 'error' }); });
 
         return () => unsubscribe();
     }, [db, isAuthReady]);
@@ -395,6 +405,40 @@ const App = () => {
         });
     }, [displayFeedback]);
     
+    // ============================================================
+    // SECTION: Handler — Template (Alamat, Harga, Plat, Logo Generik)
+    // ============================================================
+    const handleAddressTemplate = useCallback((e) => {
+        const tpl = ADDRESS_TEMPLATES[parseInt(e.target.value)];
+        if (tpl) setCurrentSpbu(prev => ({ ...prev, address: tpl.value }));
+    }, []);
+
+    const handlePriceTemplate = useCallback((e) => {
+        const tpl = PRICE_TEMPLATES[parseInt(e.target.value)];
+        if (tpl) setTransactionData(prev => ({ ...prev, productName: tpl.productName, pricePerLiter: tpl.pricePerLiter }));
+    }, []);
+
+    const handlePlateTemplate = useCallback((code) => {
+        setTransactionData(prev => ({ ...prev, nopol: buildPlate(code || randomRegionCode()) }));
+    }, []);
+
+    const handleGenericLogo = useCallback((logo) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = LOGO_MAX_WIDTH * 2;
+            canvas.height = 140;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            setCurrentSpbu(prev => ({ ...prev, logoBase64: canvas.toDataURL('image/png') }));
+            displayFeedback(`Logo "${logo.label}" dipilih. Jangan lupa klik Simpan.`, 'success');
+        };
+        img.onerror = () => displayFeedback('Gagal memuat logo generik.', 'error');
+        img.src = svgToDataUri(logo.svg);
+    }, [displayFeedback]);
+
     const handleClearLogo = useCallback(() => {
         setCurrentSpbu(prev => ({ ...prev, logoBase64: null }));
         // Reset input file (secara manual, karena React tidak mengontrol type="file" value)
@@ -709,21 +753,8 @@ const App = () => {
                     </p>
                 </header>
                 
-                {/* BAGIAN TOMBOL TRAKTIR */}
-                <div className="mb-6 p-4 bg-white rounded-xl shadow-lg flex flex-col items-center space-y-3">
-                    <p className="text-lg font-bold text-gray-700 text-center">
-                        Traktir Saya Dengan Cara Klik Tombol di Bawah Ini:
-                    </p>
-                    <a 
-                        href={TRAKTEER_LINK}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full text-center max-w-xs bg-red-600 text-white font-extrabold text-xl p-3 rounded-xl shadow-md transition transform hover:scale-[1.02] hover:bg-red-700"
-                    >
-                        SCAN - Q R I S<br/>DISINI BRO
-                    </a>
-                </div>
-                {/* AKHIR BAGIAN TOMBOL TRAKTIR */}
+                {/* BAGIAN TOMBOL TRAKTIR (QRIS pop-up, komponen bersama) */}
+                <QrisCard />
 
                 {/* Feedback Message */}
                 {feedback && (
@@ -810,7 +841,27 @@ const App = () => {
                             </div>
                         </div>
 
+                        {/* Logo Generik */}
                         <div>
+                            <label className="text-sm font-medium text-gray-700 block mb-1">Logo Generik (bebas pakai)</label>
+                            <div className="grid grid-cols-3 gap-2">
+                                {GENERIC_LOGOS.map(logo => (
+                                    <button key={logo.id} type="button" onClick={() => handleGenericLogo(logo)} disabled={isProcessing || isAiGenerating}
+                                        aria-label={`Pilih logo ${logo.label}`}
+                                        className="border rounded-lg p-1 bg-white hover:border-indigo-500 hover:shadow transition disabled:opacity-50">
+                                        <img src={svgToDataUri(logo.svg)} alt={logo.label} className="w-full h-auto" />
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="text-sm block">Template Alamat</label>
+                            <select value="" onChange={handleAddressTemplate} disabled={isProcessing || isAiGenerating}
+                                className="w-full p-2 border rounded-lg bg-white mb-2 text-sm" aria-label="Template Alamat">
+                                <option value="" disabled>Pilih template alamat...</option>
+                                {ADDRESS_TEMPLATES.map((t, i) => <option key={t.label} value={i}>{t.label}</option>)}
+                            </select>
                             <label className="text-sm block">Alamat (Maksimal 2 Baris)</label>
                             <textarea name="address" rows="3" value={currentSpbu.address} onChange={handleSpbuChange}
                                 className="w-full p-2 border rounded-lg" disabled={isProcessing || isAiGenerating}></textarea>
@@ -844,6 +895,29 @@ const App = () => {
                     <>
                         <div className="mb-6 p-4 bg-white rounded-xl shadow-lg">
                             <h2 className="text-xl font-bold mb-3 text-indigo-700">2. Data Transaksi</h2>
+                            <div className="grid grid-cols-2 gap-3 mb-3">
+                                <div>
+                                    <label className="text-xs font-medium text-gray-700 block mb-1">Template Harga (contoh)</label>
+                                    <select value="" onChange={handlePriceTemplate} disabled={isProcessing || isAiGenerating}
+                                        className="w-full p-2 border rounded-lg bg-white text-sm" aria-label="Template Harga">
+                                        <option value="" disabled>Pilih BBM...</option>
+                                        {PRICE_TEMPLATES.map((t, i) => <option key={t.label} value={i}>{t.label}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium text-gray-700 block mb-1">Template Plat</label>
+                                    <div className="flex gap-1">
+                                        <select value="" onChange={(e) => handlePlateTemplate(e.target.value)} disabled={isProcessing || isAiGenerating}
+                                            className="flex-1 min-w-0 p-2 border rounded-lg bg-white text-sm" aria-label="Template Plat Wilayah">
+                                            <option value="" disabled>Wilayah...</option>
+                                            {PLATE_REGIONS.map(r => <option key={r.code} value={r.code}>{r.code} - {r.area}</option>)}
+                                        </select>
+                                        <button type="button" onClick={() => handlePlateTemplate()} disabled={isProcessing || isAiGenerating}
+                                            aria-label="Plat acak" title="Plat acak"
+                                            className="px-3 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition active:scale-95 min-h-[44px]">Acak</button>
+                                    </div>
+                                </div>
+                            </div>
                             <div className="grid grid-cols-2 gap-3" id="transaction-inputs">
                                 <TransactionInput 
                                     label="Shift" name="shift" value={transactionData.shift} inputType="tel" 
