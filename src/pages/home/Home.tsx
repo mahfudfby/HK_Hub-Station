@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertCircle, ArrowUpRight, Check, Copy, X } from 'lucide-react';
 import { routes } from '../../router/routes';
-import QrisCard from './QrisCard';
+import QrisCard from '../../shared/components/QrisCard';
 
 // ============================================================
 // SECTION: Types & Constants
