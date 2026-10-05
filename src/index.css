@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --text-shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+/* Text-shadow hanya untuk hub (bukan SPA lain, agar nota/export tidak terpengaruh) */
+.hub, .hub h1, .hub h2, .hub p, .hub span, .hub a, .hub button, .hub strong {
+  text-shadow: var(--text-shadow-subtle);
+}
+
+.spinner {
+  width: 20px; height: 20px;
+  border: 2px solid rgba(148, 163, 184, 0.3);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.progress-track { width: 160px; height: 4px; background: rgba(148, 163, 184, 0.25); border-radius: 999px; overflow: hidden; }
+.progress-fill { height: 100%; width: 40%; background: currentColor; border-radius: 999px; animation: indeterminate 1.1s ease-in-out infinite; }
+@keyframes indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
