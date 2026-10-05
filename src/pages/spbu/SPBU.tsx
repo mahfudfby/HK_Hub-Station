@@ -208,22 +208,30 @@ const App = () => {
             setDb(dbInstance);
 
             const unsubscribe = onAuthStateChanged(authInstance, async (user) => {
-                if (user) {
-                    setUserId(user.uid);
-                } else if (initialAuthToken) {
-                    try {
-                        await signInWithCustomToken(authInstance, initialAuthToken);
+                try {
+                    if (user) {
+                        setUserId(user.uid);
+                    } else if (initialAuthToken) {
+                        try {
+                            await signInWithCustomToken(authInstance, initialAuthToken);
+                        } catch (e) {
+                            console.error('Custom token sign-in failed, signing in anonymously.', e);
+                            await signInAnonymously(authInstance);
+                        }
                         setUserId(authInstance.currentUser?.uid);
-                    } catch (e) {
-                        console.error('Custom token sign-in failed, signing in anonymously.', e);
+                    } else {
                         await signInAnonymously(authInstance);
                         setUserId(authInstance.currentUser?.uid);
                     }
-                } else {
-                    await signInAnonymously(authInstance);
-                    setUserId(authInstance.currentUser?.uid);
+                } catch (e) {
+                    console.error('Login Firebase gagal:', e);
+                    const msg = e?.code === 'auth/operation-not-allowed' ? 'Login Anonymous belum diaktifkan di Firebase Console (Authentication > Sign-in method).'
+                        : e?.code === 'auth/unauthorized-domain' ? 'Domain ini belum ditambahkan di Firebase (Authentication > Settings > Authorized domains).'
+                        : `Login Firebase gagal: ${e?.message || e}`;
+                    setFeedback({ message: msg, type: 'error' });
+                } finally {
+                    setIsAuthReady(true); // selalu keluar dari layar loading
                 }
-                setIsAuthReady(true);
             });
 
             return () => unsubscribe();
@@ -251,7 +259,7 @@ const App = () => {
                 return isCurrentStillInList && prevId ? prevId : list.length > 0 ? list[0].id : '';
             });
 
-        }, (e) => console.error('Gagal memuat data SPBU:', e));
+        }, (e) => { console.error('Gagal memuat data SPBU:', e); setFeedback({ message: `Gagal memuat data: ${e.code === 'permission-denied' ? 'akses ditolak oleh Firestore Rules / login belum berhasil.' : e.message}`, type: 'error' }); });
 
         return () => unsubscribe();
     }, [db, isAuthReady]);
