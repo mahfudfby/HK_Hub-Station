@@ -12,4 +12,10 @@ export const routes = [
     title: 'Generator Nota SPBU',
     desc: 'Buat dan cetak nota BBM dengan template SPBU yang tersimpan.',
   },
+  {
+    path: '/slip-gaji/*',
+    component: lazy(() => import('../pages/slip-gaji')),
+    title: 'Slip Gaji (BPJS & PPh 21)',
+    desc: 'Buat slip gaji lengkap dengan potongan BPJS dan PPh 21, ekspor ke PNG.',
+  },
 ];
