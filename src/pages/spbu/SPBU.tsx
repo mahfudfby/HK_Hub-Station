@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { firebaseConfig } from '../../shared/lib/firebase';
+import QrisCard from '../../shared/components/QrisCard';
 import { ADDRESS_TEMPLATES, PRICE_TEMPLATES, PLATE_REGIONS, GENERIC_LOGOS, buildPlate, randomRegionCode, svgToDataUri } from './SPBU.templates';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -752,21 +753,8 @@ const App = () => {
                     </p>
                 </header>
                 
-                {/* BAGIAN TOMBOL TRAKTIR */}
-                <div className="mb-6 p-4 bg-white rounded-xl shadow-lg flex flex-col items-center space-y-3">
-                    <p className="text-lg font-bold text-gray-700 text-center">
-                        Traktir Saya Dengan Cara Klik Tombol di Bawah Ini:
-                    </p>
-                    <a 
-                        href={TRAKTEER_LINK}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full text-center max-w-xs bg-red-600 text-white font-extrabold text-xl p-3 rounded-xl shadow-md transition transform hover:scale-[1.02] hover:bg-red-700"
-                    >
-                        SCAN - Q R I S<br/>DISINI BRO
-                    </a>
-                </div>
-                {/* AKHIR BAGIAN TOMBOL TRAKTIR */}
+                {/* BAGIAN TOMBOL TRAKTIR (QRIS pop-up, komponen bersama) */}
+                <QrisCard />
 
                 {/* Feedback Message */}
                 {feedback && (
