@@ -2,11 +2,9 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 
 // ============================================================
-// SECTION: Config — ganti URL gambar QRIS di sini (atau lewat env)
-// Opsi 1: taruh file di public/qris.png  -> '/qris.png'
-// Opsi 2: upload ke Cloudinary lalu isi VITE_QRIS_IMAGE_URL (URL secure_url)
+// SECTION: Config — gambar QRIS dari Cloudinary
 // ============================================================
-const QRIS_IMAGE_URL: string = import.meta.env.VITE_QRIS_IMAGE_URL || '/qris.png';
+const QRIS_IMAGE_URL = 'https://res.cloudinary.com/dl4pyan8v/image/upload/v1791206224/HK_Qris_dyxbaq.jpg';
 
 // ============================================================
 // SECTION: Modal QRIS (top-level)
@@ -38,7 +36,7 @@ function QrisModal({ onClose }: { onClose: () => void }) {
         </button>
         <h2 className="mb-3 pr-8 text-lg font-bold text-slate-800">Scan QRIS</h2>
         {failed ? (
-          <p className="py-8 text-sm text-slate-600">Gambar QRIS belum tersedia. Letakkan file di <code>public/qris.png</code> atau isi <code>VITE_QRIS_IMAGE_URL</code>.</p>
+          <p className="py-8 text-sm text-slate-600">Gambar QRIS gagal dimuat. Periksa koneksi internet lalu coba lagi.</p>
         ) : (
           <img src={QRIS_IMAGE_URL} alt="Kode QRIS" onError={() => setFailed(true)} className="mx-auto max-h-[70vh] w-full rounded-lg object-contain" />
         )}
