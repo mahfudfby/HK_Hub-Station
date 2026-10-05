@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import QrisCard from '../../shared/components/QrisCard';
 import { uploadImage } from '../../shared/lib/cloudinary';
 import './SlipGaji.css';
 
@@ -655,6 +656,8 @@ export default function SlipGaji() {
         <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
           Aplikasi Pembuat Slip Gaji Terintegrasi (BPJS &amp; PPh 21)
         </h1>
+
+        <div className="max-w-md mx-auto"><QrisCard /></div>
 
         {/* Render — Tombol Export */}
         <div className="mb-8 p-4 bg-white shadow-lg rounded-lg sticky top-0 z-10">
