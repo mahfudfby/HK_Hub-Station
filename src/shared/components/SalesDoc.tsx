@@ -1,3 +1,4 @@
+import AutoTextarea from './AutoTextarea';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import FitPreview from './FitPreview';
@@ -617,9 +618,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
   };
   const txt = (k: keyof Doc, label: string, rows = 1) => (
     <Field label={label}>
-      {rows > 1
-        ? <textarea rows={rows} className={inputCls} value={d[k] as string} onChange={(e) => set(k, e.target.value as never)} />
-        : <input className={inputCls} value={d[k] as string} onChange={(e) => set(k, e.target.value as never)} />}
+      <AutoTextarea rows={rows} className={inputCls} value={d[k] as string} onChange={(e) => set(k, e.target.value as never)} />
     </Field>
   );
   const seg = (on: boolean) => `px-3 py-2 rounded-lg border text-sm font-medium min-h-[44px] ${on ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`;
@@ -719,13 +718,13 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
               {d.items.map((it, i) => (
                 <div key={i} className="rounded-xl border border-gray-200 p-3 space-y-2">
                   <div className="flex gap-2">
-                    <input aria-label={`Deskripsi baris ${i + 1}`} placeholder="Deskripsi" className={inputCls} value={it.nama} onChange={(e) => setItem(i, { nama: e.target.value })} />
+                    <AutoTextarea aria-label={`Deskripsi baris ${i + 1}`} placeholder="Deskripsi" className={inputCls} value={it.nama} onChange={(e) => setItem(i, { nama: e.target.value })} />
                     <button type="button" onClick={() => set('items', d.items.filter((_, j) => j !== i))} disabled={d.items.length === 1}
                       aria-label={`Hapus baris ${i + 1}`} className="px-3 rounded-lg text-red-600 border border-red-200 disabled:opacity-40">✕</button>
                   </div>
                   <div className="grid grid-cols-4 gap-2">
                     <Field label="Qty"><input type="number" min={0} className={inputCls} value={it.qty} onChange={(e) => setItem(i, { qty: e.target.value })} /></Field>
-                    <Field label="Satuan"><input className={inputCls} value={it.satuan} onChange={(e) => setItem(i, { satuan: e.target.value })} /></Field>
+                    <Field label="Satuan"><AutoTextarea className={inputCls} value={it.satuan} onChange={(e) => setItem(i, { satuan: e.target.value })} /></Field>
                     <Field label="Harga"><input type="number" min={0} className={inputCls} value={it.harga} onChange={(e) => setItem(i, { harga: e.target.value })} /></Field>
                     <Field label="Disc %"><input type="number" min={0} max={100} className={inputCls} value={it.diskon} onChange={(e) => setItem(i, { diskon: e.target.value })} /></Field>
                   </div>

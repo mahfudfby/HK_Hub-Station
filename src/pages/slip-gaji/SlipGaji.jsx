@@ -1,3 +1,4 @@
+import AutoTextarea from '../../shared/components/AutoTextarea';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import QrisCard from '../../shared/components/QrisCard';
@@ -321,10 +322,17 @@ function TextField({ id, label, name, value, onChange, placeholder, type = 'text
   return (
     <div className={`input-group ${wrapClass}`}>
       <label htmlFor={id} className="text-sm font-medium text-gray-700">{label}</label>
-      <input
-        type={type} id={id} name={name} value={value} onChange={onChange} placeholder={placeholder || label}
-        className="p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-      />
+      {type === 'text' ? (
+        <AutoTextarea
+          id={id} name={name} value={value} onChange={onChange} placeholder={placeholder || label}
+          className="p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+        />
+      ) : (
+        <input
+          type={type} id={id} name={name} value={value} onChange={onChange} placeholder={placeholder || label}
+          className="p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+        />
+      )}
     </div>
   );
 }
@@ -333,11 +341,13 @@ function FileField({ id, label, onChange, wrapClass = '', bg, onBg, bgBusy }) {
   return (
     <div className={`input-group ${wrapClass}`}>
       <label htmlFor={id} className="text-sm font-medium text-gray-700">{label}</label>
-      <div className="flex items-center gap-2">
-        <input
-          type="file" id={id} accept="image/*" onChange={onChange}
-          className="p-2 border border-gray-300 rounded-lg bg-gray-50 flex-1 min-w-0"
-        />
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="upload-box flex-1 min-w-0">
+          <input
+            type="file" id={id} accept="image/*" onChange={onChange}
+            className="p-2 border border-gray-300 rounded-lg bg-gray-50 w-full"
+          />
+        </div>
         <BgToggle checked={bg} onChange={onBg} busy={bgBusy} />
       </div>
     </div>
@@ -396,7 +406,7 @@ function InfoRow({ label, value, highlight = false }) {
     <div className="flex">
       <span className="w-24 font-semibold">{label}</span>
       <span className="mr-2">:</span>
-      <span className={highlight ? 'px-2 bg-yellow-100 rounded' : ''}>{value}</span>
+      <span className={highlight ? 'px-2 rounded' : ''} style={highlight ? { background: '#FEF9C3' } : undefined}>{value}</span>
     </div>
   );
 }
@@ -483,7 +493,7 @@ function DeductionsForm({ form, onChange, calc }) {
 // ============================================================
 function LogoMark({ logo, h }) {
   if (logo) return <img src={logo} crossOrigin="anonymous" alt="Logo Perusahaan" className="slip-logo" style={h ? { height: h } : undefined} />;
-  return <div className="slip-logo-text font-extrabold text-red-700" style={h ? { fontSize: Math.round(h * 0.6), lineHeight: `${h}px` } : undefined}>LOGO</div>;
+  return <div className="slip-logo-text font-extrabold" style={{ color: '#b91c1c', ...(h ? { fontSize: Math.round(h * 0.6), lineHeight: `${h}px` } : {}) }}>LOGO</div>;
 }
 
 function CompanyText({ form, ink, oneLine }) {

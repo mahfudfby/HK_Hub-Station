@@ -1,3 +1,4 @@
+import AutoTextarea from '../../shared/components/AutoTextarea';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { User } from 'firebase/auth';
@@ -29,14 +30,15 @@ type Form = {
   pembuka: string;
   rows: Row[];
   isi: string; // kalimat hasil bila SAKIT
-  isiSehat: string; // kalimat hasil bila SEHAT
+  isiSehat: string; // kalimat hasil bila SEHAT (terkunci, tidak bisa diedit)
+  hasilSehat: string; // isi hasil, mis. "SEHAT secara jasmani dan rohani"
   diagnosa: string;
   status: 'SAKIT' | 'SEHAT';
   hari: string;
   mulai: string;
   sampai: string;
   penutup: string; // penutup bila SAKIT
-  penutupSehat: string; // penutup bila SEHAT ({tujuan} = tujuan penggunaan)
+  penutupSehat: string; // penutup bila SEHAT (terkunci; {tujuan} diisi dari kolom Tujuan)
   tujuan: string;
   catatan: string;
   kota: string;
@@ -62,6 +64,7 @@ const DEFAULT: Form = {
   rows: ['Nama', 'Jenis Kelamin', 'Umur', 'Pekerjaan', 'Alamat'].map((label) => ({ label, value: '' })),
   isi: 'Setelah dilakukan pemeriksaan, yang bersangkutan didiagnosa menderita penyakit {diagnosa} dan perlu istirahat selama {hari} hari ({terbilang}) sejak tanggal {mulai} s/d {sampai}.',
   isiSehat: 'Setelah dilakukan pemeriksaan, yang bersangkutan dinyatakan {sehat}.',
+  hasilSehat: 'SEHAT secara jasmani dan rohani',
   diagnosa: '',
   status: 'SAKIT',
   hari: '',
@@ -106,7 +109,9 @@ function loadForm(): Form {
     delete saved.namaTtd; // dulu ada isian nama penanda tangan; sekarang selalu nama dokter
     if (saved.isi === 'Setelah dilakukan pemeriksaan dinyatakan {status}*) dan memerlukan istirahat selama {hari} hari ({terbilang}) sejak tanggal {mulai} s/d {sampai}') delete saved.isi; // kalimat bawaan lama → kalimat diagnosa baru
     if (saved.catatan === '*) Coret yang tidak perlu') delete saved.catatan;
-    if (saved.penutupSehat === 'Untuk dipergunakan sebagai kelengkapan administrasi : {tujuan}.') delete saved.penutupSehat;
+    // Narasi SEHAT dikunci (dulu bisa diedit & membingungkan): selalu pakai kalimat baku
+    delete saved.isiSehat;
+    delete saved.penutupSehat;
     return { ...DEFAULT, ...saved };
   } catch {
     return DEFAULT;
@@ -131,7 +136,7 @@ function Letter({ f, k }: { f: Form; k: number }) {
   const tokens: Record<string, ReactNode> = {
     status,
     diagnosa: orDots(f.diagnosa, '12em'),
-    sehat: <strong>SEHAT secara jasmani dan rohani</strong>,
+    sehat: f.hasilSehat ? <strong>{f.hasilSehat}</strong> : <Dots w="12em" />,
     tujuan: (
       <span style={{ display: 'block', textAlign: 'center', marginTop: 4 * k, fontWeight: 700, fontStyle: 'italic', fontSize: '1.45em', lineHeight: 1.3 }}>
         {f.tujuan || <Dots w="14em" />}
@@ -270,8 +275,8 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
               <h2 className="font-bold">Data Pasien</h2>
               {f.rows.map((r, i) => (
                 <div key={i} className="grid grid-cols-[8rem_1fr] gap-2">
-                  <input aria-label={`Label baris ${i + 1}`} className={inputCls} value={r.label} onChange={(e) => setRow(i, { label: e.target.value })} />
-                  <textarea aria-label={r.label} rows={r.label.toLowerCase().includes('alamat') ? 2 : 1} className={inputCls} value={r.value}
+                  <AutoTextarea aria-label={`Label baris ${i + 1}`} className={inputCls} value={r.label} onChange={(e) => setRow(i, { label: e.target.value })} />
+                  <AutoTextarea aria-label={r.label} rows={r.label.toLowerCase().includes('alamat') ? 2 : 1} className={inputCls} value={r.value}
                     onChange={(e) => setRow(i, { value: e.target.value })} />
                 </div>
               ))}
@@ -293,7 +298,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
               </Field>
               {f.status === 'SAKIT' && (<>
               <Field label="Diagnosa (menderita penyakit)">
-                <input className={inputCls} value={f.diagnosa} onChange={(e) => set('diagnosa', e.target.value)} placeholder="mis. Demam berdarah, ISPA, Gastritis" />
+                <AutoTextarea className={inputCls} value={f.diagnosa} onChange={(e) => set('diagnosa', e.target.value)} placeholder="mis. Demam berdarah, ISPA, Gastritis" />
               </Field>
               <div className="grid grid-cols-3 gap-2">
                 <Field label="Istirahat (hari)"><input type="number" min={0} readOnly={!!hitungHari(f.mulai, f.sampai)} title="Otomatis dari tanggal"
@@ -302,28 +307,29 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
                 <Field label="Sampai"><input type="date" className={inputCls} value={f.sampai} onChange={(e) => setTanggal('sampai', e.target.value)} /></Field>
               </div>
               <Field label="Kalimat hasil SAKIT (penanda: {diagnosa} {hari} {terbilang} {mulai} {sampai})">
-                <textarea rows={3} className={inputCls} value={f.isi} onChange={(e) => set('isi', e.target.value)} />
+                <AutoTextarea rows={3} className={inputCls} value={f.isi} onChange={(e) => set('isi', e.target.value)} />
               </Field>
               </>)}
               {f.status === 'SEHAT' && (<>
+                <Field label="Hasil pemeriksaan">
+                  <AutoTextarea className={inputCls} value={f.hasilSehat} onChange={(e) => set('hasilSehat', e.target.value)} placeholder="mis. SEHAT secara jasmani dan rohani" />
+                </Field>
                 <Field label="Tujuan penggunaan surat">
-                  <input className={inputCls} value={f.tujuan} onChange={(e) => set('tujuan', e.target.value)} placeholder="mis. Melamar pekerjaan, Pendaftaran sekolah" />
+                  <AutoTextarea className={inputCls} value={f.tujuan} onChange={(e) => set('tujuan', e.target.value)} placeholder="mis. Melamar pekerjaan, Pendaftaran sekolah" />
                 </Field>
-                <Field label="Kalimat hasil SEHAT (penanda: {sehat})">
-                  <textarea rows={2} className={inputCls} value={f.isiSehat} onChange={(e) => set('isiSehat', e.target.value)} />
-                </Field>
-                <Field label="Kalimat penutup SEHAT (penanda: {tujuan})">
-                  <textarea rows={2} className={inputCls} value={f.penutupSehat} onChange={(e) => set('penutupSehat', e.target.value)} />
-                </Field>
+                <p className="rounded-lg bg-gray-100 p-3 text-sm text-gray-700">
+                  Kalimat di surat sudah baku: “Setelah dilakukan pemeriksaan, yang bersangkutan dinyatakan <b>{f.hasilSehat || '…'}</b>.
+                  Untuk dipergunakan sebagai kelengkapan administrasi : <b>{f.tujuan || '…'}</b>”
+                </p>
               </>)}
             </section>
 
             <section className="space-y-3">
               <h2 className="font-bold">Tanda Tangan</h2>
               <div className="grid grid-cols-2 gap-2">
-                <Field label="Kota"><input className={inputCls} value={f.kota} onChange={(e) => set('kota', e.target.value)} /></Field>
+                <Field label="Kota"><AutoTextarea className={inputCls} value={f.kota} onChange={(e) => set('kota', e.target.value)} /></Field>
                 <Field label="Tanggal surat"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
-                <Field label="Keterangan"><input className={inputCls} value={f.jabatan} onChange={(e) => set('jabatan', e.target.value)} /></Field>
+                <Field label="Keterangan"><AutoTextarea className={inputCls} value={f.jabatan} onChange={(e) => set('jabatan', e.target.value)} /></Field>
               </div>
               <ImageUpload label="Logo kop (opsional, kiri atas)" value={f.logo} onChange={(v) => set('logo', v)} notify={notify}
                 bg={bg.logo} onBg={(v) => setBg((p) => ({ ...p, logo: v }))} shown={logo.src} bgBusy={logo.busy} />
@@ -339,19 +345,19 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
             <details className="space-y-3">
               <summary className="font-bold cursor-pointer">Kop &amp; Teks Surat</summary>
               <div className="space-y-3 pt-3">
-                <Field label="Nama dokter (kop)"><input className={inputCls} value={f.nama} onChange={(e) => set('nama', e.target.value)} /></Field>
+                <Field label="Nama dokter (kop)"><AutoTextarea className={inputCls} value={f.nama} onChange={(e) => set('nama', e.target.value)} /></Field>
                 <div className="grid sm:grid-cols-2 gap-3">
-                  <Field label="No. SIP"><input className={inputCls} value={f.sip} onChange={(e) => set('sip', e.target.value)} /></Field>
-                  <Field label="No. STR"><input className={inputCls} value={f.str} onChange={(e) => set('str', e.target.value)} /></Field>
+                  <Field label="No. SIP"><AutoTextarea className={inputCls} value={f.sip} onChange={(e) => set('sip', e.target.value)} /></Field>
+                  <Field label="No. STR"><AutoTextarea className={inputCls} value={f.str} onChange={(e) => set('str', e.target.value)} /></Field>
                 </div>
-                <Field label="Alamat (baris 1)"><input className={inputCls} value={f.alamat1} onChange={(e) => set('alamat1', e.target.value)} /></Field>
-                <Field label="Alamat (baris 2: kelurahan, kota)"><input className={inputCls} value={f.alamat2} onChange={(e) => set('alamat2', e.target.value)} /></Field>
-                <Field label="No. Telepon"><input className={inputCls} value={f.telp} onChange={(e) => set('telp', e.target.value)} /></Field>
+                <Field label="Alamat (baris 1)"><AutoTextarea className={inputCls} value={f.alamat1} onChange={(e) => set('alamat1', e.target.value)} /></Field>
+                <Field label="Alamat (baris 2: kelurahan, kota)"><AutoTextarea className={inputCls} value={f.alamat2} onChange={(e) => set('alamat2', e.target.value)} /></Field>
+                <Field label="No. Telepon"><AutoTextarea className={inputCls} value={f.telp} onChange={(e) => set('telp', e.target.value)} /></Field>
                 <p className="text-xs text-gray-500">Kosongkan isian untuk menyembunyikan barisnya di surat.</p>
-                <Field label="Judul"><input className={inputCls} value={f.judul} onChange={(e) => set('judul', e.target.value)} /></Field>
-                <Field label="Kalimat pembuka"><textarea rows={2} className={inputCls} value={f.pembuka} onChange={(e) => set('pembuka', e.target.value)} /></Field>
-                <Field label="Kalimat penutup (SAKIT)"><textarea rows={2} className={inputCls} value={f.penutup} onChange={(e) => set('penutup', e.target.value)} /></Field>
-                <Field label="Catatan kaki"><input className={inputCls} value={f.catatan} onChange={(e) => set('catatan', e.target.value)} /></Field>
+                <Field label="Judul"><AutoTextarea className={inputCls} value={f.judul} onChange={(e) => set('judul', e.target.value)} /></Field>
+                <Field label="Kalimat pembuka"><AutoTextarea rows={2} className={inputCls} value={f.pembuka} onChange={(e) => set('pembuka', e.target.value)} /></Field>
+                <Field label="Kalimat penutup (SAKIT)"><AutoTextarea rows={2} className={inputCls} value={f.penutup} onChange={(e) => set('penutup', e.target.value)} /></Field>
+                <Field label="Catatan kaki"><AutoTextarea className={inputCls} value={f.catatan} onChange={(e) => set('catatan', e.target.value)} /></Field>
               </div>
             </details>
           </div>

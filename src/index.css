@@ -25,11 +25,22 @@ img[src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAA
   --md-elev-2: 0 2px 4px rgb(0 0 0 / 0.22), 0 4px 10px 2px rgb(0 0 0 / 0.12);
 }
 
-body { background: #F5F5F5; -webkit-font-smoothing: antialiased; }
+body { background: #F5F5F5; -webkit-font-smoothing: antialiased; font-weight: 400; }
+
+/* Hierarki huruf Helvetica (UI saja): judul tebal & rapat, label sedang, teks bantu tipis.
+   Light/Thin tampil di perangkat yang punya Helvetica Neue (Apple); lainnya memakai Regular. */
+:where(h1):where(:not([data-fit-preview] *)) { font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+:where(h2, h3):where(:not([data-fit-preview] *)) { font-weight: 700; letter-spacing: -0.01em; }
+/* Semua judul kolom form tebal; [class] agar menang atas kelas font-medium bawaan. Isian di dalam label tetap normal. */
+label:where(:not([data-fit-preview] *)), label[class]:where(:not([data-fit-preview] *)) { font-weight: 700; }
+input:where(:not([data-fit-preview] *)), textarea:where(:not([data-fit-preview] *)), select:where(:not([data-fit-preview] *)) { font-weight: 400; }
+:where(button):where(:not([data-fit-preview] *)) { font-weight: 700; letter-spacing: 0.01em; }
+:where(.text-xs, small, .text-gray-500, .text-gray-600):where(:not([data-fit-preview] *)) { font-weight: 300; }
 
 /* Dokumen kembali ke font bawaan sebelumnya (Tailwind sans), agar tata letak hasil unduh tetap sama */
 [data-fit-preview] {
   font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  white-space: pre-line; /* Enter di form = baris baru di dokumen (semua menu) */
 }
 
 /* ---------- Tombol: dibungkus bingkai + bayangan, efek hover saat disentuh mouse ---------- */
