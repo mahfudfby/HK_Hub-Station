@@ -1,3 +1,4 @@
+import UserData from './UserData';
 import NumberFormatInput from './NumberFormatInput';
 import AutoTextarea from './AutoTextarea';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
@@ -141,6 +142,8 @@ type Doc = {
   stempel: string;
 };
 
+// Data User: identitas penjual, tata letak gambar (joystick) & pengaturan tetap (bukan gaya/kertas, bukan data transaksi)
+const USER_KEYS = ['logo', 'posisi', 'namaFont', 'penjual', 'penjualAlamat', 'penjualKontak', 'penjualNpwp', 'catatan', 'pembayaran', 'metode', 'nonTunai', 'terbilang', 'ppn', 'kota', 'ttdNama', 'ttdJabatan', 'ttd', 'stempel'] as const;
 const today = () => new Date().toISOString().slice(0, 10);
 const blankItem = (): Item => ({ nama: '', qty: '1', satuan: 'pcs', harga: '', diskon: '' });
 
@@ -676,6 +679,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
+            <UserData storageKey={`data-user:${kind}`} keys={USER_KEYS} data={d} onApply={(u) => setD((p) => ({ ...p, ...u }))} />
             <section className="space-y-3">
               <h2 className="font-bold">Gaya &amp; Kertas</h2>
               <div className="hidden lg:block"><TextSizeSlider value={d.skala} onChange={(v) => set('skala', v)} effective={k} /></div>
@@ -716,7 +720,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
               {txt('pembeliKontak', 'Telepon / email')}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div className="sm:col-span-3">
-                  <Field label={L.nomor}><NumberFormatInput parts={['Kode', 'Tahun', 'No. urut']} value={d.nomor} onChange={(v) => set('nomor', v)} /></Field>
+                  <Field label={L.nomor}><NumberFormatInput parts={['Kode', 'Tahun', 'Urut']} example={`${kind === 'invoice' ? 'INV' : 'FJ'}/${new Date().getFullYear()}/001`} value={d.nomor} onChange={(v) => set('nomor', v)} /></Field>
                 </div>
                 <Field label="Tanggal"><input type="date" className={inputCls} value={d.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
                 <Field label="Jatuh tempo"><input type="date" className={inputCls} value={d.jatuhTempo} onChange={(e) => set('jatuhTempo', e.target.value)} /></Field>
@@ -732,7 +736,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
                     <button type="button" onClick={() => set('items', d.items.filter((_, j) => j !== i))} disabled={d.items.length === 1}
                       aria-label={`Hapus baris ${i + 1}`} className="px-3 rounded-lg text-red-600 border border-red-200 disabled:opacity-40">✕</button>
                   </div>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <Field label="Qty"><input type="number" min={0} className={inputCls} value={it.qty} onChange={(e) => setItem(i, { qty: e.target.value })} /></Field>
                     <Field label="Satuan"><AutoTextarea className={inputCls} value={it.satuan} onChange={(e) => setItem(i, { satuan: e.target.value })} /></Field>
                     <Field label="Harga"><input type="number" min={0} className={inputCls} value={it.harga} onChange={(e) => setItem(i, { harga: e.target.value })} /></Field>

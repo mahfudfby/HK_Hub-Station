@@ -196,3 +196,6 @@ html.dark body { background: #121212; color: #e6e6e6; }
 .dark .bg-orb { opacity: 0.22; }
 .dark .bg-orbs::before { background-image: radial-gradient(rgb(159 168 218 / 0.10) 1px, transparent 1px); }
 .dark .slip-app { background-color: #121212; }
+
+/* Kolom nomor terkunci (NumberFormatInput) selalu memakai satu baris penuh di grid form */
+.grid > :has(.nfi) { grid-column: 1 / -1; }

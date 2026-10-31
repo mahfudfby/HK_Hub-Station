@@ -1,3 +1,4 @@
+import UserData from '../../shared/components/UserData';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import AutoTextarea from '../../shared/components/AutoTextarea';
@@ -70,7 +71,7 @@ type Nota = {
   pembeli: string; penjual: string; alamat: string; hp: string;
   noPesanan: string; tanggal: string; metode: string; kurir: string;
   items: Item[];
-  ongkir: string; biayaLayanan: string; biayaLainLabel: string; biayaLain: string; diskonLabel: string; diskon: string;
+  ongkir: string; biayaLayanan: string; proteksi: string; biayaLainLabel: string; biayaLain: string; diskonLabel: string; diskon: string;
   catatanBiaya: string; infoToko: string; catatan: string;
   ttdNama: string; ttd: string; stempel: string;
 };
@@ -86,7 +87,7 @@ const DEFAULT: Nota = {
     { produk: 'Contoh produk pertama', variasi: 'Merah, L', harga: '45000', qty: '2' },
     { produk: 'Contoh produk kedua dengan nama yang cukup panjang', variasi: 'Isi 6', harga: '12500', qty: '3' },
   ],
-  ongkir: '', biayaLayanan: '2000', biayaLainLabel: '', biayaLain: '', diskonLabel: 'Diskon Voucher', diskon: '4000',
+  ongkir: '', biayaLayanan: '2000', proteksi: '', biayaLainLabel: '', biayaLain: '', diskonLabel: 'Diskon Voucher', diskon: '4000',
   catatanBiaya: 'Biaya-biaya yang ditagihkan sudah termasuk PPN (jika ada).',
   infoToko: 'Nama Usaha Anda\nAlamat usaha, Kota\nTelp. 0812-0000-0000',
   catatan: '',
@@ -97,7 +98,7 @@ function calc(n: Nota) {
   const lines = n.items.map((it) => num(it.qty) * num(it.harga));
   const subtotal = lines.reduce((a, b) => a + b, 0);
   const qty = n.items.reduce((a, it) => a + num(it.qty), 0);
-  const total = subtotal + num(n.ongkir) + num(n.biayaLayanan) + num(n.biayaLain) - num(n.diskon);
+  const total = subtotal + num(n.ongkir) + num(n.biayaLayanan) + num(n.proteksi) + num(n.biayaLain) - num(n.diskon);
   return { lines, subtotal, qty, total: Math.max(0, total) };
 }
 {
@@ -209,19 +210,21 @@ function NotaView({ n, c, fs, w, h, pad }: { n: Nota; c: ReturnType<typeof calc>
       {/* Ringkasan biaya */}
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <div style={{ width: '48%' }}>
-          <div style={{ ...boxStyle, padding: `${fs * 1.4}px ${fs * 1.6}px`, fontSize: fs * 0.9 }}>
+          <div style={{ ...boxStyle, padding: `${fs * 1.2}px ${fs * 1.6}px`, fontSize: fs * 0.9 }}>
+            {/* Daftar tetap: kosong tetap tampil Rp0; hanya "biaya lain" yang muncul bila diisi */}
             {[
               ['Subtotal Pesanan', c.subtotal, true],
-              ['Ongkos Kirim', num(n.ongkir), !!n.ongkir],
-              ['Biaya Layanan', num(n.biayaLayanan), !!n.biayaLayanan],
+              ['Ongkos Kirim', num(n.ongkir), true],
+              ['Biaya Layanan', num(n.biayaLayanan), true],
+              ['Proteksi Produk', num(n.proteksi), true],
               [n.biayaLainLabel || 'Biaya Lain', num(n.biayaLain), !!n.biayaLain],
-              [n.diskonLabel || 'Diskon', -num(n.diskon), !!n.diskon],
+              [n.diskonLabel || 'Diskon Voucher', -num(n.diskon), true],
             ].filter((r) => r[2]).map(([l, v]) => (
-              <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: fs * 1.1 }}>
+              <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: fs * 0.65 }}>
                 <span>{l}</span><span style={{ whiteSpace: 'nowrap' }}>{(v as number) < 0 ? '-' : ''}Rp{rupiah(Math.abs(v as number))}</span>
               </div>
             ))}
-            <div style={{ borderTop: `1.5px solid ${LINE}`, paddingTop: fs * 1.1, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontWeight: 700 }}>
+            <div style={{ borderTop: `1.5px solid ${LINE}`, marginTop: fs * 0.35, paddingTop: fs * 0.9, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontWeight: 700 }}>
               <span style={{ fontSize: fs * 1.1 }}>Total Pembayaran</span>
               <span style={{ fontSize: fs * 1.45, whiteSpace: 'nowrap', color: g.total === 'accent' ? accent : undefined }}>Rp{rupiah(c.total)}</span>
             </div>
@@ -370,6 +373,7 @@ export default function InvoiceTokoOnline() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
+            <UserData storageKey="data-user:toko-online" keys={['logo', 'posisi', 'logoTeks', 'judul', 'penjual', 'metode', 'kurir', 'biayaLayanan', 'proteksi', 'catatanBiaya', 'infoToko', 'catatan', 'ttdNama', 'ttd', 'stempel']} data={n} onApply={(u) => setN((p) => ({ ...p, ...u }))} />
             <section className="hidden lg:block space-y-3">
               <h2 className="font-bold">Tampilan</h2>
               {tampilan}
@@ -430,6 +434,8 @@ export default function InvoiceTokoOnline() {
               <div className="grid grid-cols-2 gap-2">
                 {money('ongkir', 'Ongkos kirim (Rp)')}
                 {money('biayaLayanan', 'Biaya layanan (Rp)')}
+                {money('proteksi', 'Proteksi produk (Rp)')}
+                <div />
                 {txt('biayaLainLabel', 'Nama biaya lain')}
                 {money('biayaLain', 'Biaya lain (Rp)')}
                 {txt('diskonLabel', 'Nama diskon / voucher')}

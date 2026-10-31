@@ -402,7 +402,7 @@ const App = () => {
             const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setSpbuList(list);
             setIsListLoaded(prev => {
-                if (!prev) setFeedback({ message: `Data dimuat: ${list.length} template SPBU.`, type: 'success' });
+                if (!prev) setFeedback({ message: `Data dimuat: ${list.length} data user SPBU.`, type: 'success' });
                 return true;
             });
             
@@ -662,7 +662,7 @@ const App = () => {
             .filter(f => f.name);
         if (!cleanFuels.length) return displayFeedback('Isi minimal satu jenis BBM.', 'error');
         setIsProcessing(true);
-        displayFeedback('Menyimpan template...', 'loading');
+        displayFeedback('Menyimpan data user...', 'loading');
 
         try {
             const spbuToSave = {
@@ -683,7 +683,7 @@ const App = () => {
             });
             setSelectedSpbuId(spbuToSave.id);
             setUiState('view');
-            displayFeedback('Template berhasil disimpan!', 'success');
+            displayFeedback('Data user berhasil disimpan!', 'success');
 
         } catch (e) { 
             console.error('Gagal simpan:', e);
@@ -694,14 +694,14 @@ const App = () => {
     }, [db, currentSpbu, spbuList, displayFeedback]);
 
     const handleDeleteSpbu = useCallback(async () => {
-        if (!db || !currentSpbu.id || !window.confirm(`Yakin ingin menghapus template SPBU "${currentSpbu.name}"?`)) return;
+        if (!db || !currentSpbu.id || !window.confirm(`Yakin ingin menghapus data user SPBU "${currentSpbu.name}"?`)) return;
         setIsProcessing(true);
-        displayFeedback('Menghapus template...', 'loading');
+        displayFeedback('Menghapus data user...', 'loading');
         try {
             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'spbu_configs', currentSpbu.id));
             setSelectedSpbuId(''); // Dipilih otomatis ke yang pertama di list
             setUiState('view');
-            displayFeedback('Template berhasil dihapus.', 'success');
+            displayFeedback('Data user berhasil dihapus.', 'success');
         } catch (e) {
             console.error('Gagal hapus:', e);
             displayFeedback(`Gagal hapus: ${e.message}`, 'error');
@@ -993,7 +993,7 @@ const App = () => {
                 
                 {/* --- Bagian 1: Pilih SPBU --- */}
                 <div className="mb-6 p-4 bg-white rounded-xl shadow-lg">
-                    <h2 className="text-xl font-bold mb-3 text-indigo-700">1. Pilih Template SPBU</h2>
+                    <h2 className="text-xl font-bold mb-3 text-indigo-700">1. Pilih Data User SPBU</h2>
                     
                     {/* DROPDOWN TEMPLATE */}
                     <select 
@@ -1007,7 +1007,7 @@ const App = () => {
                         disabled={isProcessing || isAiGenerating || spbuList.length === 0}
                     >
                         {spbuList.length === 0 ? (
-                            <option value="">Tidak Ada Template (Gunakan Default)</option>
+                            <option value="">Belum Ada Data User (Gunakan Default)</option>
                         ) : (
                             spbuList.map(spbu => (
                                 <option key={spbu.id} value={spbu.id}>{spbu.name}</option>
@@ -1022,7 +1022,7 @@ const App = () => {
                             disabled={!selectedSpbuId || isProcessing || isAiGenerating}
                             className={`flex-grow bg-yellow-500 text-white px-3 py-2 rounded-lg font-bold hover:bg-yellow-600 transition disabled:opacity-50`}
                         >
-                            Edit Template
+                            Edit Data User
                         </button>
                         <button 
                             onClick={() => setUiState('new')} 
@@ -1037,7 +1037,7 @@ const App = () => {
                 {/* --- Bagian Edit Template (Conditional) --- */}
                 {(uiState === 'edit' || uiState === 'new') && (
                     <div className="mb-6 p-4 bg-white rounded-xl shadow-2xl border-t-4 border-blue-500 space-y-4">
-                        <h2 className="text-xl font-bold text-blue-700">{uiState === 'new' ? 'Buat Template Baru' : `Edit Template: ${currentSpbu.name}`}</h2>
+                        <h2 className="text-xl font-bold text-blue-700">{uiState === 'new' ? 'Buat Data User Baru' : `Edit Data User: ${currentSpbu.name}`}</h2>
                         
                         <div className="flex space-x-2 items-end">
                             <div className="flex-grow">
@@ -1155,7 +1155,7 @@ const App = () => {
                             </div>
                             <button type="button" onClick={addFuel} disabled={isProcessing || isAiGenerating}
                                 className="mt-2 w-full p-2 min-h-[44px] border-2 border-dashed border-indigo-300 text-indigo-700 rounded-lg font-semibold hover:bg-indigo-50 transition disabled:opacity-50">+ Tambah Jenis BBM</button>
-                            <p className="text-xs text-gray-500 mt-1">Klik Simpan Template agar perubahan muncul di dropdown Harga BBM.</p>
+                            <p className="text-xs text-gray-500 mt-1">Klik Simpan Data User agar perubahan muncul di dropdown Harga BBM.</p>
                         </div>
 
                         <div className="flex space-x-2 pt-2">
@@ -1163,7 +1163,7 @@ const App = () => {
                                 className={`flex-grow p-3 rounded-lg font-bold transition ${isProcessing ? 'bg-blue-300' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>
                                 {isProcessing ? (
                                     <span className="flex items-center justify-center"><div className="spinner mr-2"></div> Menyimpan...</span>
-                                ) : 'Simpan Template'}
+                                ) : 'Simpan Data User'}
                             </button>
                             <button onClick={() => setUiState('view')} disabled={isProcessing || isAiGenerating}
                                 className="bg-gray-400 text-white p-3 rounded-lg hover:bg-gray-500 transition font-bold">Batal</button>
@@ -1190,7 +1190,7 @@ const App = () => {
                                             {fuels.map((f, i) => <option key={`${f.name}-${i}`} value={i}>{f.name} - {formatRupiah(f.price)}</option>)}
                                         </select>
                                         <button type="button" onClick={() => setUiState('edit')} disabled={!selectedSpbuId || isProcessing || isAiGenerating}
-                                            aria-label="Atur jenis dan harga BBM" title={selectedSpbuId ? 'Atur jenis & harga BBM' : 'Buat template SPBU dulu'}
+                                            aria-label="Atur jenis dan harga BBM" title={selectedSpbuId ? 'Atur jenis & harga BBM' : 'Buat data user SPBU dulu'}
                                             className="px-3 bg-yellow-500 text-white rounded-lg text-sm font-bold hover:bg-yellow-600 transition min-h-[44px] disabled:opacity-50">Atur</button>
                                     </div>
                                 </div>
@@ -1332,7 +1332,7 @@ const App = () => {
                                 
                                 <p className="font-extrabold text-red-600 mt-4">***** CATATAN PENTING *****</p>
                                 <p className="text-base font-semibold">
-                                    Atur Ukuran **Lebar Nota (px)** pada Template SPBU (Bagian 1) dan otak-atik sendiri karena setiap HP Beda Settingan LEBAR NOTA-nya.
+                                    Atur Ukuran **Lebar Nota (px)** pada Data User SPBU (Bagian 1) dan otak-atik sendiri karena setiap HP Beda Settingan LEBAR NOTA-nya.
                                 </p>
                             </div>
                             {/* AKHIR BAGIAN BARU */}

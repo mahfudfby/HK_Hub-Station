@@ -1,3 +1,4 @@
+import UserData from '../../shared/components/UserData';
 import NumberFormatInput from '../../shared/components/NumberFormatInput';
 import AutoTextarea from '../../shared/components/AutoTextarea';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
@@ -30,7 +31,7 @@ type Form = {
   judul: string;
   pembuka: string;
   rows: Row[];
-  isi: string; // kalimat hasil bila SAKIT
+  isi: string; // kalimat hasil bila SAKIT (terkunci, tidak bisa diedit)
   isiSehat: string; // kalimat hasil bila SEHAT (terkunci, tidak bisa diedit)
   hasilSehat: string; // isi hasil, mis. "SEHAT secara jasmani dan rohani"
   diagnosa: string;
@@ -108,9 +109,9 @@ function loadForm(): Form {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (!saved) return DEFAULT;
     delete saved.namaTtd; // dulu ada isian nama penanda tangan; sekarang selalu nama dokter
-    if (saved.isi === 'Setelah dilakukan pemeriksaan dinyatakan {status}*) dan memerlukan istirahat selama {hari} hari ({terbilang}) sejak tanggal {mulai} s/d {sampai}') delete saved.isi; // kalimat bawaan lama → kalimat diagnosa baru
     if (saved.catatan === '*) Coret yang tidak perlu') delete saved.catatan;
-    // Narasi SEHAT dikunci (dulu bisa diedit & membingungkan): selalu pakai kalimat baku
+    // Narasi SAKIT & SEHAT dikunci (dulu bisa diedit & membingungkan): selalu pakai kalimat baku
+    delete saved.isi;
     delete saved.isiSehat;
     delete saved.penutupSehat;
     return { ...DEFAULT, ...saved };
@@ -275,6 +276,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6">
+            <UserData storageKey="data-user:surat-dokter" keys={['posisi', 'nama', 'sip', 'str', 'alamat1', 'alamat2', 'telp', 'judul', 'pembuka', 'penutup', 'catatan', 'kota', 'jabatan', 'ttd', 'stempel', 'logo']} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
             <div className="hidden lg:block"><TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} /></div>
             <div className="hidden lg:block">{posPad}</div>
             <div className="hidden lg:block">
@@ -315,9 +317,10 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
                 <Field label="Sejak tanggal"><input type="date" className={inputCls} value={f.mulai} onChange={(e) => setTanggal('mulai', e.target.value)} /></Field>
                 <Field label="Sampai"><input type="date" className={inputCls} value={f.sampai} onChange={(e) => setTanggal('sampai', e.target.value)} /></Field>
               </div>
-              <Field label="Kalimat hasil SAKIT (penanda: {diagnosa} {hari} {terbilang} {mulai} {sampai})">
-                <AutoTextarea rows={3} className={inputCls} value={f.isi} onChange={(e) => set('isi', e.target.value)} />
-              </Field>
+              <p className="rounded-lg bg-gray-100 p-3 text-sm text-gray-700">
+                Kalimat di surat sudah baku: “Setelah dilakukan pemeriksaan, yang bersangkutan didiagnosa menderita penyakit <b>{f.diagnosa || '…'}</b> dan
+                perlu istirahat selama <b>{f.hari || '…'}</b> hari ({hitungHari(f.mulai, f.sampai) || f.hari ? 'terbilang otomatis' : '…'}) sejak tanggal <b>{fmtTanggal(f.mulai) || '…'}</b> s/d <b>{fmtTanggal(f.sampai) || '…'}</b>.”
+              </p>
               </>)}
               {f.status === 'SEHAT' && (<>
                 <Field label="Hasil pemeriksaan">
@@ -356,8 +359,8 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
               <div className="space-y-3 pt-3">
                 <Field label="Nama dokter (kop)"><AutoTextarea className={inputCls} value={f.nama} onChange={(e) => set('nama', e.target.value)} /></Field>
                 <div className="grid sm:grid-cols-2 gap-3">
-                  <Field label="No. SIP"><NumberFormatInput parts={['Kode', 'Nomor', 'Kode instansi', 'Bulan (romawi)', 'Tahun']} value={f.sip} onChange={(v) => set('sip', v)} /></Field>
-                  <Field label="No. STR"><NumberFormatInput parts={['Kode', 'Nomor', 'Nomor']} value={f.str} onChange={(v) => set('str', v)} /></Field>
+                  <Field label="No. SIP"><NumberFormatInput parts={['Kode', 'Nomor', 'Instansi', 'Bulan', 'Tahun']} example="446.1/0434.1/Pu Kes-3/VI/2011 (bulan angka romawi)" value={f.sip} onChange={(v) => set('sip', v)} /></Field>
+                  <Field label="No. STR"><NumberFormatInput parts={['Kode', 'Nomor', 'Nomor']} example="312/1001060/4226" value={f.str} onChange={(v) => set('str', v)} /></Field>
                 </div>
                 <Field label="Alamat (baris 1)"><AutoTextarea className={inputCls} value={f.alamat1} onChange={(e) => set('alamat1', e.target.value)} /></Field>
                 <Field label="Alamat (baris 2: kelurahan, kota)"><AutoTextarea className={inputCls} value={f.alamat2} onChange={(e) => set('alamat2', e.target.value)} /></Field>

@@ -1,3 +1,4 @@
+import UserData from '../../shared/components/UserData';
 import NumberFormatInput from '../../shared/components/NumberFormatInput';
 import AutoTextarea from '../../shared/components/AutoTextarea';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -207,6 +208,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6">
+            <UserData storageKey="data-user:surat-sehat" keys={['posisi', 'instansi', 'subKop', 'alamatKop', 'logo', 'judul', 'pembuka', 'pengantarHasil', 'pengantarKeperluan', 'kota', 'jabatan', 'dokter', 'idLabel', 'idNo', 'ttd', 'stempel']} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
             <div className="hidden lg:block"><TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} /></div>
             <div className="hidden lg:block">{posPad}</div>
             <div className="hidden lg:block">
@@ -214,7 +216,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
             </div>
             <section className="space-y-3">
               <h2 className="font-bold">Data Pasien</h2>
-              <Field label="Nomor surat"><NumberFormatInput parts={['Klasifikasi', 'No. urut', 'Kode surat', 'Tahun']} value={f.nomor} onChange={(v) => set('nomor', v)} /></Field>
+              <Field label="Nomor surat"><NumberFormatInput parts={['Klasif.', 'Urut', 'Kode', 'Tahun']} example="445/012/SKS/2026" value={f.nomor} onChange={(v) => set('nomor', v)} /></Field>
               {f.rows.map((r, i) => (
                 <Field key={i} label={r.label}>
                   <AutoTextarea rows={r.label.toLowerCase().includes('alamat') ? 2 : 1} className={inputCls} value={r.value} onChange={(e) => setRow(i, e.target.value)} />
@@ -246,7 +248,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
                 <Field label="Keterangan"><AutoTextarea className={inputCls} value={f.jabatan} onChange={(e) => set('jabatan', e.target.value)} /></Field>
                 <Field label="Jenis nomor (SIP/NIP)"><AutoTextarea className={inputCls} value={f.idLabel} onChange={(e) => set('idLabel', e.target.value)} /></Field>
                 <Field label={`Nomor ${f.idLabel || 'SIP/NIP'}`}>{/SIP/i.test(f.idLabel) // SIP: susunan terkunci; NIP: satu kotak angka
-                  ? <NumberFormatInput parts={['Kode', 'Nomor', 'Kode instansi', 'Bulan (romawi)', 'Tahun']} value={f.idNo} onChange={(v) => set('idNo', v)} />
+                  ? <NumberFormatInput parts={['Kode', 'Nomor', 'Instansi', 'Bulan', 'Tahun']} example="446.1/0434.1/Pu Kes-3/VI/2011 (bulan angka romawi)" value={f.idNo} onChange={(v) => set('idNo', v)} />
                   : <NumberFormatInput parts={['Nomor']} value={f.idNo} onChange={(v) => set('idNo', v)} />}</Field>
               </div>
               <ImageUpload label="Logo kop (opsional, kiri atas)" value={f.logo} onChange={(v) => set('logo', v)} notify={notify} shown={logo.src} bgBusy={logo.busy} {...bgFor('logo')} />
