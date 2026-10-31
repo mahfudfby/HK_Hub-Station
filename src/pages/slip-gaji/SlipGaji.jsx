@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import QrisCard from '../../shared/components/QrisCard';
 import { uploadImage } from '../../shared/lib/cloudinary';
 import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
+import { printImage } from '../../shared/lib/printImage';
 import './SlipGaji.css';
 
 // ============================================================
@@ -561,6 +562,7 @@ export default function SlipGaji() {
   const [logo, setLogo] = useState('');
   const [signature, setSignature] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [toasts, setToasts] = useState([]);
   const slipRef = useRef(null);
@@ -617,21 +619,41 @@ export default function SlipGaji() {
   const handleLogoChange = (e) => handleImage(e, setLogo, LOGO_MAX_WIDTH, LOGO_MAX_HEIGHT, 'Logo perusahaan', 'logo');
   const handleSignatureChange = (e) => handleImage(e, setSignature, SIGNATURE_MAX_WIDTH, SIGNATURE_MAX_HEIGHT, 'Tanda tangan', 'tanda-tangan');
 
+  const captureSlip = async () => {
+    const { default: html2canvas } = await import('html2canvas');
+    return html2canvas(slipRef.current, {
+      scale: 3,
+      logging: false,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      width: SLIP_WIDTH,
+      height: SLIP_HEIGHT,
+    });
+  };
+  const slipFileName = () => `slip_gaji_${form.name.replace(/\s/g, '_')}_${form.slipMonth.toUpperCase().replace(/\s/g, '_')}`;
+
+  // --- Handler: Print ---
+  const handlePrint = async () => {
+    if (exporting || printing || !slipRef.current) return;
+    setPrinting(true);
+    try {
+      const canvas = await captureSlip();
+      await printImage(canvas.toDataURL('image/png'), slipFileName());
+      pushToast('success', 'Jendela cetak dibuka.');
+    } catch (error) {
+      pushToast('error', `Gagal mencetak slip gaji: ${error && error.message ? error.message : 'proses render gambar gagal.'}`);
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   // --- Handler: Export PNG ---
   const handleExport = async () => {
-    if (exporting || !slipRef.current) return;
+    if (exporting || printing || !slipRef.current) return;
     setExporting(true);
     try {
-      const { default: html2canvas } = await import('html2canvas');
-      const canvas = await html2canvas(slipRef.current, {
-        scale: 3,
-        logging: false,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        width: SLIP_WIDTH,
-        height: SLIP_HEIGHT,
-      });
-      const fileName = `slip_gaji_${form.name.replace(/\s/g, '_')}_${form.slipMonth.toUpperCase().replace(/\s/g, '_')}.png`;
+      const canvas = await captureSlip();
+      const fileName = `${slipFileName()}.png`;
       saveFile(await canvasToBlob(canvas), fileName);
       pushToast('success', `Slip gaji diekspor sebagai ${fileName}.`);
     } catch (error) {
@@ -657,16 +679,23 @@ export default function SlipGaji() {
 
         {/* Render — Tombol Export */}
         <div className="mb-8 p-4 bg-white shadow-lg rounded-lg sticky top-0 z-10">
-          <div className="flex justify-center">
+          <div className="flex flex-wrap justify-center gap-3">
             <button
-              type="button" onClick={handleExport} disabled={exporting}
+              type="button" onClick={handleExport} disabled={exporting || printing}
               className="slip-btn bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md inline-flex items-center gap-2"
             >
               {exporting ? <span className="slip-spinner" aria-hidden="true" /> : <IconDownload />}
               {exporting ? 'Memproses... Harap tunggu.' : 'Export Slip Gaji sebagai PNG'}
             </button>
+            <button
+              type="button" onClick={handlePrint} disabled={exporting || printing}
+              className="slip-btn bg-slate-700 hover:bg-slate-800 text-white font-semibold py-3 px-6 rounded-lg shadow-md inline-flex items-center gap-2"
+            >
+              {printing && <span className="slip-spinner" aria-hidden="true" />}
+              {printing ? 'Menyiapkan cetakan...' : 'Print'}
+            </button>
           </div>
-          {(exporting || uploading) && (
+          {(exporting || printing || uploading) && (
             <div className="slip-progress-track" role="progressbar" aria-label={exporting ? 'Memproses ekspor' : 'Memproses gambar'}>
               <div className="slip-progress-fill" />
             </div>

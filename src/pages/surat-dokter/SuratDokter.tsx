@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import type { User } from 'firebase/auth';
 import RequireLogin from '../../shared/components/RequireLogin';
 import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
+import { printImage } from '../../shared/lib/printImage';
 import { Spinner, Toast, type ToastState, type ToastType } from '../../shared/components/Feedback';
 
 type Notify = (type: ToastType, message: string) => void;
@@ -211,7 +212,7 @@ function Letter({ f }: { f: Form }) {
 // ---------------- Main ----------------
 function Editor({ user, notify }: { user: User; notify: Notify }) {
   const [f, setF] = useState<Form>(loadForm);
-  const [exporting, setExporting] = useState<'' | 'PDF' | 'PNG'>('');
+  const [exporting, setExporting] = useState<'' | 'PDF' | 'PNG' | 'Print'>('');
   const letterRef = useRef<HTMLDivElement>(null);
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
   const setRow = (i: number, patch: Partial<Row>) => set('rows', f.rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
@@ -230,11 +231,16 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
   };
   const fileName = `surat-keterangan-${(f.rows[0]?.value || 'pasien').replace(/\s+/g, '-').toLowerCase()}`;
 
-  const runExport = async (kind: 'PDF' | 'PNG') => {
+  const runExport = async (kind: 'PDF' | 'PNG' | 'Print') => {
     setExporting(kind);
-    notify('loading', `Membuat file ${kind}…`);
+    notify('loading', kind === 'Print' ? 'Menyiapkan cetakan…' : `Membuat file ${kind}…`);
     try {
       const canvas = await capture();
+      if (kind === 'Print') {
+        await printImage(canvas.toDataURL('image/png'), fileName);
+        notify('success', 'Jendela cetak dibuka.');
+        return;
+      }
       if (kind === 'PNG') {
         saveFile(await canvasToBlob(canvas), `${fileName}.png`);
       } else {
@@ -247,7 +253,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
       }
       notify('success', `${fileName}.${kind.toLowerCase()} berhasil diunduh.`);
     } catch (err: any) {
-      notify('error', `Gagal membuat ${kind}: ${err?.message || 'proses render gagal.'}`);
+      notify('error', `Gagal ${kind === 'Print' ? 'mencetak' : `membuat ${kind}`}: ${err?.message || 'proses render gagal.'}`);
     } finally {
       setExporting('');
     }
@@ -261,10 +267,10 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
     setF(DEFAULT);
     notify('info', 'Semua isian dikembalikan ke bawaan.');
   };
-  const exportBtn = (kind: 'PDF' | 'PNG', color: string) => (
+  const exportBtn = (kind: 'PDF' | 'PNG' | 'Print', color: string) => (
     <button onClick={() => runExport(kind)} disabled={!!exporting}
       className={`px-5 py-2 rounded-lg text-white font-semibold flex items-center gap-2 disabled:opacity-60 ${color}`}>
-      {exporting === kind && <Spinner />} Unduh {kind}
+      {exporting === kind && <Spinner />} {kind === 'Print' ? 'Print' : `Unduh ${kind}`}
     </button>
   );
 
@@ -281,6 +287,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
         <div className="flex flex-wrap justify-center gap-3 mb-6">
           {exportBtn('PDF', 'bg-red-600')}
           {exportBtn('PNG', 'bg-blue-600')}
+          {exportBtn('Print', 'bg-slate-700')}
           <button onClick={resetPasien} className="px-5 py-2 rounded-lg bg-white border font-semibold">Kosongkan Data Pasien</button>
           <button onClick={resetAll} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
         </div>
