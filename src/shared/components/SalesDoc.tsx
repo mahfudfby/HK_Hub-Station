@@ -613,6 +613,24 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
     </Field>
   );
   const seg = (on: boolean) => `px-3 py-2 rounded-lg border text-sm font-medium min-h-[44px] ${on ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`;
+  // Pilihan kertas & orientasi: di form (desktop) dan di paling bawah (ponsel)
+  const paperField = (
+    <Field label="Ukuran kertas">
+      <select className={inputCls} value={d.paper} onChange={(e) => set('paper', e.target.value as PaperId)}>
+        {PAPER_GROUPS.map((g) => (
+          <optgroup key={g} label={g}>
+            {(Object.keys(PAPERS) as PaperId[]).filter((p) => PAPERS[p].group === g).map((p) => <option key={p} value={p}>{PAPERS[p].label}</option>)}
+          </optgroup>
+        ))}
+      </select>
+    </Field>
+  );
+  const orientButtons = (
+    <div className="flex gap-2" role="radiogroup" aria-label="Orientasi">
+      <button type="button" role="radio" aria-checked={!d.landscape} disabled={base.fixed} onClick={() => set('landscape', false)} className={`${seg(!d.landscape || !!base.fixed)} flex-1 disabled:opacity-50`}>Vertikal</button>
+      <button type="button" role="radio" aria-checked={d.landscape && !base.fixed} disabled={base.fixed} onClick={() => set('landscape', true)} className={`${seg(d.landscape && !base.fixed)} flex-1 disabled:opacity-50`}>Landscape</button>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
@@ -633,19 +651,8 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
               </Field>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
-                <Field label="Ukuran kertas">
-                  <select className={inputCls} value={d.paper} onChange={(e) => set('paper', e.target.value as PaperId)}>
-                    {PAPER_GROUPS.map((g) => (
-                      <optgroup key={g} label={g}>
-                        {(Object.keys(PAPERS) as PaperId[]).filter((p) => PAPERS[p].group === g).map((p) => <option key={p} value={p}>{PAPERS[p].label}</option>)}
-                      </optgroup>
-                    ))}
-                  </select>
-                </Field>
-                <div className="flex gap-2" role="radiogroup" aria-label="Orientasi">
-                  <button type="button" role="radio" aria-checked={!d.landscape} disabled={base.fixed} onClick={() => set('landscape', false)} className={`${seg(!d.landscape || !!base.fixed)} flex-1 disabled:opacity-50`}>Vertikal</button>
-                  <button type="button" role="radio" aria-checked={d.landscape && !base.fixed} disabled={base.fixed} onClick={() => set('landscape', true)} className={`${seg(d.landscape && !base.fixed)} flex-1 disabled:opacity-50`}>Landscape</button>
-                </div>
+                <div className="hidden lg:block">{paperField}</div>
+                <div className="hidden lg:block">{orientButtons}</div>
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 min-h-[44px] sm:col-span-3">
                   <input type="checkbox" className="h-5 w-5" checked={d.bingkai} onChange={(e) => set('bingkai', e.target.checked)} /> Bingkai kotak di tepi kertas
                 </label>
@@ -758,7 +765,9 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
         </div>
 
         {/* Ponsel: pilihan template di paling bawah, dekat tombol unduh */}
-        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow">
+        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">
+          {paperField}
+          {orientButtons}
           <Field label="Template">
             <select className={inputCls} value={tplOf(d.template).id} onChange={(e) => set('template', e.target.value)}>
               {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}

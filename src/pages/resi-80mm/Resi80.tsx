@@ -342,6 +342,19 @@ export default function Resi80() {
   const fileName = `resi-${(r.noResi || 'pengiriman').replace(/[^\w-]+/g, '-').toLowerCase()}`;
   const { exporting, run } = useLetterExport(() => ref.current!.firstElementChild as HTMLElement, fileName, notify,
     (page) => (r.ukuran === 'label' ? { w: MM, h: LABEL_MM_H } : { w: MM, h: Math.ceil((MM * page.offsetHeight) / W) }), 2);
+  // Pilihan ukuran kertas: di form (desktop) dan di paling bawah (ponsel)
+  const ukuranPicker = (
+    <>
+      <h2 className="font-bold">Ukuran kertas</h2>
+      <div className="flex gap-2" role="radiogroup" aria-label="Ukuran kertas">
+        {([['label', 'Label 80×100mm'], ['continuous', 'Continuous 80mm']] as [Ukuran, string][]).map(([v, l]) => (
+          <button key={v} type="button" role="radio" aria-checked={r.ukuran === v} onClick={() => set('ukuran', v)}
+            className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium min-h-[44px] ${r.ukuran === v ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}>{l}</button>
+        ))}
+      </div>
+      <p className="text-xs text-gray-500">Label: tinggi tetap 100mm (stiker thermal). Continuous: tinggi mengikuti isi (kertas gulung).</p>
+    </>
+  );
   const txt = (k: keyof Resi, label: string, rows = 1) => (
     <Field label={label}>
       {rows > 1
@@ -376,14 +389,7 @@ export default function Resi80() {
                 </select>
               </Field>
               </div>
-              <h2 className="font-bold">Ukuran kertas</h2>
-              <div className="flex gap-2" role="radiogroup" aria-label="Ukuran kertas">
-                {([['label', 'Label 80×100mm'], ['continuous', 'Continuous 80mm']] as [Ukuran, string][]).map(([v, l]) => (
-                  <button key={v} type="button" role="radio" aria-checked={r.ukuran === v} onClick={() => set('ukuran', v)}
-                    className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium min-h-[44px] ${r.ukuran === v ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}>{l}</button>
-                ))}
-              </div>
-              <p className="text-xs text-gray-500">Label: tinggi tetap 100mm (stiker thermal). Continuous: tinggi mengikuti isi (kertas gulung).</p>
+              <div className="hidden lg:block space-y-3">{ukuranPicker}</div>
             </section>
 
             <section className="space-y-3">
@@ -459,7 +465,8 @@ export default function Resi80() {
         </div>
 
         {/* Ponsel: pilihan template di paling bawah, dekat tombol unduh */}
-        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow">
+        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">
+          {ukuranPicker}
           <Field label="Template resi">
             <select className={inputCls} value={tplOf(r.template).id} onChange={(e) => set('template', e.target.value)}>
               {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
