@@ -1,5 +1,9 @@
+// Ukuran kertas cetak, mis. { w: '210mm', h: '297mm' }. Tanpa h = tinggi mengikuti gambar.
+export type PaperSize = { w: string; h?: string };
+
 // Cetak satu gambar (hasil html2canvas) lewat iframe tersembunyi: tanpa pop-up, jalan di Chrome, Edge & Safari.
-export function printImage(src: string, title = 'Cetak'): Promise<void> {
+// Dengan `paper`, ukuran kertas & gambar dikunci sehingga hasil cetak sama di semua perangkat.
+export function printImage(src: string, title = 'Cetak', paper?: PaperSize): Promise<void> {
   return new Promise((resolve, reject) => {
     const iframe = document.createElement('iframe');
     iframe.setAttribute('aria-hidden', 'true');
@@ -13,12 +17,15 @@ export function printImage(src: string, title = 'Cetak'): Promise<void> {
       return reject(new Error('Browser tidak mendukung cetak.'));
     }
     const safeTitle = title.replace(/[<>&"]/g, '');
+    const css = paper
+      ? `@page { size: ${paper.w} ${paper.h ?? 'auto'}; margin: 0; }
+         html, body { margin: 0; width: ${paper.w}; }
+         img { display: block; width: ${paper.w}; height: ${paper.h ?? 'auto'}; }`
+      : `@page { margin: 8mm; }
+         html, body { margin: 0; }
+         img { display: block; margin: 0 auto; max-width: 100%; max-height: 100vh; object-fit: contain; }`;
     doc.open();
-    doc.write(`<!doctype html><html><head><title>${safeTitle}</title><style>
-      @page { margin: 8mm; }
-      html, body { margin: 0; }
-      img { display: block; margin: 0 auto; max-width: 100%; max-height: 100vh; object-fit: contain; }
-    </style></head><body><img alt=""></body></html>`);
+    doc.write(`<!doctype html><html><head><title>${safeTitle}</title><style>${css}</style></head><body><img alt=""></body></html>`);
     doc.close();
 
     let removed = false;

@@ -4,6 +4,7 @@ import QrisCard from '../../shared/components/QrisCard';
 import { uploadImage } from '../../shared/lib/cloudinary';
 import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import { printImage } from '../../shared/lib/printImage';
+import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
 import './SlipGaji.css';
 
 // ============================================================
@@ -333,13 +334,6 @@ function SlipLine({ label, value }) {
     </div>
   );
 }
-function SlipSpacer() {
-  return (
-    <div className="flex">
-      <span className="w-40">&nbsp;</span><span className="w-4"></span><span className="flex-1 text-right"></span>
-    </div>
-  );
-}
 function InfoRow({ label, value, highlight = false }) {
   return (
     <div className="flex">
@@ -433,8 +427,8 @@ function DeductionsForm({ form, onChange, calc }) {
 function SlipPreview({ slipRef, form, calc, logo, signature }) {
   return (
     <div className="slip-scroll">
-      <div id="slip-container" ref={slipRef} className="slip-box border border-gray-400 p-4">
-        <div id="payslip-content" className="text-[10px] p-1">
+      <div id="slip-container" ref={slipRef} className="slip-box doc-font border border-gray-400 p-3">
+        <div id="payslip-content" className="text-[10px] px-1">
           {/* Header perusahaan */}
           <div className="flex justify-between items-center border-b-2 border-black pb-1 mb-2">
             <div className="flex-1">
@@ -453,20 +447,20 @@ function SlipPreview({ slipRef, form, calc, logo, signature }) {
           </div>
 
           {/* Judul */}
-          <div className="text-center mb-2">
+          <div className="text-center mb-1.5">
             <p className="text-xs font-bold uppercase border-b border-t border-black py-1 tracking-wider">
               SLIP GAJI BULAN <span>{form.slipMonth.toUpperCase()}</span>
             </p>
           </div>
 
           {/* Info karyawan */}
-          <div className="grid grid-cols-2 gap-4 mb-2">
-            <div className="space-y-0.5">
+          <div className="grid grid-cols-2 gap-4 mb-1.5">
+            <div className="space-y-0.5 leading-tight">
               <InfoRow label="ID" value={form.slipID} highlight />
               <InfoRow label="NAMA" value={form.name} />
               <InfoRow label="JABATAN" value={form.position} />
             </div>
-            <div className="space-y-0.5">
+            <div className="space-y-0.5 leading-tight">
               <InfoRow label="NO. REK" value={form.bankAccountNumber} />
               <InfoRow label="NAMA BANK" value={form.bankName} />
               <InfoRow label="STS PAJAK" value={form.status} />
@@ -477,48 +471,45 @@ function SlipPreview({ slipRef, form, calc, logo, signature }) {
           <div className="flex border border-black mb-1">
             <div className="w-1/2 border-r border-black">
               <div className="text-center font-bold border-b border-black p-0.5 bg-gray-100">PENERIMAAN</div>
-              <div className="p-1 space-y-0.5">
+              <div className="p-1 space-y-0.5 leading-tight">
                 <SlipLine label="Gaji Pokok" value={formatRupiah(calc.basicSalary)} />
                 <SlipLine label="Tunjangan" value={formatRupiah(calc.allowance)} />
                 <SlipLine label="Lembur" value={formatRupiah(calc.overtime)} />
                 <SlipLine label="Transport" value={formatRupiah(calc.transport)} />
                 <SlipLine label="Uang Makan" value={formatRupiah(calc.mealAllowance)} />
                 <SlipLine label="Bonus" value={formatRupiah(calc.bonus)} />
-                <SlipSpacer />
               </div>
             </div>
             <div className="w-1/2">
               <div className="text-center font-bold border-b border-black p-0.5 bg-gray-100">POTONGAN</div>
-              <div className="p-1 space-y-0.5">
+              <div className="p-1 space-y-0.5 leading-tight">
                 <SlipLine label="Pinjaman Karyawan" value={formatRupiah(calc.loanDeduction)} />
                 <SlipLine label="BPJS Kes. + JP" value={formatRupiah(calc.bpjsKesAndJP)} />
                 <SlipLine label="JHT" value={formatRupiah(calc.jht)} />
                 <SlipLine label="PPh 21" value={formatRupiah(calc.pph21)} />
                 <SlipLine label="Lain-lain (Manual)" value={formatRupiah(calc.otherDeduction)} />
-                <SlipSpacer />
-                <SlipSpacer />
               </div>
             </div>
           </div>
 
           {/* Total */}
           <div className="flex font-extrabold text-sm border-t-2 border-black pt-1 mb-0.5">
-            <div className="w-1/2 border-r border-black bg-gray-200 p-0.5 flex justify-between">
+            <div className="w-1/2 border-r border-black bg-gray-200 py-0.5 px-1 flex justify-between">
               <span>TOTAL PENERIMAAN</span>
               <span className="pl-2">{formatRupiah(calc.totalEarnings)}</span>
             </div>
-            <div className="w-1/2 bg-gray-200 p-0.5 flex justify-between">
+            <div className="w-1/2 bg-gray-200 py-0.5 px-1 flex justify-between">
               <span>TOTAL POTONGAN</span>
               <span className="pl-2">{formatRupiah(calc.totalDeductions)}</span>
             </div>
           </div>
 
           {/* THP */}
-          <div className="relative py-2">
+          <div className="relative py-1.5">
             <div className="absolute w-[49%] right-0 top-[2px] h-[1px] bg-black"></div>
             <div className="flex justify-between items-center">
-              <span className="font-extrabold text-lg">TAKE HOME PAY (THP)</span>
-              <span className="font-extrabold text-lg">{formatRupiah(calc.takeHomePay)}</span>
+              <span className="font-extrabold text-lg leading-tight">TAKE HOME PAY (THP)</span>
+              <span className="font-extrabold text-lg leading-tight">{formatRupiah(calc.takeHomePay)}</span>
             </div>
             <div className="absolute w-full h-[2px] bg-black bottom-[2px]"></div>
           </div>
@@ -530,19 +521,15 @@ function SlipPreview({ slipRef, form, calc, logo, signature }) {
               <div className="relative h-10 mb-1 pt-2">
                 <p className="text-[9px] text-gray-700">Tanggal Transfer: <span>{formatTransferDate(form.transferDate)}</span></p>
               </div>
-              <div className="pt-1">
-                <p className="text-[9px]">&nbsp;</p>
-                <p className="text-[9px]">&nbsp;</p>
-              </div>
             </div>
 
             <div className="text-right" style={{ width: '40%' }}>
               <p>Tanda Tangan,</p>
-              <div className="relative h-10 mb-1">
+              <div className="relative h-9 mb-0.5">
                 {signature && <img src={signature} crossOrigin="anonymous" alt="Tanda Tangan Karyawan" className="slip-signature" />}
               </div>
               <div className="pt-1">
-                <p className="border-b border-black font-semibold inline-block pb-1">{form.name}</p>
+                <p className="border-b border-black font-semibold inline-block pb-0.5">{form.name}</p>
                 <p className="text-[9px]">{form.position}</p>
               </div>
             </div>
@@ -620,9 +607,12 @@ export default function SlipGaji() {
   const handleSignatureChange = (e) => handleImage(e, setSignature, SIGNATURE_MAX_WIDTH, SIGNATURE_MAX_HEIGHT, 'Tanda tangan', 'tanda-tangan');
 
   const captureSlip = async () => {
+    await document.fonts.ready; // font dokumen wajib termuat agar tata letak sama di semua perangkat
     const { default: html2canvas } = await import('html2canvas');
     return html2canvas(slipRef.current, {
-      scale: 3,
+      scale: 3, // tetap (bukan devicePixelRatio): hasil selalu 2382×1362 px
+      windowWidth: 1280,
+      onclone: unfitPreview,
       logging: false,
       useCORS: true,
       backgroundColor: '#ffffff',
@@ -638,7 +628,7 @@ export default function SlipGaji() {
     setPrinting(true);
     try {
       const canvas = await captureSlip();
-      await printImage(canvas.toDataURL('image/png'), slipFileName());
+      await printImage(canvas.toDataURL('image/png'), slipFileName(), { w: '210mm', h: '120mm' });
       pushToast('success', 'Jendela cetak dibuka.');
     } catch (error) {
       pushToast('error', `Gagal mencetak slip gaji: ${error && error.message ? error.message : 'proses render gambar gagal.'}`);
@@ -719,7 +709,9 @@ export default function SlipGaji() {
 
           {/* Render — Preview Slip */}
           <div className="slip-card bg-white p-2 md:p-4 rounded-xl shadow-lg lg:col-span-1 min-w-0">
-            <SlipPreview slipRef={slipRef} form={form} calc={calc} logo={logo} signature={signature} />
+            <FitPreview>
+              <SlipPreview slipRef={slipRef} form={form} calc={calc} logo={logo} signature={signature} />
+            </FitPreview>
           </div>
         </div>
       </div>

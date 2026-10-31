@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Font terkunci untuk dokumen output (nota, slip): Arimo = metrik Arial, tersedia di semua perangkat */
+.doc-font, .doc-font * { font-family: Arimo, Arial, sans-serif !important; }
+
+/* html2canvas 1.4.1 mengukur baseline teks pakai gambar 1x1 ini. Preflight Tailwind (img{display:block})
+   membuatnya turun baris sehingga teks di file export bergeser ke bawah & menimpa garis. */
+img[src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"] { display: inline !important; }
+
 :root {
   --text-shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.15);
 }

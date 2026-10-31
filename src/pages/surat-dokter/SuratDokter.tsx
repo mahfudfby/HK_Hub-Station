@@ -4,6 +4,7 @@ import type { User } from 'firebase/auth';
 import RequireLogin from '../../shared/components/RequireLogin';
 import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import { printImage } from '../../shared/lib/printImage';
+import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
 import { Spinner, Toast, type ToastState, type ToastType } from '../../shared/components/Feedback';
 
 type Notify = (type: ToastType, message: string) => void;
@@ -141,6 +142,10 @@ function ImageUpload({ label, value, onChange, notify }: { label: string; value:
 }
 
 // ---------------- Letter preview ----------------
+// Halaman terkunci A4 asli @96 DPI (210×297 mm = 794×1123 px): teks 16px = 12pt di kertas
+const PAGE_W = 794;
+const PAGE_H = 1123;
+
 function Letter({ f }: { f: Form }) {
   const hari = parseInt(f.hari, 10);
   const status = (
@@ -166,9 +171,9 @@ function Letter({ f }: { f: Form }) {
   });
 
   return (
-    <div style={{ width: 560, padding: '40px 44px', background: '#fff', color: '#000', fontFamily: 'Calibri, Carlito, Arial, sans-serif', fontSize: 16, lineHeight: 1.5 }}>
+    <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '56px 72px', background: '#fff', color: '#000', fontFamily: 'Carlito, Calibri, Arial, sans-serif', fontSize: 16, lineHeight: 1.5 }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontFamily: '"Times New Roman", Times, serif', fontWeight: 700, fontSize: 46, lineHeight: 1.1 }}>{f.nama}</div>
+        <div style={{ fontFamily: 'Tinos, "Times New Roman", Times, serif', fontWeight: 700, fontSize: 46, lineHeight: 1.1 }}>{f.nama}</div>
         <div style={{ fontSize: 15 }}>
           {[f.sip && `SIP : ${f.sip}`, f.str && `STR : ${f.str}`, f.alamat1, f.alamat2, f.telp && `Telp. ${f.telp}`]
             .filter(Boolean)
@@ -226,8 +231,12 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
   }, [f, notify]);
 
   const capture = async () => {
+    const page = letterRef.current!.firstElementChild as HTMLElement;
+    await document.fonts.ready; // font dokumen wajib termuat agar tata letak sama di semua perangkat
+    if (page.scrollHeight > PAGE_H + 1) throw new Error('isi surat melebihi 1 halaman A4. Persingkat teksnya.');
     const { default: html2canvas } = await import('html2canvas');
-    return html2canvas(letterRef.current!.firstElementChild as HTMLElement, { scale: 2, backgroundColor: '#fff' });
+    // Ukuran & skala tetap: hasil selalu 1588×2246 px, tidak bergantung layar/zoom perangkat
+    return html2canvas(page, { scale: 2, width: PAGE_W, height: PAGE_H, windowWidth: 1280, backgroundColor: '#fff', onclone: unfitPreview });
   };
   const fileName = `surat-keterangan-${(f.rows[0]?.value || 'pasien').replace(/\s+/g, '-').toLowerCase()}`;
 
@@ -237,7 +246,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
     try {
       const canvas = await capture();
       if (kind === 'Print') {
-        await printImage(canvas.toDataURL('image/png'), fileName);
+        await printImage(canvas.toDataURL('image/png'), fileName, { w: '210mm', h: '297mm' });
         notify('success', 'Jendela cetak dibuka.');
         return;
       }
@@ -245,10 +254,8 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
         saveFile(await canvasToBlob(canvas), `${fileName}.png`);
       } else {
         const { jsPDF } = await import('jspdf');
-        const w = canvas.width / 2;
-        const h = canvas.height / 2;
-        const pdf = new jsPDF({ unit: 'px', format: [w, h], orientation: h > w ? 'portrait' : 'landscape', hotfixes: ['px_scaling'] });
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, w, h); // JPEG: PNG bikin PDF ~8 MB
+        const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 210, 297); // JPEG: PNG bikin PDF ~8 MB
         saveFile(pdf.output('blob'), `${fileName}.pdf`);
       }
       notify('success', `${fileName}.${kind.toLowerCase()} berhasil diunduh.`);
@@ -363,11 +370,11 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
             </details>
           </div>
 
-          <div className="overflow-x-auto">
-            <div ref={letterRef} className="w-max mx-auto shadow-lg">
+          <FitPreview>
+            <div ref={letterRef} className="w-max shadow-lg">
               <Letter f={f} />
             </div>
-          </div>
+          </FitPreview>
         </div>
       </div>
     </div>

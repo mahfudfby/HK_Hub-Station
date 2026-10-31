@@ -3,6 +3,7 @@ import { firebaseConfig } from '../../shared/lib/firebase';
 import QrisCard from '../../shared/components/QrisCard';
 import { Toast } from '../../shared/components/Feedback';
 import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
+import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
 import { ADDRESS_TEMPLATES, PRICE_TEMPLATES, PLATE_REGIONS, GENERIC_LOGOS, buildPlate, randomRegionCode, svgToDataUri } from './SPBU.templates';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -19,7 +20,8 @@ const appId = import.meta.env.VITE_APP_ID || 'spbu-app';
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
 
 const LOGO_MAX_WIDTH = 204;
-const FALLBACK_LOGO_URL = `https://placehold.co/${LOGO_MAX_WIDTH}x70/ff0000/ffffff?text=LOGO+SPBU`; 
+// Logo default bila customer belum upload logo
+const FALLBACK_LOGO_URL = 'https://res.cloudinary.com/dl4pyan8v/image/upload/v1791260702/spbu-logo_algwuj.png';
 const LOCKED_FOOTER_TEXT = " TERIMAKASIH ATAS KUNJUNGAN ANDA \n____________________________\n____________________________\n____________________________\n____________________________\n____________________________\n"; 
 
 // --- KONSTANTA DUKUNGAN BARU ---
@@ -569,13 +571,14 @@ const App = () => {
         return (
             <div id="receipt-preview" 
                  style={{ width: `${spbu.receiptWidth || 275}px` }}
-                 className="text-left p-2 text-black leading-tight font-sans"
+                 className="doc-font text-left p-2 text-black leading-tight font-sans"
             >
                 {/* Logo Section */}
                 <div className="flex justify-center mb-1">
                     <img 
                         src={spbu.logoBase64 || FALLBACK_LOGO_URL} 
                         alt="Logo SPBU" 
+                        crossOrigin="anonymous"
                         className={`max-w-[${LOGO_MAX_WIDTH}px] h-auto max-w-full filter grayscale`} 
                         onError={(e) => { e.target.onerror = null; e.target.src = FALLBACK_LOGO_URL; }} 
                     />
@@ -636,14 +639,15 @@ const App = () => {
         }
         
         await new Promise(r => setTimeout(r, 100)); // Tunggu rendering React selesai
-        
-        const desiredScale = 3; 
-        const devicePixelRatio = window.devicePixelRatio || 1;
-        const finalScale = desiredScale / devicePixelRatio;
+        await document.fonts.ready; // font dokumen wajib termuat agar tata letak sama di semua perangkat
+
+        // Skala tetap (bukan dibagi devicePixelRatio) supaya resolusi nota sama di semua perangkat
         const width = currentSpbu.receiptWidth || 275;
 
         return await window.html2canvas(receiptEl, { 
-            scale: finalScale,
+            scale: 3,
+            windowWidth: 1280,
+            onclone: unfitPreview,
             useCORS: true, 
             backgroundColor: '#ffffff',
             width: width, 
@@ -983,8 +987,8 @@ const App = () => {
                         {/* Bagian Preview & Aksi */}
                         <div className="mb-6 p-4 bg-white rounded-xl shadow-2xl border-t-4 border-indigo-600">
                             <h2 className="text-xl font-bold mb-3 text-indigo-700">3. Preview & Aksi</h2>
-                            <div className="bg-gray-100 border border-dashed p-4 overflow-x-auto flex justify-center">
-                                {ReceiptPreviewComponent()}
+                            <div className="bg-gray-100 border border-dashed p-4">
+                                <FitPreview>{ReceiptPreviewComponent()}</FitPreview>
                             </div>
                             <div className="flex space-x-3 mt-4">
                                 <button onClick={handleExportImage} disabled={!isLibReady || isProcessing || isAiGenerating}
