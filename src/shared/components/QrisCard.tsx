@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
+import { Spinner } from './Feedback';
 
 // ============================================================
 // SECTION: Config — gambar QRIS dari Cloudinary
@@ -11,6 +12,7 @@ const QRIS_IMAGE_URL = 'https://res.cloudinary.com/dl4pyan8v/image/upload/v17912
 // ============================================================
 function QrisModal({ onClose }: { onClose: () => void }) {
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -38,7 +40,21 @@ function QrisModal({ onClose }: { onClose: () => void }) {
         {failed ? (
           <p className="py-8 text-sm text-slate-600">Gambar QRIS gagal dimuat. Periksa koneksi internet lalu coba lagi.</p>
         ) : (
-          <img src={QRIS_IMAGE_URL} alt="Kode QRIS" onError={() => setFailed(true)} className="mx-auto max-h-[70vh] w-full rounded-lg object-contain" />
+          <>
+            {!loaded && (
+              <div role="status" className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-slate-600">
+                <Spinner className="h-10 w-10 text-red-600" />
+                Memuat gambar QRIS…
+              </div>
+            )}
+            <img
+              src={QRIS_IMAGE_URL}
+              alt="Kode QRIS"
+              onLoad={() => setLoaded(true)}
+              onError={() => setFailed(true)}
+              className={`mx-auto max-h-[70vh] w-full rounded-lg object-contain ${loaded ? '' : 'hidden'}`}
+            />
+          </>
         )}
         <p className="mt-3 text-sm text-slate-600">Terima kasih banyak atas traktirannya!</p>
       </div>

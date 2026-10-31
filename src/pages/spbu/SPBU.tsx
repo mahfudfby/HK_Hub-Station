@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { firebaseConfig } from '../../shared/lib/firebase';
 import QrisCard from '../../shared/components/QrisCard';
+import { Toast } from '../../shared/components/Feedback';
 import { ADDRESS_TEMPLATES, PRICE_TEMPLATES, PLATE_REGIONS, GENERIC_LOGOS, buildPlate, randomRegionCode, svgToDataUri } from './SPBU.templates';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -253,7 +254,10 @@ const App = () => {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setSpbuList(list);
-            setIsListLoaded(true);
+            setIsListLoaded(prev => {
+                if (!prev) setFeedback({ message: `Data dimuat: ${list.length} template SPBU.`, type: 'success' });
+                return true;
+            });
             
             // Sinkronisasi SPBU yang dipilih setelah pembaruan list
             setSelectedSpbuId(prevId => {
@@ -334,9 +338,9 @@ const App = () => {
 
     // --- HANDLERS & LOGIC FUNCTIONS ---
     
+    const clearFeedback = useCallback(() => setFeedback(null), []);
     const displayFeedback = useCallback((message, type) => {
-        setFeedback({ message, type });
-        setTimeout(() => setFeedback(null), 5000);
+        setFeedback({ message, type }); // auto-hide diatur oleh <Toast>
     }, []);
 
     const handleTransactionChange = useCallback((e) => {
@@ -397,7 +401,7 @@ const App = () => {
         const file = e.target.files[0];
         if (!file) return;
 
-        displayFeedback('Sedang memproses gambar...', 'info');
+        displayFeedback('Sedang memproses gambar...', 'loading');
         
         resizeImageAndGetBase64(file, LOGO_MAX_WIDTH, (base64Data) => {
             setCurrentSpbu(prev => ({ ...prev, logoBase64: base64Data }));
@@ -449,6 +453,7 @@ const App = () => {
     const handleSaveSpbu = useCallback(async () => {
         if (!db || !currentSpbu.name) return displayFeedback('Nama SPBU wajib diisi.', 'error');
         setIsProcessing(true);
+        displayFeedback('Menyimpan template...', 'loading');
         
         try {
             const spbuToSave = { 
@@ -477,6 +482,7 @@ const App = () => {
     const handleDeleteSpbu = useCallback(async () => {
         if (!db || !currentSpbu.id || !window.confirm(`Yakin ingin menghapus template SPBU "${currentSpbu.name}"?`)) return;
         setIsProcessing(true);
+        displayFeedback('Menghapus template...', 'loading');
         try {
             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'spbu_configs', currentSpbu.id));
             setSelectedSpbuId(''); // Dipilih otomatis ke yang pertama di list
@@ -495,7 +501,7 @@ const App = () => {
         if(isAiGenerating) return;
         
         setIsAiGenerating(true);
-        displayFeedback('Sedang membuat alamat fiktif...', 'info');
+        displayFeedback('Sedang membuat alamat fiktif...', 'loading');
 
         try {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
@@ -646,6 +652,7 @@ const App = () => {
     const handleExportImage = useCallback(async () => {
         if (!isLibReady || isProcessing) return;
         setIsProcessing(true);
+        displayFeedback('Membuat gambar PNG...', 'loading');
         try {
             const canvas = await generateCanvas();
             const link = document.createElement('a');
@@ -664,11 +671,13 @@ const App = () => {
     const handlePrintReceipt = useCallback(async () => {
         if (!isLibReady || isProcessing) return;
         setIsProcessing(true);
+        displayFeedback('Menyiapkan cetakan...', 'loading');
         try {
             const canvas = await generateCanvas();
             const imgData = canvas.toDataURL('image/png');
             
             const win = window.open('', '_blank');
+            if (!win) throw new Error('Pop-up diblokir browser. Izinkan pop-up untuk mencetak.');
             win.document.write(`
                 <html>
                     <head>
@@ -697,6 +706,7 @@ const App = () => {
                 </html>
             `);
             win.document.close();
+            displayFeedback('Jendela cetak dibuka.', 'success');
         } catch (e) { 
             console.error('Print Error:', e);
             displayFeedback(`Gagal cetak: ${e.message}`, 'error'); 
@@ -757,11 +767,7 @@ const App = () => {
                 <QrisCard />
 
                 {/* Feedback Message */}
-                {feedback && (
-                    <div className={`p-3 rounded-lg text-white mb-4 ${feedback.type === 'error' ? 'bg-red-500' : feedback.type === 'success' ? 'bg-green-500' : 'bg-blue-500'}`}>
-                        {feedback.message}
-                    </div>
-                )}
+                <Toast toast={feedback} onClose={clearFeedback} />
                 
                 {/* --- Bagian 1: Pilih SPBU --- */}
                 <div className="mb-6 p-4 bg-white rounded-xl shadow-lg">
@@ -884,7 +890,7 @@ const App = () => {
                                 className="bg-gray-400 text-white p-3 rounded-lg hover:bg-gray-500 transition font-bold">Batal</button>
                             {uiState === 'edit' && (
                                 <button onClick={handleDeleteSpbu} disabled={isProcessing || isAiGenerating}
-                                    className={`bg-red-500 text-white p-3 rounded-lg transition-colors font-bold ${isProcessing ? 'opacity-50' : 'hover:bg-red-600'}`}>Hapus</button>
+                                    className={`bg-red-500 text-white p-3 rounded-lg transition-colors font-bold flex items-center ${isProcessing ? 'opacity-50' : 'hover:bg-red-600'}`}>{isProcessing && <div className="spinner mr-2"></div>}Hapus</button>
                             )}
                         </div>
                     </div>
@@ -985,13 +991,13 @@ const App = () => {
                             <div className="flex space-x-3 mt-4">
                                 <button onClick={handleExportImage} disabled={!isLibReady || isProcessing || isAiGenerating}
                                     className={`flex-1 p-3 rounded-xl font-bold flex justify-center items-center space-x-1 transition ${!isLibReady || isProcessing || isAiGenerating ? 'bg-green-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white`}>
-                                    {isProcessing && isLibReady ? <div className="spinner mr-2"></div> : 
+                                    {isProcessing || !isLibReady ? <div className="spinner mr-2"></div> : 
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>}
                                     <span>Export PNG</span>
                                 </button>
                                 <button onClick={handlePrintReceipt} disabled={!isLibReady || isProcessing || isAiGenerating}
                                     className={`flex-1 p-3 rounded-xl font-bold flex justify-center items-center space-x-1 transition ${!isLibReady || isProcessing || isAiGenerating ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}>
-                                    {isProcessing && isLibReady ? <div className="spinner mr-2"></div> : 
+                                    {isProcessing || !isLibReady ? <div className="spinner mr-2"></div> : 
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m0 0h6m-6 0v2a2 2 0 002 2h2a2 2 0 002-2v-2" /></svg>}
                                     <span>Cetak 58mm</span>
                                 </button>

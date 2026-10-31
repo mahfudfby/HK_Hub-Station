@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertCircle, ArrowUpRight, Check, Copy, X } from 'lucide-react';
+import { AlertCircle, ArrowUpRight, Check, Copy, LogIn, X } from 'lucide-react';
 import { routes } from '../../router/routes';
 import QrisCard from '../../shared/components/QrisCard';
 
@@ -105,6 +105,10 @@ export default function Home() {
             </li>
           ))}
         </ul>
+
+        <Link to="/surat-dokter" className={`${cardClass} mt-8 justify-center text-sm font-semibold text-slate-200`}>
+          <LogIn size={18} aria-hidden="true" /> Login Admin
+        </Link>
 
         <footer className="mt-12 text-center text-xs text-slate-400">HK Hub Station</footer>
       </div>

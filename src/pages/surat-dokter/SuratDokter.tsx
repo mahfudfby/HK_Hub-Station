@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
 import { firebaseConfig } from '../../shared/lib/firebase';
+import { Spinner, Toast, type ToastState, type ToastType } from '../../shared/components/Feedback';
+
+type Notify = (type: ToastType, message: string) => void;
 
 // Surat keterangan dokter: hanya untuk dokter pemilik akun (login email/password dari Firebase Console).
 // Named app agar tidak bentrok dengan initializeApp() default milik halaman SPBU.
@@ -82,7 +85,7 @@ function loadForm(): Form {
 }
 
 // ---------------- Login ----------------
-function Login() {
+function Login({ notify }: { notify: Notify }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -92,17 +95,20 @@ function Login() {
     e.preventDefault();
     setBusy(true);
     setError('');
+    notify('loading', 'Sedang masuk…');
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      notify('success', 'Login berhasil.');
     } catch (err: any) {
       const code = err?.code || '';
-      setError(
+      const text =
         code === 'auth/operation-not-allowed' || code === 'auth/admin-restricted-operation'
           ? 'Login email/password belum diaktifkan di Firebase Console.'
           : code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found'
             ? 'Email atau password salah.'
-            : `Login gagal: ${err?.message || code}`,
-      );
+            : `Login gagal: ${err?.message || code}`;
+      setError(text);
+      notify('error', text);
     } finally {
       setBusy(false);
     }
@@ -125,8 +131,8 @@ function Login() {
             className="mt-1 w-full p-2 border border-gray-300 rounded-lg" />
         </label>
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-        <button disabled={busy} className="w-full py-2 rounded-lg bg-blue-600 text-white font-semibold disabled:opacity-50">
-          {busy ? 'Memproses…' : 'Masuk'}
+        <button disabled={busy} className="w-full py-2 rounded-lg bg-blue-600 text-white font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
+          {busy ? <><Spinner /> Memproses…</> : 'Masuk'}
         </button>
       </form>
     </div>
@@ -144,20 +150,40 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function ImageUpload({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function ImageUpload({ label, value, onChange, notify }: { label: string; value: string; onChange: (v: string) => void; notify: Notify }) {
+  const [busy, setBusy] = useState(false);
   const read = (file?: File) => {
     if (!file) return;
+    if (!file.type.startsWith('image/')) return notify('error', `${label}: file "${file.name}" bukan gambar.`);
+    setBusy(true);
+    notify('loading', `Memuat ${label.toLowerCase()}…`);
     const r = new FileReader();
-    r.onload = () => onChange(String(r.result));
+    r.onload = () => {
+      onChange(String(r.result));
+      notify('success', `${label} berhasil dipasang.`);
+      setBusy(false);
+    };
+    r.onerror = () => {
+      notify('error', `${label} gagal dibaca.`);
+      setBusy(false);
+    };
     r.readAsDataURL(file);
+  };
+  const remove = () => {
+    onChange('');
+    notify('info', `${label} dihapus.`);
   };
   return (
     <Field label={label}>
       <div className="flex items-center gap-3">
-        {value && <img src={value} alt={label} className="h-14 w-14 object-contain border rounded bg-white" />}
-        <input type="file" accept="image/*" onChange={(e) => read(e.target.files?.[0])} className="text-sm flex-1" />
+        {busy ? (
+          <span className="h-14 w-14 flex items-center justify-center border rounded text-blue-600"><Spinner className="h-6 w-6" /></span>
+        ) : (
+          value && <img src={value} alt={label} className="h-14 w-14 object-contain border rounded bg-white" />
+        )}
+        <input type="file" accept="image/*" disabled={busy} onChange={(e) => read(e.target.files?.[0])} className="text-sm flex-1" />
         {value && (
-          <button type="button" onClick={() => onChange('')} className="text-sm text-red-600">Hapus</button>
+          <button type="button" onClick={remove} className="text-sm text-red-600">Hapus</button>
         )}
       </div>
     </Field>
@@ -230,9 +256,9 @@ function Letter({ f }: { f: Form }) {
 }
 
 // ---------------- Main ----------------
-function Editor({ user }: { user: User }) {
+function Editor({ user, notify }: { user: User; notify: Notify }) {
   const [f, setF] = useState<Form>(loadForm);
-  const [msg, setMsg] = useState('');
+  const [exporting, setExporting] = useState<'' | 'PDF' | 'PNG'>('');
   const letterRef = useRef<HTMLDivElement>(null);
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
   const setRow = (i: number, patch: Partial<Row>) => set('rows', f.rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
@@ -241,9 +267,9 @@ function Editor({ user }: { user: User }) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(f));
     } catch {
-      setMsg('Gambar terlalu besar untuk disimpan otomatis; tetap bisa diekspor.');
+      notify('error', 'Gambar terlalu besar untuk disimpan otomatis; tetap bisa diekspor.');
     }
-  }, [f]);
+  }, [f, notify]);
 
   const capture = async () => {
     const { default: html2canvas } = await import('html2canvas');
@@ -251,24 +277,55 @@ function Editor({ user }: { user: User }) {
   };
   const fileName = `surat-keterangan-${(f.rows[0]?.value || 'pasien').replace(/\s+/g, '-').toLowerCase()}`;
 
-  const exportPng = async () => {
-    const canvas = await capture();
-    const a = document.createElement('a');
-    a.href = canvas.toDataURL('image/png');
-    a.download = `${fileName}.png`;
-    a.click();
+  const runExport = async (kind: 'PDF' | 'PNG') => {
+    setExporting(kind);
+    notify('loading', `Membuat file ${kind}…`);
+    try {
+      const canvas = await capture();
+      if (kind === 'PNG') {
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = `${fileName}.png`;
+        a.click();
+      } else {
+        const { jsPDF } = await import('jspdf');
+        const w = canvas.width / 2;
+        const h = canvas.height / 2;
+        const pdf = new jsPDF({ unit: 'px', format: [w, h], orientation: h > w ? 'portrait' : 'landscape', hotfixes: ['px_scaling'] });
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, w, h); // JPEG: PNG bikin PDF ~8 MB
+        pdf.save(`${fileName}.pdf`);
+      }
+      notify('success', `${fileName}.${kind.toLowerCase()} berhasil diunduh.`);
+    } catch (err: any) {
+      notify('error', `Gagal membuat ${kind}: ${err?.message || 'proses render gagal.'}`);
+    } finally {
+      setExporting('');
+    }
   };
-  const exportPdf = async () => {
-    const canvas = await capture();
-    const { jsPDF } = await import('jspdf');
-    const w = canvas.width / 2;
-    const h = canvas.height / 2;
-    const pdf = new jsPDF({ unit: 'px', format: [w, h], orientation: h > w ? 'portrait' : 'landscape', hotfixes: ['px_scaling'] });
-    pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, w, h); // JPEG: PNG bikin PDF ~8 MB
-    pdf.save(`${fileName}.pdf`);
-  };
-  const resetPasien = () =>
+  const resetPasien = () => {
     setF((p) => ({ ...p, rows: p.rows.map((r) => ({ ...r, value: '' })), hari: '', mulai: '', sampai: '', tanggal: '' }));
+    notify('info', 'Data pasien dikosongkan.');
+  };
+  const resetAll = () => {
+    if (!confirm('Kembalikan semua isian ke bawaan?')) return;
+    setF(DEFAULT);
+    notify('info', 'Semua isian dikembalikan ke bawaan.');
+  };
+  const logout = async () => {
+    notify('loading', 'Sedang keluar…');
+    try {
+      await signOut(auth);
+      notify('success', 'Berhasil keluar.');
+    } catch (err: any) {
+      notify('error', `Gagal keluar: ${err?.message}`);
+    }
+  };
+  const exportBtn = (kind: 'PDF' | 'PNG', color: string) => (
+    <button onClick={() => runExport(kind)} disabled={!!exporting}
+      className={`px-5 py-2 rounded-lg text-white font-semibold flex items-center gap-2 disabled:opacity-60 ${color}`}>
+      {exporting === kind && <Spinner />} Unduh {kind}
+    </button>
+  );
 
   return (
     <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
@@ -276,17 +333,16 @@ function Editor({ user }: { user: User }) {
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <Link to="/" className="text-sm font-medium text-blue-700">&larr; Kembali ke HK Hub Station</Link>
           <div className="text-sm text-gray-600">
-            {user.email} · <button onClick={() => signOut(auth)} className="text-red-600 font-medium">Keluar</button>
+            {user.email} · <button onClick={logout} className="text-red-600 font-medium">Keluar</button>
           </div>
         </div>
         <h1 className="text-2xl font-bold text-center mb-4">Surat Keterangan Dokter</h1>
         <div className="flex flex-wrap justify-center gap-3 mb-6">
-          <button onClick={exportPdf} className="px-5 py-2 rounded-lg bg-red-600 text-white font-semibold">Unduh PDF</button>
-          <button onClick={exportPng} className="px-5 py-2 rounded-lg bg-blue-600 text-white font-semibold">Unduh PNG</button>
+          {exportBtn('PDF', 'bg-red-600')}
+          {exportBtn('PNG', 'bg-blue-600')}
           <button onClick={resetPasien} className="px-5 py-2 rounded-lg bg-white border font-semibold">Kosongkan Data Pasien</button>
-          <button onClick={() => confirm('Kembalikan semua isian ke bawaan?') && setF(DEFAULT)} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
+          <button onClick={resetAll} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
         </div>
-        {msg && <p className="text-center text-sm text-amber-700 mb-4">{msg}</p>}
 
         <div className="grid lg:grid-cols-2 gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6">
@@ -333,8 +389,9 @@ function Editor({ user }: { user: User }) {
                 <Field label="Keterangan"><input className={inputCls} value={f.jabatan} onChange={(e) => set('jabatan', e.target.value)} /></Field>
                 <Field label="Nama penanda tangan"><input className={inputCls} value={f.namaTtd} onChange={(e) => set('namaTtd', e.target.value)} /></Field>
               </div>
-              <ImageUpload label="Upload tanda tangan (PNG transparan disarankan)" value={f.ttd} onChange={(v) => set('ttd', v)} />
-              <ImageUpload label="Upload stempel" value={f.stempel} onChange={(v) => set('stempel', v)} />
+              <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} />
+              <p className="-mt-2 text-xs text-gray-500">PNG transparan disarankan.</p>
+              <ImageUpload label="Stempel" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify} />
               <p className="text-xs text-gray-500">Tanda tangan &amp; stempel hanya disimpan di perangkat ini, tidak diunggah ke server.</p>
             </section>
 
@@ -364,7 +421,22 @@ function Editor({ user }: { user: User }) {
 
 export default function SuratDokter() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
+  const [toast, setToast] = useState<ToastState>(null);
+  const notify = useCallback<Notify>((type, message) => setToast({ type, message }), []);
+  const closeToast = useCallback(() => setToast(null), []);
   useEffect(() => onAuthStateChanged(auth, setUser), []);
-  if (user === undefined) return <div className="min-h-screen flex items-center justify-center text-gray-500">Memuat…</div>;
-  return user ? <Editor user={user} /> : <Login />;
+  return (
+    <>
+      {user === undefined ? (
+        <div role="status" className="min-h-screen flex flex-col items-center justify-center gap-3 text-gray-500">
+          <Spinner className="h-10 w-10 text-blue-600" /> Memuat…
+        </div>
+      ) : user ? (
+        <Editor user={user} notify={notify} />
+      ) : (
+        <Login notify={notify} />
+      )}
+      <Toast toast={toast} onClose={closeToast} />
+    </>
+  );
 }
