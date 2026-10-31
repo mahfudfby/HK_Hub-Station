@@ -1269,6 +1269,21 @@ const App = () => {
                         {/* Bagian Preview & Aksi */}
                         <div className="mb-6 p-4 bg-white rounded-xl shadow-2xl border-t-4 border-indigo-600">
                             <h2 className="text-xl font-bold mb-3 text-indigo-700">3. Preview & Aksi</h2>
+                            {/* Desktop: tombol di atas preview; ponsel: di bawah */}
+                            <div className="hidden lg:flex space-x-3 mb-4">
+                                <button onClick={handleExportImage} disabled={!isLibReady || isProcessing || isAiGenerating}
+                                    className={`flex-1 p-3 rounded-xl font-bold flex justify-center items-center space-x-1 transition ${!isLibReady || isProcessing || isAiGenerating ? 'bg-green-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white`}>
+                                    {isProcessing || !isLibReady ? <div className="spinner mr-2"></div> : 
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>}
+                                    <span>Export PNG</span>
+                                </button>
+                                <button onClick={handlePrintReceipt} disabled={!isLibReady || isProcessing || isAiGenerating}
+                                    className={`flex-1 p-3 rounded-xl font-bold flex justify-center items-center space-x-1 transition ${!isLibReady || isProcessing || isAiGenerating ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}>
+                                    {isProcessing || !isLibReady ? <div className="spinner mr-2"></div> : 
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m0 0h6m-6 0v2a2 2 0 002 2h2a2 2 0 002-2v-2" /></svg>}
+                                    <span>Cetak 58mm</span>
+                                </button>
+                            </div>
                             <div className="hidden lg:block"><div className="mb-3"><TextSizeSlider value={skala} onChange={pilihSkala} effective={k} /></div></div>
                             <div className="hidden lg:block">
                             <label htmlFor="gaya-nota"className="block text-sm font-semibold text-gray-700 mb-1">Gaya Nota</label>
@@ -1294,7 +1309,7 @@ const App = () => {
                               </select>
                             </div>
 
-                            <div className="flex space-x-3 mt-4">
+                            <div className="lg:hidden flex space-x-3 mt-4">
                                 <button onClick={handleExportImage} disabled={!isLibReady || isProcessing || isAiGenerating}
                                     className={`flex-1 p-3 rounded-xl font-bold flex justify-center items-center space-x-1 transition ${!isLibReady || isProcessing || isAiGenerating ? 'bg-green-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white`}>
                                     {isProcessing || !isLibReady ? <div className="spinner mr-2"></div> : 

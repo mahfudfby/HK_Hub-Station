@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { routes } from './router/routes';
 import AdminFab from './shared/components/AdminFab';
 import ShareSheet from './shared/components/ShareSheet';
+import ThemeToggle from './shared/components/ThemeToggle';
 
 // ============================================================
 // SECTION: Loading Fallback (dipakai saat pindah halaman / lazy chunk)
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
+      <ThemeToggle />
       <AdminFab />
       <ShareSheet />
     </>

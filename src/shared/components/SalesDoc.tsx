@@ -666,6 +666,13 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
       <div className="max-w-7xl mx-auto">
         <Link to="/" className="inline-block mb-3 text-sm font-medium text-blue-700">&larr; Kembali ke HK Hub Station</Link>
         <h1 className="text-2xl font-bold text-center mb-4">Generator {kind === 'invoice' ? 'Invoice' : 'Faktur Penjualan'}</h1>
+        {/* Desktop: tombol unduh di atas; ponsel: di paling bawah */}
+        <div className="hidden lg:flex flex-wrap justify-center gap-3 mb-6">
+          <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
+          <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
+          <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
+          <button onClick={reset} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
@@ -805,7 +812,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
         </div>
 
         {/* Tombol unduh di paling bawah */}
-        <div className="flex flex-wrap justify-center gap-3 mt-6 mb-20">
+        <div className="lg:hidden flex flex-wrap justify-center gap-3 mt-6 mb-20">
           <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
           <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
           <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />

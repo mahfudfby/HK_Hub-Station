@@ -7,6 +7,13 @@
     <meta name="theme-color" content="#3F51B5" />
     <meta name="description" content="Kumpulan aplikasi web praktis dalam satu tautan." />
     <title>HK Hub Station</title>
+    <!-- Mode gelap/terang dipasang sebelum halaman tampil (tanpa kedipan): pilihan tersimpan, kalau tidak ada ikut sistem -->
+    <script>
+      try {
+        var t = localStorage.getItem('hk:tema');
+        if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark');
+      } catch (e) {}
+    </script>
     <!-- Font dokumen dibundel (bukan font sistem) supaya tata letak output sama di semua perangkat -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

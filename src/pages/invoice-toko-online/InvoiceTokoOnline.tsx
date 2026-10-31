@@ -166,9 +166,9 @@ function NotaView({ n, c, fs, w, h, pad }: { n: Nota; c: ReturnType<typeof calc>
       </div>
 
       {/* Info pesanan */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: fs * 0.6, marginBottom: gap, padding: `0 ${fs * 0.2}px` }}>
-        {[['No. Pesanan', n.noPesanan], ['Tanggal Transaksi', n.tanggal ? new Date(`${n.tanggal}T00:00:00`).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''], ['Metode Pembayaran', n.metode], ['Jasa Kirim', n.kurir]].map(([l, v]) => (
-          <div key={l} style={{ minWidth: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: fs * 1.2, marginBottom: gap, padding: `0 ${fs * 0.4}px` }}>
+        {[['No. Pesanan', n.noPesanan], ['Tanggal Transaksi', n.tanggal ? new Date(`${n.tanggal}T00:00:00`).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''], ['Metode Pembayaran', n.metode], ['Jasa Kirim', n.kurir]].map(([l, v], i, all) => (
+          <div key={l} style={{ minWidth: 0, textAlign: i === all.length - 1 ? 'right' : 'left' }}>
             <div style={{ fontWeight: 700, marginBottom: fs * 0.3 }}>{l}</div>
             <div style={{ overflowWrap: 'anywhere' }}>{v}</div>
           </div>
@@ -182,7 +182,7 @@ function NotaView({ n, c, fs, w, h, pad }: { n: Nota; c: ReturnType<typeof calc>
         <thead>
           <tr style={{ borderTop: border ?? `1px solid ${LINE}`, borderBottom: border ?? `1px solid ${LINE}`, ...(g.table === 'zebra' && { background: `${accent}1f` }) }}>
             {['No.', 'Produk', 'Variasi', 'Harga Produk', 'Kuantitas', 'Subtotal'].map((t, i) => (
-              <th key={t} style={{ ...cell, fontWeight: 400, textAlign: i < 3 ? 'left' : 'center', border }}>{t}</th>
+              <th key={t} style={{ ...cell, fontWeight: 400, textAlign: i < 3 ? 'left' : i === 4 ? 'center' : 'right', border }}>{t}</th>
             ))}
           </tr>
         </thead>
@@ -192,16 +192,16 @@ function NotaView({ n, c, fs, w, h, pad }: { n: Nota; c: ReturnType<typeof calc>
               <td style={{ ...cell, border }}>{i + 1}</td>
               <td style={{ ...cell, border, overflowWrap: 'anywhere' }}>{it.produk}</td>
               <td style={{ ...cell, border, overflowWrap: 'anywhere' }}>{it.variasi}</td>
-              <td style={{ ...cell, border, textAlign: 'center' }}>Rp{rupiah(num(it.harga))}</td>
+              <td style={{ ...cell, border, textAlign: 'right', whiteSpace: 'nowrap' }}>Rp{rupiah(num(it.harga))}</td>
               <td style={{ ...cell, border, textAlign: 'center' }}>{num(it.qty)}</td>
-              <td style={{ ...cell, border, textAlign: 'center' }}>Rp{rupiah(c.lines[i])}</td>
+              <td style={{ ...cell, border, textAlign: 'right', whiteSpace: 'nowrap' }}>Rp{rupiah(c.lines[i])}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: gap * 1.4 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: gap * 1.4, paddingRight: fs * 0.4 }}>
         <div style={{ textAlign: 'left', minWidth: '30%' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: fs * 3, fontWeight: 700, fontSize: fs * 1.1 }}><span>Subtotal</span><span>Rp{rupiah(c.subtotal)}</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: fs * 3, fontWeight: 700, fontSize: fs * 1.1 }}><span>Subtotal</span><span style={{ whiteSpace: 'nowrap' }}>Rp{rupiah(c.subtotal)}</span></div>
           <div style={{ fontWeight: 700, fontSize: fs * 0.85 }}>Total Kuantitas {c.qty} produk</div>
         </div>
       </div>
@@ -209,7 +209,7 @@ function NotaView({ n, c, fs, w, h, pad }: { n: Nota; c: ReturnType<typeof calc>
       {/* Ringkasan biaya */}
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <div style={{ width: '48%' }}>
-          <div style={{ ...boxStyle, padding: `${fs * 1.4}px ${fs * 3.2}px ${fs * 1.4}px ${fs * 3.2}px`, fontSize: fs * 0.9 }}>
+          <div style={{ ...boxStyle, padding: `${fs * 1.4}px ${fs * 1.6}px`, fontSize: fs * 0.9 }}>
             {[
               ['Subtotal Pesanan', c.subtotal, true],
               ['Ongkos Kirim', num(n.ongkir), !!n.ongkir],
@@ -218,12 +218,12 @@ function NotaView({ n, c, fs, w, h, pad }: { n: Nota; c: ReturnType<typeof calc>
               [n.diskonLabel || 'Diskon', -num(n.diskon), !!n.diskon],
             ].filter((r) => r[2]).map(([l, v]) => (
               <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: fs * 1.1 }}>
-                <span>{l}</span><span>{(v as number) < 0 ? '-' : ''}Rp{rupiah(Math.abs(v as number))}</span>
+                <span>{l}</span><span style={{ whiteSpace: 'nowrap' }}>{(v as number) < 0 ? '-' : ''}Rp{rupiah(Math.abs(v as number))}</span>
               </div>
             ))}
             <div style={{ borderTop: `1.5px solid ${LINE}`, paddingTop: fs * 1.1, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontWeight: 700 }}>
               <span style={{ fontSize: fs * 1.1 }}>Total Pembayaran</span>
-              <span style={{ fontSize: fs * 1.45, color: g.total === 'accent' ? accent : undefined }}>Rp{rupiah(c.total)}</span>
+              <span style={{ fontSize: fs * 1.45, whiteSpace: 'nowrap', color: g.total === 'accent' ? accent : undefined }}>Rp{rupiah(c.total)}</span>
             </div>
           </div>
           {n.catatanBiaya && <div style={{ marginTop: fs * 0.4 }}>{n.catatanBiaya}</div>}
@@ -360,6 +360,13 @@ export default function InvoiceTokoOnline() {
       <div className="max-w-7xl mx-auto">
         <Link to="/" className="inline-block mb-3 text-sm font-medium text-blue-700">&larr; Kembali ke HK Hub Station</Link>
         <h1 className="text-2xl font-bold text-center mb-4">Custom Invoices Toko Online</h1>
+        {/* Desktop: tombol unduh di atas; ponsel: di paling bawah */}
+        <div className="hidden lg:flex flex-wrap justify-center gap-3 mb-6">
+          <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
+          <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
+          <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
+          <button onClick={reset} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
@@ -452,7 +459,7 @@ export default function InvoiceTokoOnline() {
         {/* Ponsel: pengaturan tampilan di paling bawah, dekat tombol unduh */}
         <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">{tampilan}</div>
 
-        <div className="flex flex-wrap justify-center gap-3 mt-6 mb-20">
+        <div className="lg:hidden flex flex-wrap justify-center gap-3 mt-6 mb-20">
           <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
           <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
           <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
