@@ -73,6 +73,14 @@ export function terbilang(n: number): string {
 }
 console.assert(terbilang(3) === 'tiga' && terbilang(12) === 'dua belas' && terbilang(21) === 'dua puluh satu', 'terbilang');
 
+// Jumlah hari istirahat dari tanggal mulai s/d sampai (keduanya dihitung). '' jika belum lengkap/terbalik.
+export function hitungHari(mulai: string, sampai: string): string {
+  if (!mulai || !sampai) return '';
+  const n = Math.round((Date.parse(`${sampai}T00:00:00Z`) - Date.parse(`${mulai}T00:00:00Z`)) / 86_400_000) + 1;
+  return n > 0 ? String(n) : '';
+}
+console.assert(hitungHari('2026-10-30', '2026-11-01') === '3' && hitungHari('2026-11-01', '2026-11-01') === '1' && hitungHari('2026-11-02', '2026-11-01') === '', 'hitungHari');
+
 const fmtTanggal = (iso: string) =>
   iso ? new Date(`${iso}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
 
@@ -239,6 +247,12 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
   const stempel = useBgRemoved(f.stempel, bg.stempel, bgError);
   const letterRef = useRef<HTMLDivElement>(null);
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
+  // Ubah tanggal istirahat: jumlah hari ikut dihitung otomatis
+  const setTanggal = (k: 'mulai' | 'sampai', v: string) =>
+    setF((p) => {
+      const n = { ...p, [k]: v };
+      return { ...n, hari: hitungHari(n.mulai, n.sampai) || p.hari };
+    });
   const setRow = (i: number, patch: Partial<Row>) => set('rows', f.rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
   useEffect(() => {
@@ -339,9 +353,10 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
                 </select>
               </Field>
               <div className="grid grid-cols-3 gap-2">
-                <Field label="Istirahat (hari)"><input type="number" min={0} className={inputCls} value={f.hari} onChange={(e) => set('hari', e.target.value)} /></Field>
-                <Field label="Sejak tanggal"><input type="date" className={inputCls} value={f.mulai} onChange={(e) => set('mulai', e.target.value)} /></Field>
-                <Field label="Sampai"><input type="date" className={inputCls} value={f.sampai} onChange={(e) => set('sampai', e.target.value)} /></Field>
+                <Field label="Istirahat (hari)"><input type="number" min={0} readOnly={!!hitungHari(f.mulai, f.sampai)} title="Otomatis dari tanggal"
+                  className={`${inputCls} read-only:bg-gray-100`} value={f.hari} onChange={(e) => set('hari', e.target.value)} /></Field>
+                <Field label="Sejak tanggal"><input type="date" className={inputCls} value={f.mulai} onChange={(e) => setTanggal('mulai', e.target.value)} /></Field>
+                <Field label="Sampai"><input type="date" className={inputCls} value={f.sampai} onChange={(e) => setTanggal('sampai', e.target.value)} /></Field>
               </div>
               <Field label="Kalimat hasil (penanda: {status} {hari} {terbilang} {mulai} {sampai})">
                 <textarea rows={3} className={inputCls} value={f.isi} onChange={(e) => set('isi', e.target.value)} />
