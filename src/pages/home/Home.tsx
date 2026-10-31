@@ -101,7 +101,7 @@ export default function Home() {
   const [q, setQ] = useState('');
   const words = q.toLowerCase().split(/\s+/).filter(Boolean);
   const shown = apps.filter((a) => {
-    const text = `${a.no} ${a.title} ${a.desc ?? ''}`.toLowerCase();
+    const text = String(a.title).toLowerCase(); // hanya judul, nomor tidak ikut dicari
     return words.every((w) => text.includes(w));
   });
 
