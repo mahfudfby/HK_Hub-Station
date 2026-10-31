@@ -36,6 +36,7 @@ type Doc = {
   paper: PaperId;
   landscape: boolean;
   accent: string;
+  bingkai: boolean; // border kotak di tepi kertas
   logo: string;
   penjual: string;
   penjualAlamat: string;
@@ -69,6 +70,7 @@ const makeDefault = (kind: DocKind): Doc => ({
   paper: 'A4',
   landscape: false,
   accent: kind === 'invoice' ? '#1d4ed8' : '#0f766e',
+  bingkai: true,
   logo: '',
   penjual: 'NAMA USAHA ANDA',
   penjualAlamat: 'Alamat usaha, Kota',
@@ -117,6 +119,8 @@ function calc(d: Doc) {
 
 // ---------------- Tampilan dokumen ----------------
 type Ctx = { d: Doc; kind: DocKind; c: ReturnType<typeof calc>; fs: number; pad: number };
+// Jarak bingkai dari tepi kertas
+const frameInset = (pad: number) => Math.round(pad * 0.35);
 
 const FONTS: Record<TemplateId, string> = {
   klasik: 'Tinos, "Times New Roman", serif',
@@ -139,12 +143,13 @@ const Logo = ({ src, h, bg }: { src: string; h: number; bg?: string }) =>
   src ? <img src={src} alt="Logo" style={{ height: h, maxWidth: h * 2, objectFit: 'contain', background: bg, borderRadius: bg ? 6 : 0, padding: bg ? 4 : 0 }} /> : null;
 
 function Header({ d, kind, fs, pad }: Ctx) {
+  const band = d.bingkai ? frameInset(pad) + 2 : 0; // pita Modern berhenti di dalam bingkai
   const title = LABELS[kind].title;
   const logoH = fs * 4.4;
   switch (d.template) {
     case 'modern':
       return (
-        <div style={{ margin: `-${pad}px -${pad}px ${fs * 1.4}px`, padding: `${pad * 0.6}px ${pad}px`, background: d.accent, color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
+        <div style={{ margin: `-${pad - band}px -${pad - band}px ${fs * 1.4}px`, padding: `${pad * 0.6 - band}px ${pad - band}px`, background: d.accent, color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <Logo src={d.logo} h={logoH} bg="#fff" />
             <Seller d={d} fs={fs} color="#fff" />
@@ -320,7 +325,7 @@ function DocView(ctx: Ctx & { w: number; h: number }) {
   const { d, kind, c, fs, pad, w, h } = ctx;
   const box: CSSProperties = {
     width: w, height: h, overflow: 'hidden', boxSizing: 'border-box', padding: pad, background: '#fff', color: '#111',
-    fontFamily: FONTS[d.template], fontSize: fs, lineHeight: 1.4,
+    fontFamily: FONTS[d.template], fontSize: fs, lineHeight: 1.4, position: 'relative',
     ...(d.template === 'tegas' ? { borderLeft: `${Math.round(fs * 0.9)}px solid ${d.accent}` } : {}),
   };
   return (
@@ -356,6 +361,9 @@ function DocView(ctx: Ctx & { w: number; h: number }) {
         {kind === 'faktur' && <SignBox heading="Penerima," name="" title="" fs={fs} />}
         <SignBox heading="Hormat kami," name={d.ttdNama} title={d.ttdJabatan} ttd={d.ttd} stempel={d.stempel} fs={fs} />
       </div>
+      {d.bingkai && (
+        <div style={{ position: 'absolute', inset: frameInset(pad), border: `1.5px solid ${d.template === 'klasik' ? '#000' : d.accent}`, pointerEvents: 'none' }} />
+      )}
     </div>
   );
 }
@@ -449,6 +457,9 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
                   <button type="button" role="radio" aria-checked={!d.landscape} onClick={() => set('landscape', false)} className={`${seg(!d.landscape)} flex-1`}>Vertikal</button>
                   <button type="button" role="radio" aria-checked={d.landscape} onClick={() => set('landscape', true)} className={`${seg(d.landscape)} flex-1`}>Landscape</button>
                 </div>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 min-h-[44px] sm:col-span-3">
+                  <input type="checkbox" className="h-5 w-5" checked={d.bingkai} onChange={(e) => set('bingkai', e.target.checked)} /> Bingkai kotak di tepi kertas
+                </label>
                 <Field label="Warna aksen">
                   <input type="color" className="h-[42px] w-full rounded-lg border border-gray-300 p-1" value={d.accent} onChange={(e) => set('accent', e.target.value)} />
                 </Field>
