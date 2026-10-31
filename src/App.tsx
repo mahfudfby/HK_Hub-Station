@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { routes } from './router/routes';
 import AdminFab from './shared/components/AdminFab';
+import ShareSheet from './shared/components/ShareSheet';
 
 // ============================================================
 // SECTION: Loading Fallback (dipakai saat pindah halaman / lazy chunk)
@@ -31,6 +32,7 @@ export default function App() {
         </Routes>
       </Suspense>
       <AdminFab />
+      <ShareSheet />
     </>
   );
 }

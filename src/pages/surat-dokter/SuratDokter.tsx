@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom';
 import type { User } from 'firebase/auth';
 import RequireLogin from '../../shared/components/RequireLogin';
+import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import { Spinner, Toast, type ToastState, type ToastType } from '../../shared/components/Feedback';
 
 type Notify = (type: ToastType, message: string) => void;
@@ -235,17 +236,14 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
     try {
       const canvas = await capture();
       if (kind === 'PNG') {
-        const a = document.createElement('a');
-        a.href = canvas.toDataURL('image/png');
-        a.download = `${fileName}.png`;
-        a.click();
+        saveFile(await canvasToBlob(canvas), `${fileName}.png`);
       } else {
         const { jsPDF } = await import('jspdf');
         const w = canvas.width / 2;
         const h = canvas.height / 2;
         const pdf = new jsPDF({ unit: 'px', format: [w, h], orientation: h > w ? 'portrait' : 'landscape', hotfixes: ['px_scaling'] });
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, w, h); // JPEG: PNG bikin PDF ~8 MB
-        pdf.save(`${fileName}.pdf`);
+        saveFile(pdf.output('blob'), `${fileName}.pdf`);
       }
       notify('success', `${fileName}.${kind.toLowerCase()} berhasil diunduh.`);
     } catch (err: any) {

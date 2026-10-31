@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import QrisCard from '../../shared/components/QrisCard';
 import { uploadImage } from '../../shared/lib/cloudinary';
+import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import './SlipGaji.css';
 
 // ============================================================
@@ -631,12 +632,7 @@ export default function SlipGaji() {
         height: SLIP_HEIGHT,
       });
       const fileName = `slip_gaji_${form.name.replace(/\s/g, '_')}_${form.slipMonth.toUpperCase().replace(/\s/g, '_')}.png`;
-      const link = document.createElement('a');
-      link.href = canvas.toDataURL('image/png');
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      saveFile(await canvasToBlob(canvas), fileName);
       pushToast('success', `Slip gaji diekspor sebagai ${fileName}.`);
     } catch (error) {
       console.error('Error saat ekspor:', error);

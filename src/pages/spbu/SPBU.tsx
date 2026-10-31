@@ -2,6 +2,7 @@
 import { firebaseConfig } from '../../shared/lib/firebase';
 import QrisCard from '../../shared/components/QrisCard';
 import { Toast } from '../../shared/components/Feedback';
+import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import { ADDRESS_TEMPLATES, PRICE_TEMPLATES, PLATE_REGIONS, GENERIC_LOGOS, buildPlate, randomRegionCode, svgToDataUri } from './SPBU.templates';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -655,10 +656,7 @@ const App = () => {
         displayFeedback('Membuat gambar PNG...', 'loading');
         try {
             const canvas = await generateCanvas();
-            const link = document.createElement('a');
-            link.download = `Nota-${transactionData.noTrans}-${transactionData.nopol}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+            saveFile(await canvasToBlob(canvas), `Nota-${transactionData.noTrans}-${transactionData.nopol}.png`);
             displayFeedback('Gambar berhasil diexport!', 'success');
         } catch (e) { 
             console.error('Export Error:', e);
