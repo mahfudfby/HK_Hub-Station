@@ -27,7 +27,9 @@ type Form = {
   judul: string;
   pembuka: string;
   rows: Row[];
-  isi: string;
+  isi: string; // kalimat hasil bila SAKIT
+  isiSehat: string; // kalimat hasil bila SEHAT
+  diagnosa: string;
   status: 'SAKIT' | 'SEHAT';
   hari: string;
   mulai: string;
@@ -53,13 +55,15 @@ const DEFAULT: Form = {
   judul: 'SURAT KETERANGAN',
   pembuka: 'Bersama dengan surat ini saya terangkan bahwa :',
   rows: ['Nama', 'Jenis Kelamin', 'Umur', 'Pekerjaan', 'Alamat'].map((label) => ({ label, value: '' })),
-  isi: 'Setelah dilakukan pemeriksaan dinyatakan {status}*) dan memerlukan istirahat selama {hari} hari ({terbilang}) sejak tanggal {mulai} s/d {sampai}',
+  isi: 'Setelah dilakukan pemeriksaan, yang bersangkutan didiagnosa menderita penyakit {diagnosa} dan perlu istirahat selama {hari} hari ({terbilang}) sejak tanggal {mulai} s/d {sampai}.',
+  isiSehat: 'Setelah dilakukan pemeriksaan, yang bersangkutan dinyatakan {sehat}.',
+  diagnosa: '',
   status: 'SAKIT',
   hari: '',
   mulai: '',
   sampai: '',
   penutup: 'Demikianlah surat keterangan ini saya perbuat, untuk dipergunakan dengan seperlunya.',
-  catatan: '*) Coret yang tidak perlu',
+  catatan: '',
   kota: 'Bekasi',
   tanggal: '',
   jabatan: 'Dokter yang memeriksa',
@@ -91,6 +95,8 @@ function loadForm(): Form {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (!saved) return DEFAULT;
     delete saved.namaTtd; // dulu ada isian nama penanda tangan; sekarang selalu nama dokter
+    if (saved.isi === 'Setelah dilakukan pemeriksaan dinyatakan {status}*) dan memerlukan istirahat selama {hari} hari ({terbilang}) sejak tanggal {mulai} s/d {sampai}') delete saved.isi; // kalimat bawaan lama → kalimat diagnosa baru
+    if (saved.catatan === '*) Coret yang tidak perlu') delete saved.catatan;
     return { ...DEFAULT, ...saved };
   } catch {
     return DEFAULT;
@@ -114,12 +120,14 @@ function Letter({ f, k }: { f: Form; k: number }) {
   );
   const tokens: Record<string, ReactNode> = {
     status,
+    diagnosa: orDots(f.diagnosa, '12em'),
+    sehat: <strong>SEHAT secara jasmani dan rohani</strong>,
     hari: orDots(f.hari, '3em'),
     terbilang: orDots(hari > 0 ? terbilang(hari) : '', '5em'),
     mulai: orDots(fmtTanggal(f.mulai), '7em'),
     sampai: orDots(fmtTanggal(f.sampai), '7em'),
   };
-  const isi = f.isi.split(/(\{\w+\})/g).map((part, i) => {
+  const isi = (f.status === 'SAKIT' ? f.isi : f.isiSehat).split(/(\{\w+\})/g).map((part, i) => {
     const key = part.match(/^\{(\w+)\}$/)?.[1];
     return key && key in tokens ? <span key={i}>{tokens[key]}</span> : part;
   });
@@ -151,7 +159,7 @@ function Letter({ f, k }: { f: Form; k: number }) {
       </div>
       <p style={{ textAlign: 'justify', marginBottom: 4 * k }}>{isi}</p>
       <p style={{ textAlign: 'justify', marginBottom: 4 * k }}>{f.penutup}</p>
-      <p style={{ fontSize: 11 * k, marginBottom: 14 * k }}>{f.catatan}</p>
+      {f.catatan && <p style={{ fontSize: 11 * k, marginBottom: 14 * k }}>{f.catatan}</p>}
       {/* Tanggal, keterangan, tanda tangan, nama: rata kanan */}
       <div style={{ textAlign: 'right' }}>
         <div>{f.kota && <span style={data}>{f.kota}</span>}, {f.tanggal ? <span style={data}>{fmtTanggal(f.tanggal)}</span> : <Dots w="8em" />}</div>
@@ -200,7 +208,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
   const fileName = `surat-keterangan-${(f.rows[0]?.value || 'pasien').replace(/\s+/g, '-').toLowerCase()}`;
 
   const resetPasien = () => {
-    setF((p) => ({ ...p, rows: p.rows.map((r) => ({ ...r, value: '' })), hari: '', mulai: '', sampai: '', tanggal: '' }));
+    setF((p) => ({ ...p, rows: p.rows.map((r) => ({ ...r, value: '' })), diagnosa: '', hari: '', mulai: '', sampai: '', tanggal: '' }));
     notify('info', 'Data pasien dikosongkan.');
   };
   const resetAll = () => {
@@ -255,15 +263,25 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
                   <option value="SEHAT">SEHAT</option>
                 </select>
               </Field>
+              {f.status === 'SAKIT' && (<>
+              <Field label="Diagnosa (menderita penyakit)">
+                <input className={inputCls} value={f.diagnosa} onChange={(e) => set('diagnosa', e.target.value)} placeholder="mis. Demam berdarah, ISPA, Gastritis" />
+              </Field>
               <div className="grid grid-cols-3 gap-2">
                 <Field label="Istirahat (hari)"><input type="number" min={0} readOnly={!!hitungHari(f.mulai, f.sampai)} title="Otomatis dari tanggal"
                   className={`${inputCls} read-only:bg-gray-100`} value={f.hari} onChange={(e) => set('hari', e.target.value)} /></Field>
                 <Field label="Sejak tanggal"><input type="date" className={inputCls} value={f.mulai} onChange={(e) => setTanggal('mulai', e.target.value)} /></Field>
                 <Field label="Sampai"><input type="date" className={inputCls} value={f.sampai} onChange={(e) => setTanggal('sampai', e.target.value)} /></Field>
               </div>
-              <Field label="Kalimat hasil (penanda: {status} {hari} {terbilang} {mulai} {sampai})">
+              <Field label="Kalimat hasil SAKIT (penanda: {diagnosa} {hari} {terbilang} {mulai} {sampai})">
                 <textarea rows={3} className={inputCls} value={f.isi} onChange={(e) => set('isi', e.target.value)} />
               </Field>
+              </>)}
+              {f.status === 'SEHAT' && (
+                <Field label="Kalimat hasil SEHAT (penanda: {sehat})">
+                  <textarea rows={2} className={inputCls} value={f.isiSehat} onChange={(e) => set('isiSehat', e.target.value)} />
+                </Field>
+              )}
             </section>
 
             <section className="space-y-3">
