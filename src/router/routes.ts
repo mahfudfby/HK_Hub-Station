@@ -32,6 +32,42 @@ export const routes = [
     desc: 'Khusus dokter terdaftar: surat sehat dengan BB, TB, tensi & golongan darah, ekspor PDF & PNG.',
   },
   {
+    path: '/surat-jalan/*',
+    component: lazy(() => import('../pages/surat-jalan')),
+    title: 'Surat Jalan',
+    desc: 'Surat jalan pengiriman barang berkop lengkap: daftar barang, kendaraan, tanda tangan penerima & sopir.',
+  },
+  {
+    path: '/surat-tugas/*',
+    component: lazy(() => import('../pages/surat-tugas')),
+    title: 'Surat Penugasan Perusahaan',
+    desc: 'Surat tugas karyawan dari perusahaan: petugas, keperluan, tujuan & tanggal tugas.',
+  },
+  {
+    path: '/surat-penugasan-kegiatan/*',
+    component: lazy(() => import('../pages/surat-penugasan-kegiatan')),
+    title: 'Surat Penugasan Kegiatan',
+    desc: 'Penugasan panitia/petugas kegiatan: data kegiatan & daftar tugas tiap petugas.',
+  },
+  {
+    path: '/surat-undangan/*',
+    component: lazy(() => import('../pages/surat-undangan')),
+    title: 'Surat Undangan',
+    desc: 'Undangan rapat/acara resmi: nomor, perihal, waktu & tempat, berkop lengkap.',
+  },
+  {
+    path: '/surat-pemberitahuan/*',
+    component: lazy(() => import('../pages/surat-pemberitahuan')),
+    title: 'Surat Pemberitahuan',
+    desc: 'Pemberitahuan resmi kepada karyawan, mitra atau pelanggan, berkop lengkap.',
+  },
+  {
+    path: '/surat-peringatan/*',
+    component: lazy(() => import('../pages/surat-peringatan')),
+    title: 'Surat Peringatan (Teguran Pelanggaran)',
+    desc: 'Surat peringatan SP-1/2/3 untuk pelanggaran karyawan, dengan tanda tangan penerima.',
+  },
+  {
     path: '/invoice/*',
     component: lazy(() => import('../pages/invoice')),
     title: 'Generator Invoice',
