@@ -9,7 +9,7 @@ import {
   DOTTED, Dots, ExportButton, Field, ImageUpload, PAGE_H, PAGE_W, dataStyle as data,
   fmtTanggal, inputCls, orDots, useLetterExport, type Notify,
 } from '../../shared/components/LetterKit';
-import { Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts } from '../../shared/components/LetterStyles';
+import { FitLine, Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts } from '../../shared/components/LetterStyles';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 
 // Surat keterangan dokter: hanya untuk akun admin (login lewat tombol mengambang / halaman /login).
@@ -66,7 +66,7 @@ const DEFAULT: Form = {
   mulai: '',
   sampai: '',
   penutup: 'Demikianlah surat keterangan ini saya perbuat, untuk dipergunakan dengan seperlunya.',
-  penutupSehat: 'Untuk dipergunakan sebagai kelengkapan administrasi : {tujuan}.',
+  penutupSehat: 'Untuk dipergunakan sebagai kelengkapan administrasi : {tujuan}',
   tujuan: '',
   catatan: '',
   kota: 'Bekasi',
@@ -103,6 +103,7 @@ function loadForm(): Form {
     delete saved.namaTtd; // dulu ada isian nama penanda tangan; sekarang selalu nama dokter
     if (saved.isi === 'Setelah dilakukan pemeriksaan dinyatakan {status}*) dan memerlukan istirahat selama {hari} hari ({terbilang}) sejak tanggal {mulai} s/d {sampai}') delete saved.isi; // kalimat bawaan lama → kalimat diagnosa baru
     if (saved.catatan === '*) Coret yang tidak perlu') delete saved.catatan;
+    if (saved.penutupSehat === 'Untuk dipergunakan sebagai kelengkapan administrasi : {tujuan}.') delete saved.penutupSehat;
     return { ...DEFAULT, ...saved };
   } catch {
     return DEFAULT;
@@ -128,7 +129,11 @@ function Letter({ f, k }: { f: Form; k: number }) {
     status,
     diagnosa: orDots(f.diagnosa, '12em'),
     sehat: <strong>SEHAT secara jasmani dan rohani</strong>,
-    tujuan: orDots(f.tujuan, '14em'),
+    tujuan: (
+      <span style={{ display: 'block', textAlign: 'center', marginTop: 4 * k, fontWeight: 700, fontStyle: 'italic', fontSize: '1.45em', lineHeight: 1.3 }}>
+        {f.tujuan || <Dots w="14em" />}
+      </span>
+    ),
     hari: orDots(f.hari, '3em'),
     terbilang: orDots(hari > 0 ? terbilang(hari) : '', '5em'),
     mulai: orDots(fmtTanggal(f.mulai), '7em'),
@@ -141,16 +146,15 @@ function Letter({ f, k }: { f: Form; k: number }) {
   });
   const isi = fill(f.status === 'SAKIT' ? f.isi : f.isiSehat);
   const penutup = fill(f.status === 'SAKIT' ? f.penutup : f.penutupSehat);
-  const izin = [f.sip && `SIP : ${f.sip}`, f.str && `STR : ${f.str}`].filter(Boolean).join('   |   ');
-  // Kop 3 baris: nama, izin praktik, alamat + telepon
-  const alamat = [[f.alamat1, f.alamat2].filter(Boolean).join(', '), f.telp && `Telp. ${f.telp}`].filter(Boolean).join('  •  ');
+  // Kop piramida 3 baris: nama (atas, pendek) → alamat → kelurahan/kota + telepon (paling lebar). SIP/STR di bawah tanda tangan.
+  const kopLines = [f.alamat1, [f.alamat2, f.telp && `Telp. ${f.telp}`].filter(Boolean).join('  •  ')].filter(Boolean);
 
   return (
     <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '48px 56px', background: '#fff', color: '#000', fontFamily: g.font, fontSize: g.size * k, lineHeight: 1.4 }}>
       {/* KOP 3 baris; garis pemisah & judul mengikuti gaya (klasik: garis tebal + tipis, judul bergaris bawah) */}
       <Kop g={g} k={k} logo={f.logo} logoH={58 * k} name={f.nama} nameStyle={{ fontWeight: 700, fontSize: 24 * k, lineHeight: 1.15, letterSpacing: 0.5 }}>
-        <div style={{ fontSize: 11 * k, lineHeight: 1.35, marginTop: 2 * k }}>
-          {[izin, alamat].filter(Boolean).map((line, i) => <div key={i}>{line}</div>)}
+        <div style={{ lineHeight: 1.35, marginTop: 2 * k }}>
+          {kopLines.map((line, i) => <FitLine key={i} style={{ fontSize: (i === kopLines.length - 1 ? 11 : 11.5) * k }}>{line}</FitLine>)}
         </div>
       </Kop>
       <Rule g={g} mb={14 * k} />
@@ -167,8 +171,9 @@ function Letter({ f, k }: { f: Form; k: number }) {
           </div>
         ))}
       </div>
-      <p style={{ textAlign: 'justify', marginBottom: 4 * k }}>{isi}</p>
-      <p style={{ textAlign: f.status === 'SAKIT' ? 'justify' : 'left', marginBottom: 4 * k }}>{penutup}</p>
+      {/* Rata kiri agar tidak ada spasi panjang antar kata */}
+      <p style={{ marginBottom: 4 * k }}>{isi}</p>
+      <p style={{ marginBottom: 4 * k }}>{penutup}</p>
       {f.catatan && <p style={{ fontSize: 11 * k, marginBottom: 14 * k }}>{f.catatan}</p>}
       {/* Tanggal, keterangan, tanda tangan, nama: rata kanan */}
       <div style={{ textAlign: 'right' }}>
@@ -183,6 +188,8 @@ function Letter({ f, k }: { f: Form; k: number }) {
           )}
         </div>
         <SignName g={g} k={k}>{f.nama}</SignName>
+        {f.sip && <div style={{ fontSize: 11 * k }}>SIP : {f.sip}</div>}
+        {f.str && <div style={{ fontSize: 11 * k }}>STR : {f.str}</div>}
       </div>
     </div>
   );

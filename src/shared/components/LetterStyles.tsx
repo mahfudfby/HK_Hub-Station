@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Field, LETTER_FONT, inputCls } from './LetterKit';
 import { cssFamily, useGoogleFonts, type WebFont } from '../lib/fonts';
 
@@ -92,17 +92,45 @@ export function Kop({ g, name, nameStyle, logo, logoH = 58, k = 1, children }: {
   );
 }
 
+// Satu baris kop yang tidak boleh pindah baris: huruf dikecilkan seperlunya (maks. 30%) agar muat lebar
+export function FitLine({ children, style }: { children: ReactNode; style?: CSSProperties }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const text = typeof children === 'string' ? children : '';
+  useLayoutEffect(() => setScale(1), [text, style?.fontSize]);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || scale !== 1) return;
+    if (el.scrollWidth > el.clientWidth + 1) setScale(Math.max(0.7, (el.clientWidth / el.scrollWidth) * 0.99));
+  });
+  const fs = typeof style?.fontSize === 'number' ? style.fontSize * scale : undefined;
+  return <div ref={ref} style={{ ...style, ...(fs ? { fontSize: fs } : {}), whiteSpace: 'nowrap', overflow: 'hidden' }}>{children}</div>;
+}
+
+// Garis ganda: garis tebal + garis tipis bertumpuk dengan celah tipis (blok warna, tajam di html2canvas)
+const DoubleRule = ({ c, m, thinFirst = false }: { c: string; m: string; thinFirst?: boolean }) => {
+  const thick = <div style={{ height: 3, background: c }} />;
+  const thin = <div style={{ height: 1, background: c }} />;
+  return (
+    <div style={{ margin: m }}>
+      {thinFirst ? thin : thick}
+      <div style={{ height: 2 }} />
+      {thinFirst ? thick : thin}
+    </div>
+  );
+};
+
 // Garis pemisah kop; mb = jarak ke isi
 export function Rule({ g, mb }: { g: Gaya; mb: number }) {
   const c = g.accent;
   const m = `6px 0 ${mb}px`;
   switch (g.rule) {
-    case 'thinThick': return <div style={{ borderTop: `1px solid ${c}`, borderBottom: `3px solid ${c}`, height: 2, margin: m }} />;
+    case 'thinThick': return <DoubleRule c={c} m={m} thinFirst />;
     case 'thick': return <div style={{ borderTop: `2px solid ${c}`, margin: m }} />;
     case 'thin2': return <div style={{ borderTop: `1px solid ${c}`, borderBottom: `1px solid ${c}`, height: 2, margin: m }} />;
     case 'short': return <div style={{ width: '30%', borderTop: `2px solid ${c}`, margin: `8px auto ${mb}px` }} />;
     case 'none': return <div style={{ height: mb }} />;
-    default: return <div style={{ borderTop: `3px solid ${c}`, borderBottom: `1px solid ${c}`, height: 2, margin: m }} />;
+    default: return <DoubleRule c={c} m={m} />;
   }
 }
 
