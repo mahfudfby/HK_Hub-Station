@@ -36,7 +36,6 @@ type Form = {
   kota: string;
   tanggal: string;
   jabatan: string;
-  namaTtd: string;
   ttd: string; // data URL, hanya di perangkat ini
   stempel: string;
 };
@@ -61,7 +60,6 @@ const DEFAULT: Form = {
   kota: 'Bekasi',
   tanggal: '',
   jabatan: 'Dokter yang memeriksa',
-  namaTtd: 'dr. Tena. DJ.',
   ttd: '',
   stempel: '',
 };
@@ -79,14 +77,16 @@ const fmtTanggal = (iso: string) =>
   iso ? new Date(`${iso}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
 
 const Dots = ({ w = '7em' }: { w?: string }) => (
-  <span style={{ display: 'inline-block', width: w, borderBottom: '2px dotted #000', verticalAlign: 'baseline' }} />
+  <span style={{ display: 'inline-block', width: w, borderBottom: '1.5px dotted #000', verticalAlign: 'baseline' }} />
 );
-const orDots = (v: string, w?: string) => (v ? <strong>{v}</strong> : <Dots w={w} />);
+const orDots = (v: string, w?: string) => (v ? <span style={{ fontStyle: 'italic' }}>{v}</span> : <Dots w={w} />);
 
 function loadForm(): Form {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-    return saved ? { ...DEFAULT, ...saved } : DEFAULT;
+    if (!saved) return DEFAULT;
+    delete saved.namaTtd; // dulu ada isian nama penanda tangan; sekarang selalu nama dokter
+    return { ...DEFAULT, ...saved };
   } catch {
     return DEFAULT;
   }
@@ -148,9 +148,12 @@ function ImageUpload({ label, value, onChange, notify, bg, onBg, shown, bgBusy }
 }
 
 // ---------------- Letter preview ----------------
-// Halaman terkunci A4 asli @96 DPI (210×297 mm = 794×1123 px): teks 16px = 12pt di kertas
-const PAGE_W = 794;
-const PAGE_H = 1123;
+// Halaman terkunci A5 asli @96 DPI (148×210 mm = 559×794 px): teks 13px ≈ 10pt di kertas
+const PAGE_W = 559;
+const PAGE_H = 794;
+// Helvetica; perangkat tanpa Helvetica memakai Arimo (bawaan aplikasi, ukuran huruf identik) agar tata letak sama
+const FONT = 'Helvetica, Arimo, Arial, sans-serif';
+const data = { fontStyle: 'italic' } as const; // isian data ditulis miring
 
 function Letter({ f }: { f: Form }) {
   const hari = parseInt(f.hari, 10);
@@ -166,55 +169,59 @@ function Letter({ f }: { f: Form }) {
   );
   const tokens: Record<string, ReactNode> = {
     status,
-    hari: orDots(f.hari, '4em'),
-    terbilang: orDots(hari > 0 ? terbilang(hari) : '', '6em'),
-    mulai: orDots(fmtTanggal(f.mulai), '9em'),
-    sampai: orDots(fmtTanggal(f.sampai), '9em'),
+    hari: orDots(f.hari, '3em'),
+    terbilang: orDots(hari > 0 ? terbilang(hari) : '', '5em'),
+    mulai: orDots(fmtTanggal(f.mulai), '7em'),
+    sampai: orDots(fmtTanggal(f.sampai), '7em'),
   };
   const isi = f.isi.split(/(\{\w+\})/g).map((part, i) => {
     const key = part.match(/^\{(\w+)\}$/)?.[1];
     return key && key in tokens ? <span key={i}>{tokens[key]}</span> : part;
   });
+  const izin = [f.sip && `SIP : ${f.sip}`, f.str && `STR : ${f.str}`].filter(Boolean).join('   |   ');
+  // Kop 3 baris: nama, izin praktik, alamat + telepon
+  const alamat = [[f.alamat1, f.alamat2].filter(Boolean).join(', '), f.telp && `Telp. ${f.telp}`].filter(Boolean).join('  •  ');
 
   return (
-    <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '56px 72px', background: '#fff', color: '#000', fontFamily: 'Carlito, Calibri, Arial, sans-serif', fontSize: 16, lineHeight: 1.5 }}>
+    <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '36px 44px', background: '#fff', color: '#000', fontFamily: FONT, fontSize: 13, lineHeight: 1.4 }}>
+      {/* KOP */}
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontFamily: 'Tinos, "Times New Roman", Times, serif', fontWeight: 700, fontSize: 46, lineHeight: 1.1 }}>{f.nama}</div>
-        <div style={{ fontSize: 15 }}>
-          {[f.sip && `SIP : ${f.sip}`, f.str && `STR : ${f.str}`, f.alamat1, f.alamat2, f.telp && `Telp. ${f.telp}`]
-            .filter(Boolean)
-            .map((line, i) => <div key={i}>{line}</div>)}
+        <div style={{ fontWeight: 700, fontSize: 24, lineHeight: 1.15, letterSpacing: 0.5 }}>{f.nama}</div>
+        <div style={{ fontSize: 11, lineHeight: 1.35, marginTop: 2 }}>
+          {[izin, alamat].filter(Boolean).map((line, i) => <div key={i}>{line}</div>)}
         </div>
       </div>
-      <hr style={{ border: 0, borderTop: '1.5px solid #000', margin: '8px 0 24px' }} />
-      <div style={{ textAlign: 'center', fontWeight: 700, textDecoration: 'underline', marginBottom: 16 }}>{f.judul}</div>
-      <p style={{ marginBottom: 16 }}>{f.pembuka}</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 12, rowGap: 14, marginBottom: 20 }}>
+      {/* Garis pemisah kop: tebal di atas, tipis di bawah */}
+      <div style={{ borderTop: '3px solid #000', borderBottom: '1px solid #000', height: 2, margin: '6px 0 14px' }} />
+      <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 14, textDecoration: 'underline', letterSpacing: 1, marginBottom: 10 }}>{f.judul}</div>
+      <p style={{ marginBottom: 4 }}>{f.pembuka}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 8, rowGap: 2, marginBottom: 8 }}>
         {f.rows.map((r, i) => (
           <div key={i} style={{ display: 'contents' }}>
-            <span style={{ minWidth: 120 }}>{r.label}</span>
+            <span style={{ minWidth: 96 }}>{r.label}</span>
             <span style={{ display: 'flex', gap: 6 }}>
               <span>:</span>
-              {r.value ? <strong style={{ whiteSpace: 'pre-line' }}>{r.value}</strong> : <span style={{ flex: 1, borderBottom: '2px dotted #000' }} />}
+              {r.value ? <span style={{ ...data, whiteSpace: 'pre-line' }}>{r.value}</span> : <span style={{ flex: 1, borderBottom: '1.5px dotted #000' }} />}
             </span>
           </div>
         ))}
       </div>
-      <p style={{ textAlign: 'justify', marginBottom: 16 }}>{isi}</p>
-      <p style={{ textAlign: 'justify', marginBottom: 40 }}>{f.penutup}</p>
-      <p style={{ marginBottom: 16 }}>{f.catatan}</p>
-      <div style={{ marginLeft: '45%', textAlign: 'center' }}>
-        <div>{f.kota}, {f.tanggal ? fmtTanggal(f.tanggal) : <Dots w="10em" />}</div>
+      <p style={{ textAlign: 'justify', marginBottom: 4 }}>{isi}</p>
+      <p style={{ textAlign: 'justify', marginBottom: 4 }}>{f.penutup}</p>
+      <p style={{ fontSize: 11, marginBottom: 14 }}>{f.catatan}</p>
+      {/* Tanggal, keterangan, tanda tangan, nama: rata kanan */}
+      <div style={{ textAlign: 'right' }}>
+        <div>{f.kota && <span style={data}>{f.kota}</span>}, {f.tanggal ? <span style={data}>{fmtTanggal(f.tanggal)}</span> : <Dots w="8em" />}</div>
         <div>{f.jabatan}</div>
-        <div style={{ position: 'relative', height: 110 }}>
+        <div style={{ position: 'relative', height: 80 }}>
           {f.stempel && (
-            <img src={f.stempel} alt="Stempel" style={{ position: 'absolute', left: 0, top: 0, height: 110, opacity: 0.9, mixBlendMode: 'multiply' }} />
+            <img src={f.stempel} alt="Stempel" style={{ position: 'absolute', right: 70, top: 0, height: 80, opacity: 0.9, mixBlendMode: 'multiply' }} />
           )}
           {f.ttd && (
-            <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', left: '50%', top: 10, transform: 'translateX(-50%)', height: 90, mixBlendMode: 'multiply' }} />
+            <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', right: 0, top: 6, height: 68, maxWidth: 200, objectFit: 'contain', mixBlendMode: 'multiply' }} />
           )}
         </div>
-        <div>{f.namaTtd}</div>
+        <div style={{ fontWeight: 700, textDecoration: 'underline' }}>{f.nama}</div>
       </div>
     </div>
   );
@@ -243,10 +250,10 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
   const capture = async () => {
     const page = letterRef.current!.firstElementChild as HTMLElement;
     await document.fonts.ready; // font dokumen wajib termuat agar tata letak sama di semua perangkat
-    if (page.scrollHeight > PAGE_H + 1) throw new Error('isi surat melebihi 1 halaman A4. Persingkat teksnya.');
+    if (page.scrollHeight > PAGE_H + 1) throw new Error('isi surat melebihi 1 halaman A5. Persingkat teksnya.');
     const { default: html2canvas } = await import('html2canvas');
-    // Ukuran & skala tetap: hasil selalu 1588×2246 px, tidak bergantung layar/zoom perangkat
-    return html2canvas(page, { scale: 2, width: PAGE_W, height: PAGE_H, windowWidth: 1280, backgroundColor: '#fff', onclone: unfitPreview });
+    // Ukuran & skala tetap: hasil selalu 1677×2382 px (≈288 DPI), tidak bergantung layar/zoom perangkat
+    return html2canvas(page, { scale: 3, width: PAGE_W, height: PAGE_H, windowWidth: 1280, backgroundColor: '#fff', onclone: unfitPreview });
   };
   const fileName = `surat-keterangan-${(f.rows[0]?.value || 'pasien').replace(/\s+/g, '-').toLowerCase()}`;
 
@@ -256,7 +263,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
     try {
       const canvas = await capture();
       if (kind === 'Print') {
-        await printImage(canvas.toDataURL('image/png'), fileName, { w: '210mm', h: '297mm' });
+        await printImage(canvas.toDataURL('image/png'), fileName, { w: '148mm', h: '210mm' });
         notify('success', 'Jendela cetak dibuka.');
         return;
       }
@@ -264,8 +271,8 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
         saveFile(await canvasToBlob(canvas), `${fileName}.png`);
       } else {
         const { jsPDF } = await import('jspdf');
-        const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 210, 297); // JPEG: PNG bikin PDF ~8 MB
+        const pdf = new jsPDF({ unit: 'mm', format: 'a5', orientation: 'portrait' });
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 148, 210); // JPEG: PNG bikin PDF ~8 MB
         saveFile(pdf.output('blob'), `${fileName}.pdf`);
       }
       notify('success', `${fileName}.${kind.toLowerCase()} berhasil diunduh.`);
@@ -301,13 +308,6 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
           </div>
         </div>
         <h1 className="text-2xl font-bold text-center mb-4">Surat Keterangan Dokter</h1>
-        <div className="flex flex-wrap justify-center gap-3 mb-6">
-          {exportBtn('PDF', 'bg-red-600')}
-          {exportBtn('PNG', 'bg-blue-600')}
-          {exportBtn('Print', 'bg-slate-700')}
-          <button onClick={resetPasien} className="px-5 py-2 rounded-lg bg-white border font-semibold">Kosongkan Data Pasien</button>
-          <button onClick={resetAll} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
-        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6">
@@ -352,11 +352,10 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
                 <Field label="Kota"><input className={inputCls} value={f.kota} onChange={(e) => set('kota', e.target.value)} /></Field>
                 <Field label="Tanggal surat"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
                 <Field label="Keterangan"><input className={inputCls} value={f.jabatan} onChange={(e) => set('jabatan', e.target.value)} /></Field>
-                <Field label="Nama penanda tangan"><input className={inputCls} value={f.namaTtd} onChange={(e) => set('namaTtd', e.target.value)} /></Field>
               </div>
               <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify}
                 bg={bg.ttd} onBg={(v) => setBg((p) => ({ ...p, ttd: v }))} shown={ttd.src} bgBusy={ttd.busy} />
-              <p className="-mt-2 text-xs text-gray-500">PNG transparan disarankan.</p>
+              <p className="-mt-2 text-xs text-gray-500">Nama di bawah tanda tangan otomatis memakai nama dokter (kop). PNG transparan disarankan.</p>
               <ImageUpload label="Stempel" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify}
                 bg={bg.stempel} onBg={(v) => setBg((p) => ({ ...p, stempel: v }))} shown={stempel.src} bgBusy={stempel.busy} />
               <p className="text-xs text-gray-500">Tanda tangan &amp; stempel hanya disimpan di perangkat ini, tidak diunggah ke server.</p>
@@ -387,6 +386,15 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
               <Letter f={{ ...f, ttd: ttd.src, stempel: stempel.src }} />
             </div>
           </FitPreview>
+        </div>
+
+        {/* Tombol unduh di paling bawah */}
+        <div className="flex flex-wrap justify-center gap-3 mt-6 mb-20">
+          {exportBtn('PDF', 'bg-red-600')}
+          {exportBtn('PNG', 'bg-blue-600')}
+          {exportBtn('Print', 'bg-slate-700')}
+          <button onClick={resetPasien} className="px-5 py-2 rounded-lg bg-white border font-semibold">Kosongkan Data Pasien</button>
+          <button onClick={resetAll} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
         </div>
       </div>
     </div>

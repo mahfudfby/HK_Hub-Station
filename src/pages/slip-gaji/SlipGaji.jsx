@@ -691,31 +691,6 @@ export default function SlipGaji() {
 
         <div className="max-w-md mx-auto"><QrisCard /></div>
 
-        {/* Render — Tombol Export */}
-        <div className="mb-8 p-4 bg-white shadow-lg rounded-lg sticky top-0 z-10">
-          <div className="flex flex-wrap justify-center gap-3">
-            <button
-              type="button" onClick={handleExport} disabled={exporting || printing || bgBusy}
-              className="slip-btn bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md inline-flex items-center gap-2"
-            >
-              {exporting ? <span className="slip-spinner" aria-hidden="true" /> : <IconDownload />}
-              {exporting ? 'Memproses... Harap tunggu.' : 'Export Slip Gaji sebagai PNG'}
-            </button>
-            <button
-              type="button" onClick={handlePrint} disabled={exporting || printing || bgBusy}
-              className="slip-btn bg-slate-700 hover:bg-slate-800 text-white font-semibold py-3 px-6 rounded-lg shadow-md inline-flex items-center gap-2"
-            >
-              {printing && <span className="slip-spinner" aria-hidden="true" />}
-              {printing ? 'Menyiapkan cetakan...' : 'Print'}
-            </button>
-          </div>
-          {(exporting || printing || uploading) && (
-            <div className="slip-progress-track" role="progressbar" aria-label={exporting ? 'Memproses ekspor' : 'Memproses gambar'}>
-              <div className="slip-progress-fill" />
-            </div>
-          )}
-        </div>
-
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Render — Formulir */}
           <div className="slip-card bg-white p-6 md:p-8 shadow-lg rounded-xl h-fit">
@@ -740,6 +715,31 @@ export default function SlipGaji() {
               <SlipPreview slipRef={slipRef} form={form} calc={calc} logo={logoShown.src} signature={signatureShown.src} managerSignature={managerShown.src} />
             </FitPreview>
           </div>
+        </div>
+
+        {/* Render — Tombol Export (paling bawah) */}
+        <div className="mt-8 mb-20 p-4 bg-white shadow-lg rounded-lg">
+          <div className="flex flex-wrap justify-center gap-3">
+            <button
+              type="button" onClick={handleExport} disabled={exporting || printing || bgBusy}
+              className="slip-btn bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md inline-flex items-center gap-2"
+            >
+              {exporting ? <span className="slip-spinner" aria-hidden="true" /> : <IconDownload />}
+              {exporting ? 'Memproses... Harap tunggu.' : 'Export Slip Gaji sebagai PNG'}
+            </button>
+            <button
+              type="button" onClick={handlePrint} disabled={exporting || printing || bgBusy}
+              className="slip-btn bg-slate-700 hover:bg-slate-800 text-white font-semibold py-3 px-6 rounded-lg shadow-md inline-flex items-center gap-2"
+            >
+              {printing && <span className="slip-spinner" aria-hidden="true" />}
+              {printing ? 'Menyiapkan cetakan...' : 'Print'}
+            </button>
+          </div>
+          {(exporting || printing || uploading) && (
+            <div className="slip-progress-track" role="progressbar" aria-label={exporting ? 'Memproses ekspor' : 'Memproses gambar'}>
+              <div className="slip-progress-fill" />
+            </div>
+          )}
         </div>
       </div>
     </div>
