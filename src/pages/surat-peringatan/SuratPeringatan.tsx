@@ -7,7 +7,7 @@ import PositionPad, { fxOf, getOffset, type Offsets } from '../../shared/compone
 import UserData from '../../shared/components/UserData';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
+import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, signSpace, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { FitLine, Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts } from '../../shared/components/LetterStyles';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 
@@ -137,18 +137,18 @@ function Letter({ f, k, W, H, pf }: { f: Form; k: number; W: number; H: number; 
         {f.penandaLain.map((p, i) => (
           <div key={i} style={{ textAlign: 'center', minWidth: 120 * k }}>
             <div>{p.heading}</div>
-            <div style={{ height: 72 * k }} />
+            <div style={{ height: signSpace(72 * k) }} />
             <div style={{ fontWeight: 700, borderBottom: '1px solid #000', display: 'inline-block', minWidth: 120 * k, paddingBottom: 1 }}>{p.nama || ' '}</div>
             {p.jabatan && <div style={{ fontSize: 11 * k }}>{p.jabatan}</div>}
           </div>
         ))}
-        <div style={{ textAlign: 'center', minWidth: 170 * k }}>
+        <div style={{ textAlign: 'right', minWidth: 170 * k, marginLeft: 'auto' }}>
           {tempatTanggal && <div>{tempatTanggal}</div>}
           <div>{f.ttdHeading}</div>
           {f.ttdJabatan && <div>{f.ttdJabatan}</div>}
-          <div style={{ position: 'relative', height: 80 * k }}>
+          <div style={{ position: 'relative', height: signSpace(80 * k) }}>
             {f.stempel && <img src={f.stempel} alt="Stempel" style={{ position: 'absolute', left: oS.x, top: oS.y, height: 80 * k * fxS.z, opacity: fxS.a, mixBlendMode: 'multiply' }} />}
-            {f.ttd && <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', left: '50%', top: 6 * k + oT.y, marginLeft: oT.x, transform: 'translateX(-50%)', height: 66 * k * fxT.z, maxWidth: 200 * k * fxT.z, opacity: fxT.a, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
+            {f.ttd && <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', right: -oT.x, top: (signSpace(80 * k) - 66 * k * fxT.z) / 2 + oT.y, height: 66 * k * fxT.z, maxWidth: 200 * k * fxT.z, opacity: fxT.a, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
           </div>
           <SignName g={g} k={k}>{f.ttdNama}</SignName>
           {f.ttdId && <div style={{ fontSize: 11 * k }}>{f.ttdId}</div>}

@@ -391,10 +391,10 @@ function SlipLine({ label, value }) {
 }
 function SignBlock({ heading, image, alt, name, title, offset }) {
   return (
-    <div className="text-center" style={{ width: 150 }}>
+    <div className="text-right" style={{ width: 150 }}>
       <p>{heading}</p>
       <div className="relative h-14 mb-0.5">
-        {image && <img src={image} crossOrigin="anonymous" alt={alt} className="slip-signature" style={offset ? { marginLeft: offset.x, marginBottom: -offset.y } : undefined} />}
+        {image && <img src={image} crossOrigin="anonymous" alt={alt} className="slip-signature" style={{ left: 'auto', right: -(offset?.x ?? 0), transform: 'none', marginBottom: -(offset?.y ?? 0) }} />}
       </div>
       <div className="pt-1">
         <p className="border-b border-black font-semibold inline-block pb-0.5">{name}</p>

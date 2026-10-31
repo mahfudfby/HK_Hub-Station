@@ -7,7 +7,7 @@ import FitPreview from './FitPreview';
 import { TextSizeSlider, useFitScale } from './TextScale';
 import PositionPad, { fxOf, getOffset, type Offset, type Offsets } from './PositionPad';
 import { Toast, type ToastState } from './Feedback';
-import { ExportButton, Field, ImageUpload, inputCls, fmtTanggal, mmToPx, useLetterExport, type Notify, type Paper } from './LetterKit';
+import { ExportButton, Field, ImageUpload, inputCls, fmtTanggal, mmToPx, signSpace, useLetterExport, type Notify, type Paper } from './LetterKit';
 import { useBgRemoved } from '../lib/removeBg';
 import { num, rupiah, terbilangRupiah } from '../lib/money';
 import { cssFamily, loadGoogleFont, useGoogleFonts, type WebFont } from '../lib/fonts';
@@ -495,16 +495,17 @@ function Totals({ d, c, fs, short }: Ctx) {
   );
 }
 
-function SignBox({ heading, name, title, ttd, stempel, fs, short = false, oTtd, oStempel }: { heading: string; name: string; title: string; ttd?: string; stempel?: string; fs: number; short?: boolean; oTtd?: Offset; oStempel?: Offset }) {
-  const h = fs * (short ? 4 : 5.5);
+function SignBox({ heading, name, title, ttd, stempel, fs, short = false, right = false, oTtd, oStempel }: { heading: string; name: string; title: string; ttd?: string; stempel?: string; fs: number; short?: boolean; right?: boolean; oTtd?: Offset; oStempel?: Offset }) {
+  // Kertas pendek tidak cukup untuk ruang meterai, tetap ringkas
+  const h = short ? fs * 4 : signSpace(fs * 5.5);
   const fxStempel = fxOf(oStempel, 'stempel');
   const fxTtd = fxOf(oTtd, 'ttd');
   return (
-    <div style={{ textAlign: 'center', minWidth: fs * 13 }}>
+    <div style={{ textAlign: right ? 'right' : 'center', minWidth: fs * 13 }}>
       <div>{heading}</div>
       <div style={{ position: 'relative', height: h }}>
         {stempel && <img src={stempel} alt="Stempel" style={{ position: 'absolute', left: oStempel?.x ?? 0, top: oStempel?.y ?? 0, height: h * fxStempel.z, opacity: fxStempel.a, mixBlendMode: 'multiply' }} />}
-        {ttd && <img src={ttd} alt="Tanda tangan" style={{ position: 'absolute', left: '50%', top: fs * 0.4 + (oTtd?.y ?? 0), marginLeft: oTtd?.x ?? 0, transform: 'translateX(-50%)', height: h * 0.85 * fxTtd.z, maxWidth: fs * 14 * fxTtd.z, opacity: fxTtd.a, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
+        {ttd && <img src={ttd} alt="Tanda tangan" style={{ position: 'absolute', ...(right ? { right: -(oTtd?.x ?? 0) } : { left: '50%', marginLeft: oTtd?.x ?? 0, transform: 'translateX(-50%)' }), top: (h - h * 0.85 * fxTtd.z) / 2 + (oTtd?.y ?? 0), height: h * 0.85 * fxTtd.z, maxWidth: fs * 14 * fxTtd.z, opacity: fxTtd.a, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
       </div>
       <div style={{ fontWeight: 700, borderBottom: '1px solid #000', display: 'inline-block', minWidth: fs * 11 }}>{name || ' '}</div>
       {title && <div style={{ fontSize: fs * 0.9 }}>{title}</div>}
@@ -554,7 +555,7 @@ function DocView(ctx: Ctx & { w: number; h: number }) {
       {(d.kota || d.tanggal) && <div style={{ textAlign: 'right', marginBottom: 2 }}>{[d.kota, fmtTanggal(d.tanggal)].filter(Boolean).join(', ')}</div>}
       <div style={{ display: 'flex', justifyContent: kind === 'faktur' ? 'space-between' : 'flex-end' }}>
         {kind === 'faktur' && <SignBox heading="Penerima," name="" title="" fs={fs} short={ctx.short} />}
-        <SignBox heading="Hormat kami," name={d.ttdNama} title={d.ttdJabatan} ttd={d.ttd} stempel={d.stempel} fs={fs} short={ctx.short}
+        <SignBox right heading="Hormat kami," name={d.ttdNama} title={d.ttdJabatan} ttd={d.ttd} stempel={d.stempel} fs={fs} short={ctx.short}
           oTtd={getOffset(d.posisi, 'ttd')} oStempel={getOffset(d.posisi, 'stempel')} />
       </div>
       {d.bingkai && (
