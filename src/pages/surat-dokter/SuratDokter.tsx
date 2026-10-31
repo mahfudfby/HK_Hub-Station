@@ -185,8 +185,8 @@ function Letter({ f, k }: { f: Form; k: number }) {
       <p style={{ marginBottom: 4 * k }}>{isi}</p>
       <p style={{ marginBottom: 4 * k }}>{penutup}</p>
       {f.catatan && <p style={{ fontSize: 11 * k, marginBottom: 14 * k }}>{f.catatan}</p>}
-      {/* Tanggal, keterangan, tanda tangan, nama: rata kanan */}
-      <div style={{ textAlign: 'right' }}>
+      {/* Tanggal, keterangan, tanda tangan, nama: blok mentok margin kanan, berjarak lega dari isi surat */}
+      <div style={{ textAlign: 'right', marginTop: 24 * k, marginLeft: 'auto', width: 'fit-content', maxWidth: '100%' }}>
         <div>{f.kota && <span style={data}>{f.kota}</span>}, {f.tanggal ? <span style={data}>{fmtTanggal(f.tanggal)}</span> : <Dots w="8em" />}</div>
         <div>{f.jabatan}</div>
         <div style={{ position: 'relative', height: 80 * k }}>
