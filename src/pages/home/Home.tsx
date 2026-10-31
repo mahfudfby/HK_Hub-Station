@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { AlertCircle, ArrowUpRight, Check, Copy, X } from 'lucide-react';
+import { AlertCircle, ArrowUpRight, Check, Copy, Search, X } from 'lucide-react';
 import { routes } from '../../router/routes';
 import QrisCard from '../../shared/components/QrisCard';
 
@@ -97,7 +97,13 @@ export default function Home() {
   }, [location, navigate]);
   const apps = routes
     .filter((r) => r.path !== '/' && 'title' in r)
-    .map((r) => ({ ...r, path: r.path.replace(/\/\*$/, '') })); // '/spbu/*' -> '/spbu'
+    .map((r, i) => ({ ...r, path: r.path.replace(/\/\*$/, ''), no: String(i + 1).padStart(2, '0') })); // '/spbu/*' -> '/spbu'
+  const [q, setQ] = useState('');
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const shown = apps.filter((a) => {
+    const text = `${a.no} ${a.title} ${a.desc ?? ''}`.toLowerCase();
+    return words.every((w) => text.includes(w));
+  });
 
   useEffect(() => {
     if (!toast) return;
@@ -132,10 +138,18 @@ export default function Home() {
 
         <QrisCard />
 
+        <div className="relative mb-4">
+          <Search size={18} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
+          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari menu, mis. surat, nota, invoice…"
+            aria-label="Cari menu" className="w-full min-h-[44px] rounded-2xl border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm shadow-sm" />
+        </div>
+        {!shown.length && <p className="mb-3 text-center text-sm text-gray-700" role="status">Menu "{q}" tidak ditemukan.</p>}
+
         <ul className="space-y-3">
-          {apps.map((app) => (
+          {shown.map((app) => (
             <li key={app.path} className="flex items-stretch gap-2">
               <Link to={app.path} className={`${cardClass} flex-1`} aria-label={`Buka ${app.title}`}>
+                <span className="shrink-0 self-start font-bold tabular-nums text-primary-700">{app.no}.</span>
                 <div className="flex-1 min-w-0">
                   <span className="block font-semibold">{app.title}</span>
                   <span className="mt-0.5 block whitespace-pre-line text-sm text-gray-700">{app.desc}</span>
