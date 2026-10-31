@@ -34,13 +34,16 @@ type Form = {
   hari: string;
   mulai: string;
   sampai: string;
-  penutup: string;
+  penutup: string; // penutup bila SAKIT
+  penutupSehat: string; // penutup bila SEHAT ({tujuan} = tujuan penggunaan)
+  tujuan: string;
   catatan: string;
   kota: string;
   tanggal: string;
   jabatan: string;
   ttd: string; // data URL, hanya di perangkat ini
   stempel: string;
+  logo: string; // opsional, kiri atas kop; data URL, hanya di perangkat ini
   gaya: string; // id gaya surat (LetterStyles)
   skala: number; // ukuran teks surat (%)
 };
@@ -63,12 +66,15 @@ const DEFAULT: Form = {
   mulai: '',
   sampai: '',
   penutup: 'Demikianlah surat keterangan ini saya perbuat, untuk dipergunakan dengan seperlunya.',
+  penutupSehat: 'Untuk dipergunakan sebagai kelengkapan administrasi : {tujuan}.',
+  tujuan: '',
   catatan: '',
   kota: 'Bekasi',
   tanggal: '',
   jabatan: 'Dokter yang memeriksa',
   ttd: '',
   stempel: '',
+  logo: '',
   gaya: 'klasik',
   skala: 100,
 };
@@ -122,15 +128,19 @@ function Letter({ f, k }: { f: Form; k: number }) {
     status,
     diagnosa: orDots(f.diagnosa, '12em'),
     sehat: <strong>SEHAT secara jasmani dan rohani</strong>,
+    tujuan: orDots(f.tujuan, '14em'),
     hari: orDots(f.hari, '3em'),
     terbilang: orDots(hari > 0 ? terbilang(hari) : '', '5em'),
     mulai: orDots(fmtTanggal(f.mulai), '7em'),
     sampai: orDots(fmtTanggal(f.sampai), '7em'),
   };
-  const isi = (f.status === 'SAKIT' ? f.isi : f.isiSehat).split(/(\{\w+\})/g).map((part, i) => {
+  // Ganti penanda {…} dengan data (miring + titik-titik)
+  const fill = (text: string) => text.split(/(\{\w+\})/g).map((part, i) => {
     const key = part.match(/^\{(\w+)\}$/)?.[1];
     return key && key in tokens ? <span key={i}>{tokens[key]}</span> : part;
   });
+  const isi = fill(f.status === 'SAKIT' ? f.isi : f.isiSehat);
+  const penutup = fill(f.status === 'SAKIT' ? f.penutup : f.penutupSehat);
   const izin = [f.sip && `SIP : ${f.sip}`, f.str && `STR : ${f.str}`].filter(Boolean).join('   |   ');
   // Kop 3 baris: nama, izin praktik, alamat + telepon
   const alamat = [[f.alamat1, f.alamat2].filter(Boolean).join(', '), f.telp && `Telp. ${f.telp}`].filter(Boolean).join('  •  ');
@@ -138,7 +148,7 @@ function Letter({ f, k }: { f: Form; k: number }) {
   return (
     <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '48px 56px', background: '#fff', color: '#000', fontFamily: g.font, fontSize: g.size * k, lineHeight: 1.4 }}>
       {/* KOP 3 baris; garis pemisah & judul mengikuti gaya (klasik: garis tebal + tipis, judul bergaris bawah) */}
-      <Kop g={g} k={k} name={f.nama} nameStyle={{ fontWeight: 700, fontSize: 24 * k, lineHeight: 1.15, letterSpacing: 0.5 }}>
+      <Kop g={g} k={k} logo={f.logo} logoH={58 * k} name={f.nama} nameStyle={{ fontWeight: 700, fontSize: 24 * k, lineHeight: 1.15, letterSpacing: 0.5 }}>
         <div style={{ fontSize: 11 * k, lineHeight: 1.35, marginTop: 2 * k }}>
           {[izin, alamat].filter(Boolean).map((line, i) => <div key={i}>{line}</div>)}
         </div>
@@ -158,7 +168,7 @@ function Letter({ f, k }: { f: Form; k: number }) {
         ))}
       </div>
       <p style={{ textAlign: 'justify', marginBottom: 4 * k }}>{isi}</p>
-      <p style={{ textAlign: 'justify', marginBottom: 4 * k }}>{f.penutup}</p>
+      <p style={{ textAlign: f.status === 'SAKIT' ? 'justify' : 'left', marginBottom: 4 * k }}>{penutup}</p>
       {f.catatan && <p style={{ fontSize: 11 * k, marginBottom: 14 * k }}>{f.catatan}</p>}
       {/* Tanggal, keterangan, tanda tangan, nama: rata kanan */}
       <div style={{ textAlign: 'right' }}>
@@ -181,13 +191,14 @@ function Letter({ f, k }: { f: Form; k: number }) {
 // ---------------- Main ----------------
 function Editor({ user, notify }: { user: User; notify: Notify }) {
   const [f, setF] = useState<Form>(loadForm);
-  const [bg, setBg] = useState({ ttd: false, stempel: false });
+  const [bg, setBg] = useState({ logo: false, ttd: false, stempel: false });
   const bgError = (m: string) => notify('error', m);
   const ttd = useBgRemoved(f.ttd, bg.ttd, bgError);
   const stempel = useBgRemoved(f.stempel, bg.stempel, bgError);
+  const logo = useBgRemoved(f.logo, bg.logo, bgError);
   const letterRef = useRef<HTMLDivElement>(null);
   // Ukuran teks: diperkecil otomatis bila isi tidak muat di kertas A5
-  const k = useFitScale(f.skala / 100, () => letterRef.current?.firstElementChild as HTMLElement, true, [f, ttd.src, stempel.src]);
+  const k = useFitScale(f.skala / 100, () => letterRef.current?.firstElementChild as HTMLElement, true, [f, logo.src, ttd.src, stempel.src]);
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
   // Ubah tanggal istirahat: jumlah hari ikut dihitung otomatis
   const setTanggal = (k: 'mulai' | 'sampai', v: string) =>
@@ -208,7 +219,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
   const fileName = `surat-keterangan-${(f.rows[0]?.value || 'pasien').replace(/\s+/g, '-').toLowerCase()}`;
 
   const resetPasien = () => {
-    setF((p) => ({ ...p, rows: p.rows.map((r) => ({ ...r, value: '' })), diagnosa: '', hari: '', mulai: '', sampai: '', tanggal: '' }));
+    setF((p) => ({ ...p, rows: p.rows.map((r) => ({ ...r, value: '' })), diagnosa: '', tujuan: '', hari: '', mulai: '', sampai: '', tanggal: '' }));
     notify('info', 'Data pasien dikosongkan.');
   };
   const resetAll = () => {
@@ -218,7 +229,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
   };
   const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify);
   const exportBtn = (kind: 'PDF' | 'PNG' | 'Print', color: string) => (
-    <ExportButton kind={kind} color={color} exporting={exporting} disabled={ttd.busy || stempel.busy} onRun={run} />
+    <ExportButton kind={kind} color={color} exporting={exporting} disabled={logo.busy || ttd.busy || stempel.busy} onRun={run} />
   );
 
   return (
@@ -277,11 +288,17 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
                 <textarea rows={3} className={inputCls} value={f.isi} onChange={(e) => set('isi', e.target.value)} />
               </Field>
               </>)}
-              {f.status === 'SEHAT' && (
+              {f.status === 'SEHAT' && (<>
+                <Field label="Tujuan penggunaan surat">
+                  <input className={inputCls} value={f.tujuan} onChange={(e) => set('tujuan', e.target.value)} placeholder="mis. Melamar pekerjaan, Pendaftaran sekolah" />
+                </Field>
                 <Field label="Kalimat hasil SEHAT (penanda: {sehat})">
                   <textarea rows={2} className={inputCls} value={f.isiSehat} onChange={(e) => set('isiSehat', e.target.value)} />
                 </Field>
-              )}
+                <Field label="Kalimat penutup SEHAT (penanda: {tujuan})">
+                  <textarea rows={2} className={inputCls} value={f.penutupSehat} onChange={(e) => set('penutupSehat', e.target.value)} />
+                </Field>
+              </>)}
             </section>
 
             <section className="space-y-3">
@@ -291,12 +308,15 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
                 <Field label="Tanggal surat"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
                 <Field label="Keterangan"><input className={inputCls} value={f.jabatan} onChange={(e) => set('jabatan', e.target.value)} /></Field>
               </div>
+              <ImageUpload label="Logo kop (opsional, kiri atas)" value={f.logo} onChange={(v) => set('logo', v)} notify={notify}
+                bg={bg.logo} onBg={(v) => setBg((p) => ({ ...p, logo: v }))} shown={logo.src} bgBusy={logo.busy} />
+              <p className="-mt-2 text-xs text-gray-500">Kosongkan bila surat tanpa logo.</p>
               <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify}
                 bg={bg.ttd} onBg={(v) => setBg((p) => ({ ...p, ttd: v }))} shown={ttd.src} bgBusy={ttd.busy} />
               <p className="-mt-2 text-xs text-gray-500">Nama di bawah tanda tangan otomatis memakai nama dokter (kop). PNG transparan disarankan.</p>
               <ImageUpload label="Stempel" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify}
                 bg={bg.stempel} onBg={(v) => setBg((p) => ({ ...p, stempel: v }))} shown={stempel.src} bgBusy={stempel.busy} />
-              <p className="text-xs text-gray-500">Tanda tangan &amp; stempel hanya disimpan di perangkat ini, tidak diunggah ke server.</p>
+              <p className="text-xs text-gray-500">Logo, tanda tangan &amp; stempel hanya disimpan di perangkat ini, tidak diunggah ke server.</p>
             </section>
 
             <details className="space-y-3">
@@ -313,7 +333,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
                 <p className="text-xs text-gray-500">Kosongkan isian untuk menyembunyikan barisnya di surat.</p>
                 <Field label="Judul"><input className={inputCls} value={f.judul} onChange={(e) => set('judul', e.target.value)} /></Field>
                 <Field label="Kalimat pembuka"><textarea rows={2} className={inputCls} value={f.pembuka} onChange={(e) => set('pembuka', e.target.value)} /></Field>
-                <Field label="Kalimat penutup"><textarea rows={2} className={inputCls} value={f.penutup} onChange={(e) => set('penutup', e.target.value)} /></Field>
+                <Field label="Kalimat penutup (SAKIT)"><textarea rows={2} className={inputCls} value={f.penutup} onChange={(e) => set('penutup', e.target.value)} /></Field>
                 <Field label="Catatan kaki"><input className={inputCls} value={f.catatan} onChange={(e) => set('catatan', e.target.value)} /></Field>
               </div>
             </details>
@@ -321,7 +341,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
 
           <FitPreview>
             <div ref={letterRef} className="w-max shadow-lg">
-              <Letter f={{ ...f, ttd: ttd.src, stempel: stempel.src }} k={k} />
+              <Letter f={{ ...f, logo: logo.src, ttd: ttd.src, stempel: stempel.src }} k={k} />
             </div>
           </FitPreview>
         </div>
