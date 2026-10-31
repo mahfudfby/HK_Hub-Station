@@ -1,3 +1,4 @@
+import NumberFormatInput from '../../shared/components/NumberFormatInput';
 import AutoTextarea from '../../shared/components/AutoTextarea';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
@@ -347,8 +348,8 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
               <div className="space-y-3 pt-3">
                 <Field label="Nama dokter (kop)"><AutoTextarea className={inputCls} value={f.nama} onChange={(e) => set('nama', e.target.value)} /></Field>
                 <div className="grid sm:grid-cols-2 gap-3">
-                  <Field label="No. SIP"><AutoTextarea className={inputCls} value={f.sip} onChange={(e) => set('sip', e.target.value)} /></Field>
-                  <Field label="No. STR"><AutoTextarea className={inputCls} value={f.str} onChange={(e) => set('str', e.target.value)} /></Field>
+                  <Field label="No. SIP"><NumberFormatInput parts={['Kode', 'Nomor', 'Kode instansi', 'Bulan (romawi)', 'Tahun']} value={f.sip} onChange={(v) => set('sip', v)} /></Field>
+                  <Field label="No. STR"><NumberFormatInput parts={['Kode', 'Nomor', 'Nomor']} value={f.str} onChange={(v) => set('str', v)} /></Field>
                 </div>
                 <Field label="Alamat (baris 1)"><AutoTextarea className={inputCls} value={f.alamat1} onChange={(e) => set('alamat1', e.target.value)} /></Field>
                 <Field label="Alamat (baris 2: kelurahan, kota)"><AutoTextarea className={inputCls} value={f.alamat2} onChange={(e) => set('alamat2', e.target.value)} /></Field>
