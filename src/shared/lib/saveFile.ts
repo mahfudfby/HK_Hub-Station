@@ -4,7 +4,10 @@
 export const SHARE_EVENT = 'hk:share-file';
 
 export function saveFile(blob: Blob, name: string) {
-  const url = URL.createObjectURL(blob); // blob URL (bukan data URL) agar Safari mengunduh, bukan membuka file
+  // blob URL (bukan data URL) agar Safari mengunduh. Selain gambar (PDF, Excel, dll.) dikirim sebagai
+  // octet-stream supaya browser tidak membuka penampil PDF/Excel di halaman lain, tapi langsung mengunduh.
+  const raw = blob.type.startsWith('image/') ? blob : new Blob([blob], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(raw);
   const a = document.createElement('a');
   a.href = url;
   a.download = name;

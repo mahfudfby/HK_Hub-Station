@@ -76,10 +76,12 @@ console.assert(terbilang(3) === 'tiga' && terbilang(12) === 'dua belas' && terbi
 const fmtTanggal = (iso: string) =>
   iso ? new Date(`${iso}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
 
+// Isian data: miring + titik-titik di bawahnya
+const DOTTED = '1.5px dotted #000';
 const Dots = ({ w = '7em' }: { w?: string }) => (
-  <span style={{ display: 'inline-block', width: w, borderBottom: '1.5px dotted #000', verticalAlign: 'baseline' }} />
+  <span style={{ display: 'inline-block', width: w, borderBottom: DOTTED, verticalAlign: 'baseline' }} />
 );
-const orDots = (v: string, w?: string) => (v ? <span style={{ fontStyle: 'italic' }}>{v}</span> : <Dots w={w} />);
+const orDots = (v: string, w?: string) => (v ? <span style={{ fontStyle: 'italic', borderBottom: DOTTED, padding: '0 6px' }}>{v}</span> : <Dots w={w} />);
 
 function loadForm(): Form {
   try {
@@ -153,7 +155,7 @@ const PAGE_W = 559;
 const PAGE_H = 794;
 // Helvetica; perangkat tanpa Helvetica memakai Arimo (bawaan aplikasi, ukuran huruf identik) agar tata letak sama
 const FONT = 'Helvetica, Arimo, Arial, sans-serif';
-const data = { fontStyle: 'italic' } as const; // isian data ditulis miring
+const data = { fontStyle: 'italic', borderBottom: DOTTED } as const; // isian data: miring + titik-titik di bawahnya
 
 function Letter({ f }: { f: Form }) {
   const hari = parseInt(f.hari, 10);
@@ -201,7 +203,7 @@ function Letter({ f }: { f: Form }) {
             <span style={{ minWidth: 96 }}>{r.label}</span>
             <span style={{ display: 'flex', gap: 6 }}>
               <span>:</span>
-              {r.value ? <span style={{ ...data, whiteSpace: 'pre-line' }}>{r.value}</span> : <span style={{ flex: 1, borderBottom: '1.5px dotted #000' }} />}
+              {r.value ? <span style={{ ...data, flex: 1, whiteSpace: 'pre-line' }}>{r.value}</span> : <span style={{ flex: 1, borderBottom: DOTTED }} />}
             </span>
           </div>
         ))}
