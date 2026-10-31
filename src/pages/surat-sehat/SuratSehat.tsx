@@ -1,3 +1,4 @@
+import NumberFormatInput from '../../shared/components/NumberFormatInput';
 import AutoTextarea from '../../shared/components/AutoTextarea';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -205,7 +206,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
             </div>
             <section className="space-y-3">
               <h2 className="font-bold">Data Pasien</h2>
-              <Field label="Nomor surat"><AutoTextarea className={inputCls} value={f.nomor} onChange={(e) => set('nomor', e.target.value)} placeholder="mis. 445/012/SKS/2026" /></Field>
+              <Field label="Nomor surat"><NumberFormatInput parts={['Klasifikasi', 'No. urut', 'Kode surat', 'Tahun']} value={f.nomor} onChange={(v) => set('nomor', v)} /></Field>
               {f.rows.map((r, i) => (
                 <Field key={i} label={r.label}>
                   <AutoTextarea rows={r.label.toLowerCase().includes('alamat') ? 2 : 1} className={inputCls} value={r.value} onChange={(e) => setRow(i, e.target.value)} />
@@ -236,7 +237,9 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
                 <Field label="Nama dokter"><AutoTextarea className={inputCls} value={f.dokter} onChange={(e) => set('dokter', e.target.value)} /></Field>
                 <Field label="Keterangan"><AutoTextarea className={inputCls} value={f.jabatan} onChange={(e) => set('jabatan', e.target.value)} /></Field>
                 <Field label="Jenis nomor (SIP/NIP)"><AutoTextarea className={inputCls} value={f.idLabel} onChange={(e) => set('idLabel', e.target.value)} /></Field>
-                <Field label="Nomor SIP/NIP"><AutoTextarea className={inputCls} value={f.idNo} onChange={(e) => set('idNo', e.target.value)} /></Field>
+                <Field label={`Nomor ${f.idLabel || 'SIP/NIP'}`}>{/SIP/i.test(f.idLabel) // SIP: susunan terkunci; NIP: satu kotak angka
+                  ? <NumberFormatInput parts={['Kode', 'Nomor', 'Kode instansi', 'Bulan (romawi)', 'Tahun']} value={f.idNo} onChange={(v) => set('idNo', v)} />
+                  : <NumberFormatInput parts={['Nomor']} value={f.idNo} onChange={(v) => set('idNo', v)} />}</Field>
               </div>
               <ImageUpload label="Logo kop (opsional, kiri atas)" value={f.logo} onChange={(v) => set('logo', v)} notify={notify} shown={logo.src} bgBusy={logo.busy} {...bgFor('logo')} />
               <p className="-mt-2 text-xs text-gray-500">Kosongkan bila surat tanpa logo.</p>

@@ -1,3 +1,4 @@
+import NumberFormatInput from './NumberFormatInput';
 import AutoTextarea from './AutoTextarea';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
@@ -356,7 +357,7 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
             <section className="space-y-3">
               <h2 className="font-bold">Transaksi</h2>
               <div className="grid grid-cols-2 gap-2">
-                {txt('nomor', 'No. nota')}
+                <Field label="No. nota"><NumberFormatInput sep="-" parts={['Kode', 'No. urut']} value={n.nomor} onChange={(v) => set('nomor', v)} /></Field>
                 <Field label="Tanggal & jam"><input type="datetime-local" className={inputCls} value={n.waktu} onChange={(e) => set('waktu', e.target.value)} /></Field>
                 {txt('kasir', 'Kasir')}
                 {txt('pelanggan', 'Pelanggan (opsional)')}

@@ -1,3 +1,4 @@
+import NumberFormatInput from './NumberFormatInput';
 import AutoTextarea from './AutoTextarea';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
@@ -707,7 +708,9 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
               {txt('pembeliAlamat', 'Alamat', 2)}
               {txt('pembeliKontak', 'Telepon / email')}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                {txt('nomor', L.nomor)}
+                <div className="sm:col-span-3">
+                  <Field label={L.nomor}><NumberFormatInput parts={['Kode', 'Tahun', 'No. urut']} value={d.nomor} onChange={(v) => set('nomor', v)} /></Field>
+                </div>
                 <Field label="Tanggal"><input type="date" className={inputCls} value={d.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
                 <Field label="Jatuh tempo"><input type="date" className={inputCls} value={d.jatuhTempo} onChange={(e) => set('jatuhTempo', e.target.value)} /></Field>
               </div>

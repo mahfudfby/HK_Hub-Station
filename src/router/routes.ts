@@ -44,6 +44,12 @@ export const routes = [
     desc: 'Faktur dengan PPN, terbilang & tanda tangan; pilih gaya, ukuran kertas & orientasi.',
   },
   {
+    path: '/invoice-toko-online/*',
+    component: lazy(() => import('../pages/invoice-toko-online')),
+    title: 'Custom Invoices Toko Online',
+    desc: 'Nota pesanan gaya marketplace untuk toko online Anda: rincian produk & variasi, biaya layanan, voucher. PDF, PNG & Print.',
+  },
+  {
     path: '/nota-58mm/*',
     component: lazy(() => import('../pages/nota-58mm')),
     title: 'Nota Pembelian 58mm',

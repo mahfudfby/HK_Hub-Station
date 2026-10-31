@@ -1,3 +1,4 @@
+import NumberFormatInput from '../../shared/components/NumberFormatInput';
 import AutoTextarea from '../../shared/components/AutoTextarea';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -431,7 +432,10 @@ function EmployeeForm({ form, onChange, statusText }) {
   return (
     <div className="space-y-4 mb-8">
       <p className="block text-sm font-bold text-gray-700">Detail Karyawan &amp; Transfer</p>
-      <TextField id="inputSlipID" label="No. Slip Gaji (ID)" name="slipID" value={form.slipID} onChange={onChange} />
+      <div className="input-group">
+        <label className="text-sm font-medium text-gray-700">No. Slip Gaji (ID)</label>
+        <NumberFormatInput sep="-" parts={['Kode', 'No. urut']} value={form.slipID} onChange={(v) => onChange({ target: { name: 'slipID', value: v } })} />
+      </div>
       <TextField id="inputSlipMonth" label="Bulan Gaji (Periode)" name="slipMonth" value={form.slipMonth} onChange={onChange} placeholder="Bulan Gaji (e.g., November 2025)" />
       <TextField id="inputTransferDate" label="Tanggal Transfer" name="transferDate" type="date" value={form.transferDate} onChange={onChange} />
       <TextField id="inputName" label="Nama Karyawan" name="name" value={form.name} onChange={onChange} wrapClass="pt-4" />
