@@ -4,6 +4,7 @@ import { Spinner, type ToastType } from './Feedback';
 import { unfitPreview } from './FitPreview';
 import { canvasToBlob, saveFile } from '../lib/saveFile';
 import { printImage } from '../lib/printImage';
+import { fontsReady } from '../lib/fonts';
 
 // Bahan bersama surat dokter (A5): ukuran halaman, font, isian data, form, dan ekspor PDF/PNG/Print.
 
@@ -91,7 +92,7 @@ export const mmToPx = (mm: number) => Math.round((mm * 96) / 25.4); // 96 DPI CS
 // Render halaman (ukuran px tetap) ke PNG/PDF/Print sesuai ukuran kertas; tidak bergantung layar/zoom perangkat.
 // scale 3 ≈ 288 DPI di kertas.
 export async function exportPage(page: HTMLElement, kind: ExportKind, fileName: string, paper: Paper, scale = 3) {
-  await document.fonts.ready; // font dokumen wajib termuat agar tata letak sama di semua perangkat
+  await fontsReady(); // font dokumen (termasuk Google Fonts template) wajib termuat agar tata letak sama di semua perangkat
   const width = page.offsetWidth;
   const height = page.offsetHeight;
   if (page.scrollHeight > height + 1) throw new Error('isi melebihi 1 halaman. Kurangi isinya atau pilih kertas lebih besar.');

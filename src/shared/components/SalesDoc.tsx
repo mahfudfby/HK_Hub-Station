@@ -5,6 +5,7 @@ import { Toast, type ToastState } from './Feedback';
 import { ExportButton, Field, ImageUpload, inputCls, fmtTanggal, mmToPx, useLetterExport, type Notify, type Paper } from './LetterKit';
 import { useBgRemoved } from '../lib/removeBg';
 import { num, rupiah, terbilangRupiah } from '../lib/money';
+import { loadGoogleFont } from '../lib/fonts';
 
 // Generator Invoice & Faktur Penjualan: satu mesin, beberapa template gaya, ukuran kertas & orientasi bebas.
 
@@ -84,16 +85,7 @@ const NAME_FONTS: NameFont[] = [
   { id: 'lobster', label: 'Lobster', family: 'Lobster', weight: 400, fallback: 'cursive' },
 ];
 const findFont = (id: string) => NAME_FONTS.find((f) => f.id === id);
-// shortcut: font dimuat saat dipilih; ekspor menunggu document.fonts.ready, cukup selama font sudah selesai dimuat sebelum tombol unduh diklik
-function loadNameFont(f?: NameFont) {
-  if (!f || document.getElementById(`gf-${f.id}`)) return;
-  const link = document.createElement('link');
-  link.id = `gf-${f.id}`;
-  link.rel = 'stylesheet';
-  link.href = `https://fonts.googleapis.com/css2?family=${f.family.replace(/ /g, '+')}:wght@${f.weight}&display=swap`;
-  link.onload = () => void document.fonts.load(`${f.weight} 24px "${f.family}"`);
-  document.head.appendChild(link);
-}
+const loadNameFont = (f?: NameFont) => f && void loadGoogleFont({ family: f.family, weights: [f.weight] });
 
 const LABELS = {
   invoice: { title: 'INVOICE', nomor: 'No. Invoice', kepada: 'Ditagihkan kepada', file: 'invoice' },
@@ -527,7 +519,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
     }
   }, [d, storageKey, notify]);
 
-  useEffect(() => loadNameFont(findFont(d.namaFont)), [d.namaFont]);
+  useEffect(() => { loadNameFont(findFont(d.namaFont)); }, [d.namaFont]);
 
   const set = <K extends keyof Doc>(k: K, v: Doc[K]) => setD((p) => ({ ...p, [k]: v }));
   const setItem = (i: number, patch: Partial<Item>) => set('items', d.items.map((it, j) => (j === i ? { ...it, ...patch } : it)));
