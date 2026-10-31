@@ -17,12 +17,12 @@
 .slip-box, .slip-box * { text-shadow: none; }
 
 /* ============================================================
-   SECTION: Slip container (21cm x 12cm, ukuran terkunci)
+   SECTION: Slip container (dot-matrix 9,5" x 5,5" = 241 x 140 mm, ukuran terkunci)
    ============================================================ */
 .slip-scroll { overflow-x: auto; padding-bottom: 4px; }
 .slip-box {
-  width: 794px;
-  height: 454px;
+  width: 912px;
+  height: 528px;
   flex-shrink: 0;
   margin: 2rem auto;
   background-color: #fff;

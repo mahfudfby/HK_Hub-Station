@@ -41,8 +41,8 @@ const LOGO_MAX_HEIGHT = 60;
 const SIGNATURE_MAX_WIDTH = 120;
 const SIGNATURE_MAX_HEIGHT = 70;
 
-const SLIP_WIDTH = 794; // 21cm @96DPI
-const SLIP_HEIGHT = 454; // 12cm @96DPI
+const SLIP_WIDTH = 912; // kertas dot-matrix continuous form 9,5" @96DPI (241 mm)
+const SLIP_HEIGHT = 528; // 5,5" @96DPI (140 mm, setengah lembar 9,5×11")
 
 const todayLocal = () => {
   const d = new Date();
@@ -63,6 +63,7 @@ const buildInitialForm = () => ({
   position: 'Staf Administrasi',
   bankAccountNumber: '123-456-7890',
   bankName: 'BANK ABC',
+  bankAccountName: '', // kosong = pakai nama karyawan
   status: 'TK/0',
   basicSalary: '8000000',
   allowance: '500000',
@@ -334,6 +335,15 @@ function SlipLine({ label, value }) {
     </div>
   );
 }
+function BankRow({ label, value }) {
+  return (
+    <div className="flex">
+      <span className="w-20 flex-shrink-0">{label}</span>
+      <span className="mr-1">:</span>
+      <span className="font-semibold">{value}</span>
+    </div>
+  );
+}
 function InfoRow({ label, value, highlight = false }) {
   return (
     <div className="flex">
@@ -371,6 +381,7 @@ function EmployeeForm({ form, onChange, statusText }) {
       <TextField id="inputPosition" label="Jabatan" name="position" value={form.position} onChange={onChange} />
       <TextField id="inputBankAccountNumber" label="Nomor Rekening" name="bankAccountNumber" value={form.bankAccountNumber} onChange={onChange} />
       <TextField id="inputBankName" label="Nama Bank" name="bankName" value={form.bankName} onChange={onChange} />
+      <TextField id="inputBankAccountName" label="Nama Penerima (Rekening)" name="bankAccountName" value={form.bankAccountName ?? ''} onChange={onChange} placeholder="Kosong = nama karyawan" />
       <div className="input-group pt-4">
         <label htmlFor="inputStatus" className="text-sm font-medium text-gray-700">Status Pajak (PTKP)</label>
         <select
@@ -447,22 +458,20 @@ function SlipPreview({ slipRef, form, calc, logo, signature }) {
           </div>
 
           {/* Judul */}
-          <div className="text-center mb-1.5">
+          <div className="text-center mb-2">
             <p className="text-xs font-bold uppercase border-b border-t border-black py-1 tracking-wider">
               SLIP GAJI BULAN <span>{form.slipMonth.toUpperCase()}</span>
             </p>
           </div>
 
           {/* Info karyawan */}
-          <div className="grid grid-cols-2 gap-4 mb-1.5">
-            <div className="space-y-0.5 leading-tight">
+          <div className="grid grid-cols-2 gap-4 mb-2">
+            <div className="space-y-0.5">
               <InfoRow label="ID" value={form.slipID} highlight />
               <InfoRow label="NAMA" value={form.name} />
               <InfoRow label="JABATAN" value={form.position} />
             </div>
-            <div className="space-y-0.5 leading-tight">
-              <InfoRow label="NO. REK" value={form.bankAccountNumber} />
-              <InfoRow label="NAMA BANK" value={form.bankName} />
+            <div className="space-y-0.5">
               <InfoRow label="STS PAJAK" value={form.status} />
             </div>
           </div>
@@ -471,7 +480,7 @@ function SlipPreview({ slipRef, form, calc, logo, signature }) {
           <div className="flex border border-black mb-1">
             <div className="w-1/2 border-r border-black">
               <div className="text-center font-bold border-b border-black p-0.5 bg-gray-100">PENERIMAAN</div>
-              <div className="p-1 space-y-0.5 leading-tight">
+              <div className="p-1 space-y-0.5">
                 <SlipLine label="Gaji Pokok" value={formatRupiah(calc.basicSalary)} />
                 <SlipLine label="Tunjangan" value={formatRupiah(calc.allowance)} />
                 <SlipLine label="Lembur" value={formatRupiah(calc.overtime)} />
@@ -482,7 +491,7 @@ function SlipPreview({ slipRef, form, calc, logo, signature }) {
             </div>
             <div className="w-1/2">
               <div className="text-center font-bold border-b border-black p-0.5 bg-gray-100">POTONGAN</div>
-              <div className="p-1 space-y-0.5 leading-tight">
+              <div className="p-1 space-y-0.5">
                 <SlipLine label="Pinjaman Karyawan" value={formatRupiah(calc.loanDeduction)} />
                 <SlipLine label="BPJS Kes. + JP" value={formatRupiah(calc.bpjsKesAndJP)} />
                 <SlipLine label="JHT" value={formatRupiah(calc.jht)} />
@@ -505,7 +514,7 @@ function SlipPreview({ slipRef, form, calc, logo, signature }) {
           </div>
 
           {/* THP */}
-          <div className="relative py-1.5">
+          <div className="relative py-2">
             <div className="absolute w-[49%] right-0 top-[2px] h-[1px] bg-black"></div>
             <div className="flex justify-between items-center">
               <span className="font-extrabold text-lg leading-tight">TAKE HOME PAY (THP)</span>
@@ -518,14 +527,17 @@ function SlipPreview({ slipRef, form, calc, logo, signature }) {
           <div className="flex justify-between text-[10px] mt-1">
             <div className="text-left" style={{ width: '40%' }}>
               <p className="text-[9px] leading-tight">Pembayaran gaji Telah Dilakukan Perusahaan Melalui Transfer</p>
-              <div className="relative h-10 mb-1 pt-2">
-                <p className="text-[9px] text-gray-700">Tanggal Transfer: <span>{formatTransferDate(form.transferDate)}</span></p>
+              <div className="mt-1 text-[9px] leading-tight space-y-0.5">
+                <BankRow label="No. Rekening" value={form.bankAccountNumber} />
+                <BankRow label="Bank" value={form.bankName} />
+                <BankRow label="Nama Penerima" value={form.bankAccountName || form.name} />
+                <BankRow label="Tanggal Transfer" value={formatTransferDate(form.transferDate)} />
               </div>
             </div>
 
             <div className="text-right" style={{ width: '40%' }}>
               <p>Tanda Tangan,</p>
-              <div className="relative h-9 mb-0.5">
+              <div className="relative h-14 mb-0.5">
                 {signature && <img src={signature} crossOrigin="anonymous" alt="Tanda Tangan Karyawan" className="slip-signature" />}
               </div>
               <div className="pt-1">
@@ -610,7 +622,7 @@ export default function SlipGaji() {
     await document.fonts.ready; // font dokumen wajib termuat agar tata letak sama di semua perangkat
     const { default: html2canvas } = await import('html2canvas');
     return html2canvas(slipRef.current, {
-      scale: 3, // tetap (bukan devicePixelRatio): hasil selalu 2382×1362 px
+      scale: 3, // tetap (bukan devicePixelRatio): hasil selalu 2736×1584 px
       windowWidth: 1280,
       onclone: unfitPreview,
       logging: false,
@@ -628,7 +640,7 @@ export default function SlipGaji() {
     setPrinting(true);
     try {
       const canvas = await captureSlip();
-      await printImage(canvas.toDataURL('image/png'), slipFileName(), { w: '210mm', h: '120mm' });
+      await printImage(canvas.toDataURL('image/png'), slipFileName(), { w: '9.5in', h: '5.5in' });
       pushToast('success', 'Jendela cetak dibuka.');
     } catch (error) {
       pushToast('error', `Gagal mencetak slip gaji: ${error && error.message ? error.message : 'proses render gambar gagal.'}`);
