@@ -18,4 +18,10 @@ export const routes = [
     title: 'Slip Gaji (BPJS & PPh 21)',
     desc: 'Buat slip gaji lengkap dengan potongan BPJS dan PPh 21, ekspor ke PNG.',
   },
+  {
+    path: '/surat-dokter/*',
+    component: lazy(() => import('../pages/surat-dokter')),
+    title: 'Surat Keterangan Dokter',
+    desc: 'Khusus dokter terdaftar: surat keterangan sakit/sehat, ekspor PDF & PNG.',
+  },
 ];

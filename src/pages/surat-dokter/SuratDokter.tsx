@@ -1,0 +1,370 @@
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import { initializeApp, getApps } from 'firebase/app';
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
+import { firebaseConfig } from '../../shared/lib/firebase';
+
+// Surat keterangan dokter: hanya untuk dokter pemilik akun (login email/password dari Firebase Console).
+// Named app agar tidak bentrok dengan initializeApp() default milik halaman SPBU.
+const APP_NAME = 'surat-dokter';
+const app = getApps().find((a) => a.name === APP_NAME) ?? initializeApp(firebaseConfig, APP_NAME);
+const auth = getAuth(app);
+
+const STORAGE_KEY = 'surat-dokter:v1';
+
+type Row = { label: string; value: string };
+type Form = {
+  nama: string;
+  kop: string;
+  judul: string;
+  pembuka: string;
+  rows: Row[];
+  isi: string;
+  status: 'SAKIT' | 'SEHAT';
+  hari: string;
+  mulai: string;
+  sampai: string;
+  penutup: string;
+  catatan: string;
+  kota: string;
+  tanggal: string;
+  jabatan: string;
+  namaTtd: string;
+  ttd: string; // data URL, hanya di perangkat ini
+  stempel: string;
+};
+
+const DEFAULT: Form = {
+  nama: 'dr. TENA, DJ',
+  kop: 'SIP : 446.1/0434.1/Pu Kes-3/VI/2011\nSTR : 312/1001060/4226\nBumi Nasio Indah B 10/7 RT.009/0015\nKel. Jati Mekar – Bekasi\nTelp. 021 – 8475534',
+  judul: 'SURAT KETERANGAN',
+  pembuka: 'Bersama dengan surat ini saya terangkan bahwa :',
+  rows: ['Nama', 'Jenis Kelamin', 'Umur', 'Pekerjaan', 'Alamat'].map((label) => ({ label, value: '' })),
+  isi: 'Setelah dilakukan pemeriksaan dinyatakan {status}*) dan memerlukan istirahat selama {hari} hari ({terbilang}) sejak tanggal {mulai} s/d {sampai}',
+  status: 'SAKIT',
+  hari: '',
+  mulai: '',
+  sampai: '',
+  penutup: 'Demikianlah surat keterangan ini saya perbuat, untuk dipergunakan dengan seperlunya.',
+  catatan: '*) Coret yang tidak perlu',
+  kota: 'Bekasi',
+  tanggal: '',
+  jabatan: 'Dokter yang memeriksa',
+  namaTtd: 'dr. Tena. DJ.',
+  ttd: '',
+  stempel: '',
+};
+
+const SATUAN = ['nol', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'];
+export function terbilang(n: number): string {
+  if (n < 12) return SATUAN[n];
+  if (n < 20) return `${terbilang(n - 10)} belas`;
+  if (n < 100) return `${terbilang(Math.floor(n / 10))} puluh${n % 10 ? ` ${terbilang(n % 10)}` : ''}`;
+  return String(n);
+}
+console.assert(terbilang(3) === 'tiga' && terbilang(12) === 'dua belas' && terbilang(21) === 'dua puluh satu', 'terbilang');
+
+const fmtTanggal = (iso: string) =>
+  iso ? new Date(`${iso}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+
+const Dots = ({ w = '7em' }: { w?: string }) => (
+  <span style={{ display: 'inline-block', width: w, borderBottom: '2px dotted #000', verticalAlign: 'baseline' }} />
+);
+const orDots = (v: string, w?: string) => (v ? <strong>{v}</strong> : <Dots w={w} />);
+
+function loadForm(): Form {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    return saved ? { ...DEFAULT, ...saved } : DEFAULT;
+  } catch {
+    return DEFAULT;
+  }
+}
+
+// ---------------- Login ----------------
+function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (err: any) {
+      const code = err?.code || '';
+      setError(
+        code === 'auth/operation-not-allowed' || code === 'auth/admin-restricted-operation'
+          ? 'Login email/password belum diaktifkan di Firebase Console.'
+          : code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found'
+            ? 'Email atau password salah.'
+            : `Login gagal: ${err?.message || code}`,
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+      <form onSubmit={submit} className="w-full max-w-sm bg-white rounded-2xl shadow p-6 space-y-4">
+        <Link to="/" className="text-sm text-blue-700">&larr; Kembali ke HK Hub Station</Link>
+        <h1 className="text-xl font-bold">Surat Keterangan Dokter</h1>
+        <p className="text-sm text-gray-600">Khusus dokter terdaftar. Masuk dengan akun yang diberikan admin.</p>
+        <label className="block text-sm font-medium">
+          Email
+          <input type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)}
+            className="mt-1 w-full p-2 border border-gray-300 rounded-lg" />
+        </label>
+        <label className="block text-sm font-medium">
+          Password
+          <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)}
+            className="mt-1 w-full p-2 border border-gray-300 rounded-lg" />
+        </label>
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+        <button disabled={busy} className="w-full py-2 rounded-lg bg-blue-600 text-white font-semibold disabled:opacity-50">
+          {busy ? 'Memproses…' : 'Masuk'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+// ---------------- Form helpers ----------------
+const inputCls = 'w-full p-2 border border-gray-300 rounded-lg text-sm';
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="block text-sm font-medium text-gray-700">
+      {label}
+      <div className="mt-1">{children}</div>
+    </label>
+  );
+}
+
+function ImageUpload({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const read = (file?: File) => {
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = () => onChange(String(r.result));
+    r.readAsDataURL(file);
+  };
+  return (
+    <Field label={label}>
+      <div className="flex items-center gap-3">
+        {value && <img src={value} alt={label} className="h-14 w-14 object-contain border rounded bg-white" />}
+        <input type="file" accept="image/*" onChange={(e) => read(e.target.files?.[0])} className="text-sm flex-1" />
+        {value && (
+          <button type="button" onClick={() => onChange('')} className="text-sm text-red-600">Hapus</button>
+        )}
+      </div>
+    </Field>
+  );
+}
+
+// ---------------- Letter preview ----------------
+function Letter({ f }: { f: Form }) {
+  const hari = parseInt(f.hari, 10);
+  const status = (
+    <span>
+      {(['SAKIT', 'SEHAT'] as const).map((s, i) => (
+        <span key={s}>
+          {i > 0 && '/'}
+          <span style={s === f.status ? { fontWeight: 700 } : { textDecoration: 'line-through' }}>{s}</span>
+        </span>
+      ))}
+    </span>
+  );
+  const tokens: Record<string, ReactNode> = {
+    status,
+    hari: orDots(f.hari, '4em'),
+    terbilang: orDots(hari > 0 ? terbilang(hari) : '', '6em'),
+    mulai: orDots(fmtTanggal(f.mulai), '9em'),
+    sampai: orDots(fmtTanggal(f.sampai), '9em'),
+  };
+  const isi = f.isi.split(/(\{\w+\})/g).map((part, i) => {
+    const key = part.match(/^\{(\w+)\}$/)?.[1];
+    return key && key in tokens ? <span key={i}>{tokens[key]}</span> : part;
+  });
+
+  return (
+    <div style={{ width: 560, padding: '40px 44px', background: '#fff', color: '#000', fontFamily: 'Calibri, Carlito, Arial, sans-serif', fontSize: 16, lineHeight: 1.5 }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontFamily: '"Times New Roman", Times, serif', fontWeight: 700, fontSize: 46, lineHeight: 1.1 }}>{f.nama}</div>
+        <div style={{ whiteSpace: 'pre-line', fontSize: 15 }}>{f.kop}</div>
+      </div>
+      <hr style={{ border: 0, borderTop: '1.5px solid #000', margin: '8px 0 24px' }} />
+      <div style={{ textAlign: 'center', fontWeight: 700, textDecoration: 'underline', marginBottom: 16 }}>{f.judul}</div>
+      <p style={{ marginBottom: 16 }}>{f.pembuka}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 12, rowGap: 14, marginBottom: 20 }}>
+        {f.rows.map((r, i) => (
+          <div key={i} style={{ display: 'contents' }}>
+            <span style={{ minWidth: 120 }}>{r.label}</span>
+            <span style={{ display: 'flex', gap: 6 }}>
+              <span>:</span>
+              {r.value ? <strong style={{ whiteSpace: 'pre-line' }}>{r.value}</strong> : <span style={{ flex: 1, borderBottom: '2px dotted #000' }} />}
+            </span>
+          </div>
+        ))}
+      </div>
+      <p style={{ textAlign: 'justify', marginBottom: 16 }}>{isi}</p>
+      <p style={{ textAlign: 'justify', marginBottom: 40 }}>{f.penutup}</p>
+      <p style={{ marginBottom: 16 }}>{f.catatan}</p>
+      <div style={{ marginLeft: '45%', textAlign: 'center' }}>
+        <div>{f.kota}, {f.tanggal ? fmtTanggal(f.tanggal) : <Dots w="10em" />}</div>
+        <div>{f.jabatan}</div>
+        <div style={{ position: 'relative', height: 110 }}>
+          {f.stempel && (
+            <img src={f.stempel} alt="Stempel" style={{ position: 'absolute', left: 0, top: 0, height: 110, opacity: 0.9, mixBlendMode: 'multiply' }} />
+          )}
+          {f.ttd && (
+            <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', left: '50%', top: 10, transform: 'translateX(-50%)', height: 90, mixBlendMode: 'multiply' }} />
+          )}
+        </div>
+        <div>{f.namaTtd}</div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------- Main ----------------
+function Editor({ user }: { user: User }) {
+  const [f, setF] = useState<Form>(loadForm);
+  const [msg, setMsg] = useState('');
+  const letterRef = useRef<HTMLDivElement>(null);
+  const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
+  const setRow = (i: number, patch: Partial<Row>) => set('rows', f.rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(f));
+    } catch {
+      setMsg('Gambar terlalu besar untuk disimpan otomatis; tetap bisa diekspor.');
+    }
+  }, [f]);
+
+  const capture = async () => {
+    const { default: html2canvas } = await import('html2canvas');
+    return html2canvas(letterRef.current!.firstElementChild as HTMLElement, { scale: 2, backgroundColor: '#fff' });
+  };
+  const fileName = `surat-keterangan-${(f.rows[0]?.value || 'pasien').replace(/\s+/g, '-').toLowerCase()}`;
+
+  const exportPng = async () => {
+    const canvas = await capture();
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `${fileName}.png`;
+    a.click();
+  };
+  const exportPdf = async () => {
+    const canvas = await capture();
+    const { jsPDF } = await import('jspdf');
+    const w = canvas.width / 2;
+    const h = canvas.height / 2;
+    const pdf = new jsPDF({ unit: 'px', format: [w, h], orientation: h > w ? 'portrait' : 'landscape', hotfixes: ['px_scaling'] });
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, w, h); // JPEG: PNG bikin PDF ~8 MB
+    pdf.save(`${fileName}.pdf`);
+  };
+  const resetPasien = () =>
+    setF((p) => ({ ...p, rows: p.rows.map((r) => ({ ...r, value: '' })), hari: '', mulai: '', sampai: '', tanggal: '' }));
+
+  return (
+    <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <Link to="/" className="text-sm font-medium text-blue-700">&larr; Kembali ke HK Hub Station</Link>
+          <div className="text-sm text-gray-600">
+            {user.email} · <button onClick={() => signOut(auth)} className="text-red-600 font-medium">Keluar</button>
+          </div>
+        </div>
+        <h1 className="text-2xl font-bold text-center mb-4">Surat Keterangan Dokter</h1>
+        <div className="flex flex-wrap justify-center gap-3 mb-6">
+          <button onClick={exportPdf} className="px-5 py-2 rounded-lg bg-red-600 text-white font-semibold">Unduh PDF</button>
+          <button onClick={exportPng} className="px-5 py-2 rounded-lg bg-blue-600 text-white font-semibold">Unduh PNG</button>
+          <button onClick={resetPasien} className="px-5 py-2 rounded-lg bg-white border font-semibold">Kosongkan Data Pasien</button>
+          <button onClick={() => confirm('Kembalikan semua isian ke bawaan?') && setF(DEFAULT)} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
+        </div>
+        {msg && <p className="text-center text-sm text-amber-700 mb-4">{msg}</p>}
+
+        <div className="grid lg:grid-cols-2 gap-8 items-start">
+          <div className="bg-white rounded-2xl shadow p-5 space-y-6">
+            <section className="space-y-3">
+              <h2 className="font-bold">Data Pasien</h2>
+              {f.rows.map((r, i) => (
+                <div key={i} className="grid grid-cols-[8rem_1fr] gap-2">
+                  <input aria-label={`Label baris ${i + 1}`} className={inputCls} value={r.label} onChange={(e) => setRow(i, { label: e.target.value })} />
+                  <textarea aria-label={r.label} rows={r.label.toLowerCase().includes('alamat') ? 2 : 1} className={inputCls} value={r.value}
+                    onChange={(e) => setRow(i, { value: e.target.value })} />
+                </div>
+              ))}
+              <div className="flex gap-3 text-sm">
+                <button type="button" onClick={() => set('rows', [...f.rows, { label: 'Baris baru', value: '' }])} className="text-blue-700">+ Tambah baris</button>
+                {f.rows.length > 1 && (
+                  <button type="button" onClick={() => set('rows', f.rows.slice(0, -1))} className="text-red-600">− Hapus baris terakhir</button>
+                )}
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="font-bold">Hasil Pemeriksaan</h2>
+              <Field label="Dinyatakan">
+                <select className={inputCls} value={f.status} onChange={(e) => set('status', e.target.value as Form['status'])}>
+                  <option value="SAKIT">SAKIT</option>
+                  <option value="SEHAT">SEHAT</option>
+                </select>
+              </Field>
+              <div className="grid grid-cols-3 gap-2">
+                <Field label="Istirahat (hari)"><input type="number" min={0} className={inputCls} value={f.hari} onChange={(e) => set('hari', e.target.value)} /></Field>
+                <Field label="Sejak tanggal"><input type="date" className={inputCls} value={f.mulai} onChange={(e) => set('mulai', e.target.value)} /></Field>
+                <Field label="Sampai"><input type="date" className={inputCls} value={f.sampai} onChange={(e) => set('sampai', e.target.value)} /></Field>
+              </div>
+              <Field label="Kalimat hasil (penanda: {status} {hari} {terbilang} {mulai} {sampai})">
+                <textarea rows={3} className={inputCls} value={f.isi} onChange={(e) => set('isi', e.target.value)} />
+              </Field>
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="font-bold">Tanda Tangan</h2>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Kota"><input className={inputCls} value={f.kota} onChange={(e) => set('kota', e.target.value)} /></Field>
+                <Field label="Tanggal surat"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
+                <Field label="Keterangan"><input className={inputCls} value={f.jabatan} onChange={(e) => set('jabatan', e.target.value)} /></Field>
+                <Field label="Nama penanda tangan"><input className={inputCls} value={f.namaTtd} onChange={(e) => set('namaTtd', e.target.value)} /></Field>
+              </div>
+              <ImageUpload label="Upload tanda tangan (PNG transparan disarankan)" value={f.ttd} onChange={(v) => set('ttd', v)} />
+              <ImageUpload label="Upload stempel" value={f.stempel} onChange={(v) => set('stempel', v)} />
+              <p className="text-xs text-gray-500">Tanda tangan &amp; stempel hanya disimpan di perangkat ini, tidak diunggah ke server.</p>
+            </section>
+
+            <details className="space-y-3">
+              <summary className="font-bold cursor-pointer">Kop &amp; Teks Surat</summary>
+              <div className="space-y-3 pt-3">
+                <Field label="Nama dokter (kop)"><input className={inputCls} value={f.nama} onChange={(e) => set('nama', e.target.value)} /></Field>
+                <Field label="Baris kop (SIP, STR, alamat, telp)"><textarea rows={5} className={inputCls} value={f.kop} onChange={(e) => set('kop', e.target.value)} /></Field>
+                <Field label="Judul"><input className={inputCls} value={f.judul} onChange={(e) => set('judul', e.target.value)} /></Field>
+                <Field label="Kalimat pembuka"><textarea rows={2} className={inputCls} value={f.pembuka} onChange={(e) => set('pembuka', e.target.value)} /></Field>
+                <Field label="Kalimat penutup"><textarea rows={2} className={inputCls} value={f.penutup} onChange={(e) => set('penutup', e.target.value)} /></Field>
+                <Field label="Catatan kaki"><input className={inputCls} value={f.catatan} onChange={(e) => set('catatan', e.target.value)} /></Field>
+              </div>
+            </details>
+          </div>
+
+          <div className="overflow-x-auto">
+            <div ref={letterRef} className="w-max mx-auto shadow-lg">
+              <Letter f={f} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function SuratDokter() {
+  const [user, setUser] = useState<User | null | undefined>(undefined);
+  useEffect(() => onAuthStateChanged(auth, setUser), []);
+  if (user === undefined) return <div className="min-h-screen flex items-center justify-center text-gray-500">Memuat…</div>;
+  return user ? <Editor user={user} /> : <Login />;
+}
