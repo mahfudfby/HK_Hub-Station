@@ -159,10 +159,10 @@ const FONTS: Record<TemplateId, string> = {
   tegas: 'Carlito, Calibri, Arimo, sans-serif',
 };
 
-// Nama & detail usaha: 2× ukuran sebelumnya (nama 1,35→2,7; detail 0,9→1,8 × teks isi)
+// Nama usaha besar (2,7× teks isi); alamat & kontak seukuran teks isi
 function Seller({ d, fs, color, sub = '#4b5563', align = 'left' }: { d: Doc; fs: number; color?: string; sub?: string; align?: 'left' | 'right' | 'center' }) {
   const nf = findFont(d.namaFont);
-  const det: CSSProperties = { fontSize: fs * 1.8, color: sub, lineHeight: 1.25, whiteSpace: 'pre-line' };
+  const det: CSSProperties = { fontSize: fs, color: sub, lineHeight: 1.35, whiteSpace: 'pre-line' };
   return (
     <div style={{ textAlign: align, color, minWidth: 0 }}>
       <div style={{ fontWeight: nf?.weight ?? 700, fontFamily: nf ? `"${nf.family}", ${nf.fallback}` : undefined, fontSize: fs * 2.7, lineHeight: 1.15 }}>{d.penjual}</div>
