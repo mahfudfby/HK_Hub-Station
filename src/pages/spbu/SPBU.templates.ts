@@ -24,6 +24,9 @@ export const PRICE_TEMPLATES = [
   { label: 'Pertamina Dex - 13.500', productName: 'Pertamina Dex', pricePerLiter: 13500 },
 ];
 
+// Daftar BBM bawaan untuk template SPBU yang belum punya pengaturan harga sendiri
+export const DEFAULT_FUELS = PRICE_TEMPLATES.map((t) => ({ name: t.productName, price: t.pricePerLiter }));
+
 // ============================================================
 // SECTION: Template Plat Nomor (kode wilayah + nomor acak)
 // ============================================================

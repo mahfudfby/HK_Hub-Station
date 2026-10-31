@@ -7,7 +7,7 @@ import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
 import BgToggle from '../../shared/components/BgToggle';
 import { TextSizeSlider, useFitScale, ScaleBox } from '../../shared/components/TextScale';
 import { useBgRemoved } from '../../shared/lib/removeBg';
-import { ADDRESS_TEMPLATES, PRICE_TEMPLATES, PLATE_REGIONS, GENERIC_LOGOS, buildPlate, randomRegionCode, svgToDataUri, GAYA_NOTA, GAYA_NOTA_KEY } from './SPBU.templates';
+import { ADDRESS_TEMPLATES, DEFAULT_FUELS, PLATE_REGIONS, GENERIC_LOGOS, buildPlate, randomRegionCode, svgToDataUri, GAYA_NOTA, GAYA_NOTA_KEY } from './SPBU.templates';
 import { useGoogleFonts, cssFamily, fontsReady } from '../../shared/lib/fonts';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -55,31 +55,31 @@ const formatDate = (date) => {
 // Helper untuk generate ID
 const generateId = () => 'spbu-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 
-// Helper untuk resize gambar dan konversi ke Base64 (untuk logo)
-const resizeImageAndGetBase64 = (file, maxWidth, callback) => {
-    const reader = new FileReader();
-    reader.onload = (readerEvent) => {
-        const img = new Image();
-        img.onload = () => {
-            let width = img.width;
-            let height = img.height;
-            if (width > maxWidth) {
-                height = height * (maxWidth / width);
-                width = maxWidth;
-            }
-
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-            callback(dataUrl);
-        };
-        img.src = readerEvent.target.result;
+// Gambar (data URL atau link) -> JPEG Base64 maks maxWidth px, latar putih agar PNG transparan tidak jadi hitam
+const resizeToBase64 = (src, maxWidth) => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        try { resolve(canvas.toDataURL('image/jpeg', 0.7)); } catch (e) { reject(e); } // link yang menolak CORS
     };
+    img.onerror = () => reject(new Error('Gambar tidak bisa dimuat.'));
+    img.src = src;
+});
+
+const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
-};
+});
 
 // Helper untuk API Call dengan Exponential Backoff
 const fetchWithBackoff = async (url, options, maxRetries = 3) => {
@@ -124,7 +124,8 @@ const initialSpbuConfig = {
     footerNote: LOCKED_FOOTER_TEXT,
     receiptWidth: 275, 
     id: generateId(),
-    logoBase64: null, 
+    logoBase64: null,
+    fuels: DEFAULT_FUELS, // jenis & harga BBM milik template ini (dropdown Harga BBM)
 };
 
 // --- RENDER HELPERS (MEMOIZED INPUT COMPONENT) ---
@@ -531,17 +532,36 @@ const App = () => {
     }, [displayFeedback]);
 
 
-    const handleImageUpload = useCallback((e) => {
+    const handleImageUpload = useCallback(async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
         displayFeedback('Sedang memproses gambar...', 'loading');
-        
-        resizeImageAndGetBase64(file, LOGO_MAX_WIDTH, (base64Data) => {
+        try {
+            const base64Data = await resizeToBase64(await readFileAsDataUrl(file), LOGO_MAX_WIDTH);
             setCurrentSpbu(prev => ({ ...prev, logoBase64: base64Data }));
             displayFeedback('Gambar berhasil diupload dan diresize. Jangan lupa klik Simpan.', 'success');
-        });
+        } catch (err) {
+            console.error('Upload logo gagal:', err);
+            displayFeedback('Gagal memproses gambar. Pastikan file berupa gambar.', 'error');
+        }
     }, [displayFeedback]);
+
+    // Logo dari link (disalin jadi Base64 agar ikut tersimpan & aman saat Export PNG)
+    const [logoLink, setLogoLink] = useState('');
+    const handleLogoLink = useCallback(async () => {
+        const url = logoLink.trim();
+        if (!/^https?:\/\/\S+$/i.test(url)) return displayFeedback('Link harus diawali http:// atau https://', 'error');
+        displayFeedback('Mengambil logo dari link...', 'loading');
+        try {
+            const base64Data = await resizeToBase64(url, LOGO_MAX_WIDTH);
+            setCurrentSpbu(prev => ({ ...prev, logoBase64: base64Data }));
+            setLogoLink('');
+            displayFeedback('Logo dari link berhasil dipasang. Jangan lupa klik Simpan.', 'success');
+        } catch (err) {
+            console.error('Logo dari link gagal:', err);
+            displayFeedback('Link tidak bisa dipakai (bukan gambar langsung, atau situsnya menolak akses). Unduh gambarnya lalu pakai Pilih File.', 'error');
+        }
+    }, [logoLink, displayFeedback]);
     
     // ============================================================
     // SECTION: Handler — Template (Alamat, Harga, Plat, Logo Generik)
@@ -551,10 +571,19 @@ const App = () => {
         if (tpl) setCurrentSpbu(prev => ({ ...prev, address: tpl.value }));
     }, []);
 
-    const handlePriceTemplate = useCallback((e) => {
-        const tpl = PRICE_TEMPLATES[parseInt(e.target.value)];
-        if (tpl) setTransactionData(prev => ({ ...prev, productName: tpl.productName, pricePerLiter: tpl.pricePerLiter }));
-    }, []);
+    // ============================================================
+    // SECTION: Jenis & Harga BBM (disimpan per template SPBU)
+    // ============================================================
+    const fuels = currentSpbu.fuels?.length ? currentSpbu.fuels : DEFAULT_FUELS;
+    const handlePriceTemplate = (e) => {
+        const f = fuels[parseInt(e.target.value)];
+        if (f) setTransactionData(prev => ({ ...prev, productName: f.name, pricePerLiter: f.price }));
+    };
+    const setFuels = (fn) => setCurrentSpbu(prev => ({ ...prev, fuels: fn(prev.fuels?.length ? prev.fuels : DEFAULT_FUELS) }));
+    const updateFuel = (i, key, value) => setFuels(list => list.map((f, j) => j !== i ? f
+        : { ...f, [key]: key === 'price' ? (parseInt(value.replace(/\D/g, ''), 10) || 0) : value }));
+    const addFuel = () => setFuels(list => [...list, { name: '', price: 0 }]);
+    const removeFuel = (i) => setFuels(list => list.filter((_, j) => j !== i));
 
     const handlePlateTemplate = useCallback((code) => {
         setTransactionData(prev => ({ ...prev, nopol: buildPlate(code || randomRegionCode()) }));
@@ -586,13 +615,18 @@ const App = () => {
 
     const handleSaveSpbu = useCallback(async () => {
         if (!db || !currentSpbu.name) return displayFeedback('Nama SPBU wajib diisi.', 'error');
+        const cleanFuels = (currentSpbu.fuels?.length ? currentSpbu.fuels : DEFAULT_FUELS)
+            .map(f => ({ name: String(f.name || '').trim(), price: Number(f.price) || 0 }))
+            .filter(f => f.name);
+        if (!cleanFuels.length) return displayFeedback('Isi minimal satu jenis BBM.', 'error');
         setIsProcessing(true);
         displayFeedback('Menyimpan template...', 'loading');
-        
+
         try {
-            const spbuToSave = { 
-                ...currentSpbu, 
-                footerNote: LOCKED_FOOTER_TEXT, 
+            const spbuToSave = {
+                ...currentSpbu,
+                fuels: cleanFuels,
+                footerNote: LOCKED_FOOTER_TEXT,
                 // Jika ID sudah ada di list, gunakan yang itu. Jika tidak, generate baru.
                 id: currentSpbu.id && spbuList.find(s => s.id === currentSpbu.id) ? currentSpbu.id : generateId()
             }; 
@@ -600,7 +634,11 @@ const App = () => {
             // Simpan ke Firestore
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'spbu_configs', spbuToSave.id), spbuToSave, { merge: true });
             
-            // Update state
+            // Update state; harga di form transaksi ikut harga baru bila produknya sama
+            setTransactionData(prev => {
+                const f = cleanFuels.find(x => x.name === prev.productName);
+                return f ? { ...prev, pricePerLiter: f.price } : prev;
+            });
             setSelectedSpbuId(spbuToSave.id);
             setUiState('view');
             displayFeedback('Template berhasil disimpan!', 'success');
@@ -974,13 +1012,22 @@ const App = () => {
                         {/* Upload Logo */}
                         <div className="space-y-2">
                             {/* PERUBAHAN KRUSIAL DI SINI: Label dibuat 2 baris */}
-                            <label className="text-sm font-medium text-gray-700 block mb-1 leading-snug">
-                                Upload Logo Pertamina<br/>(Max {LOGO_MAX_WIDTH}px)
+                            <label htmlFor="logo-upload" className="text-sm font-medium text-gray-700 block mb-1 leading-snug">
+                                Upload Logo SPBU<br/>(Max {LOGO_MAX_WIDTH}px)
                             </label>
                             <div className="flex items-center gap-2">
                                 <input type="file" id="logo-upload" accept="image/*" onChange={handleImageUpload}
                                     className="flex-1 min-w-0 p-2 border rounded-lg bg-white" disabled={isProcessing || isAiGenerating} />
                                 <BgToggle checked={logoBg} onChange={setLogoBg} busy={logoShown.busy} />
+                            </div>
+                            <label htmlFor="logo-link" className="text-sm font-medium text-gray-700 block">Atau tempel link gambar</label>
+                            <div className="flex items-center gap-2">
+                                <input type="url" id="logo-link" value={logoLink} onChange={(e) => setLogoLink(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') handleLogoLink(); }}
+                                    placeholder="https://contoh.com/logo.png" inputMode="url"
+                                    className="flex-1 min-w-0 p-2 border rounded-lg bg-white" disabled={isProcessing || isAiGenerating} />
+                                <button type="button" onClick={handleLogoLink} disabled={!logoLink.trim() || isProcessing || isAiGenerating}
+                                    className="px-4 min-h-[44px] bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition disabled:opacity-50">Pakai</button>
                             </div>
                             <div className='flex justify-between items-center'>
                                 <p className="text-xs text-red-500">
@@ -1024,6 +1071,29 @@ const App = () => {
                                 className="w-full p-2 border rounded-lg bg-white" min="150" max="300" disabled={isProcessing || isAiGenerating} />
                         </div>
 
+                        {/* Jenis & Harga BBM (tersimpan di template, tampil di dropdown Harga BBM) */}
+                        <div id="pengaturan-bbm">
+                            <p className="text-sm font-medium text-gray-700 mb-1">Jenis &amp; Harga BBM (Rp/liter)</p>
+                            <div className="space-y-2">
+                                {fuels.map((f, i) => (
+                                    <div key={i} className="flex gap-2">
+                                        <input type="text" value={f.name} onChange={(e) => updateFuel(i, 'name', e.target.value)}
+                                            placeholder="Nama BBM" aria-label={`Nama BBM ${i + 1}`}
+                                            className="flex-1 min-w-0 p-2 border rounded-lg bg-white" disabled={isProcessing || isAiGenerating} />
+                                        <input type="text" inputMode="numeric" value={f.price ? formatRupiah(f.price) : ''} onChange={(e) => updateFuel(i, 'price', e.target.value)}
+                                            placeholder="Harga" aria-label={`Harga ${f.name || `BBM ${i + 1}`}`}
+                                            className="w-28 p-2 border rounded-lg bg-white text-right" disabled={isProcessing || isAiGenerating} />
+                                        <button type="button" onClick={() => removeFuel(i)} disabled={fuels.length === 1 || isProcessing || isAiGenerating}
+                                            aria-label={`Hapus ${f.name || `BBM ${i + 1}`}`} title="Hapus"
+                                            className="px-3 min-h-[44px] bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition disabled:opacity-40">&times;</button>
+                                    </div>
+                                ))}
+                            </div>
+                            <button type="button" onClick={addFuel} disabled={isProcessing || isAiGenerating}
+                                className="mt-2 w-full p-2 min-h-[44px] border-2 border-dashed border-indigo-300 text-indigo-700 rounded-lg font-semibold hover:bg-indigo-50 transition disabled:opacity-50">+ Tambah Jenis BBM</button>
+                            <p className="text-xs text-gray-500 mt-1">Klik Simpan Template agar perubahan muncul di dropdown Harga BBM.</p>
+                        </div>
+
                         <div className="flex space-x-2 pt-2">
                             <button onClick={handleSaveSpbu} disabled={isProcessing || isAiGenerating}
                                 className={`flex-grow p-3 rounded-lg font-bold transition ${isProcessing ? 'bg-blue-300' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>
@@ -1048,12 +1118,17 @@ const App = () => {
                             <h2 className="text-xl font-bold mb-3 text-indigo-700">2. Data Transaksi</h2>
                             <div className="grid grid-cols-2 gap-3 mb-3">
                                 <div>
-                                    <label className="text-xs font-medium text-gray-700 block mb-1">Template Harga (contoh)</label>
-                                    <select value="" onChange={handlePriceTemplate} disabled={isProcessing || isAiGenerating}
-                                        className="w-full p-2 border rounded-lg bg-white text-sm" aria-label="Template Harga">
-                                        <option value="" disabled>Pilih BBM...</option>
-                                        {PRICE_TEMPLATES.map((t, i) => <option key={t.label} value={i}>{t.label}</option>)}
-                                    </select>
+                                    <label className="text-xs font-medium text-gray-700 block mb-1">Harga BBM</label>
+                                    <div className="flex gap-1">
+                                        <select value="" onChange={handlePriceTemplate} disabled={isProcessing || isAiGenerating}
+                                            className="flex-1 min-w-0 p-2 border rounded-lg bg-white text-sm" aria-label="Pilih jenis BBM">
+                                            <option value="" disabled>Pilih BBM...</option>
+                                            {fuels.map((f, i) => <option key={`${f.name}-${i}`} value={i}>{f.name} - {formatRupiah(f.price)}</option>)}
+                                        </select>
+                                        <button type="button" onClick={() => setUiState('edit')} disabled={!selectedSpbuId || isProcessing || isAiGenerating}
+                                            aria-label="Atur jenis dan harga BBM" title={selectedSpbuId ? 'Atur jenis & harga BBM' : 'Buat template SPBU dulu'}
+                                            className="px-3 bg-yellow-500 text-white rounded-lg text-sm font-bold hover:bg-yellow-600 transition min-h-[44px] disabled:opacity-50">Atur</button>
+                                    </div>
                                 </div>
                                 <div>
                                     <label className="text-xs font-medium text-gray-700 block mb-1">Template Plat</label>
