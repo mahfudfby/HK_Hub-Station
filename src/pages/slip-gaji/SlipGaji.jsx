@@ -6,6 +6,7 @@ import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import { printImage } from '../../shared/lib/printImage';
 import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
 import { isStaleChunkError, reloadForNewVersion } from '../../shared/lib/staleChunk';
+import PositionPad, { getOffset } from '../../shared/components/PositionPad';
 import BgToggle from '../../shared/components/BgToggle';
 import { ScaleBox, TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import { useBgRemoved } from '../../shared/lib/removeBg';
@@ -88,6 +89,7 @@ const todayLocal = () => {
 const buildInitialForm = () => ({
   template: 'klasik',
   skala: 100, // ukuran teks dokumen (%)
+  posisi: {}, // geseran tanda tangan (px dokumen)
   companyName: 'PT. Nama Perusahaan Anda',
   addressLine1: 'Jl. Contoh Raya No. 12',
   addressLine2: 'Kec. Sudirman, Jakarta Pusat',
@@ -375,12 +377,12 @@ function SlipLine({ label, value }) {
     </div>
   );
 }
-function SignBlock({ heading, image, alt, name, title }) {
+function SignBlock({ heading, image, alt, name, title, offset }) {
   return (
     <div className="text-center" style={{ width: 150 }}>
       <p>{heading}</p>
       <div className="relative h-14 mb-0.5">
-        {image && <img src={image} crossOrigin="anonymous" alt={alt} className="slip-signature" />}
+        {image && <img src={image} crossOrigin="anonymous" alt={alt} className="slip-signature" style={offset ? { marginLeft: offset.x, marginBottom: -offset.y } : undefined} />}
       </div>
       <div className="pt-1">
         <p className="border-b border-black font-semibold inline-block pb-0.5">{name}</p>
@@ -765,8 +767,8 @@ function SlipPreview({ slipRef, form, calc, logo, signature, managerSignature, t
             </div>
 
             <div className="flex items-end gap-6">
-              <SignBlock heading="Mengetahui," image={managerSignature} alt="Tanda Tangan Manager" name={form.managerName} title={form.managerTitle} />
-              <SignBlock heading="Penerima," image={signature} alt="Tanda Tangan Karyawan" name={form.name} title={form.position} />
+              <SignBlock heading="Mengetahui," image={managerSignature} alt="Tanda Tangan Manager" name={form.managerName} title={form.managerTitle} offset={getOffset(form.posisi, 'manager')} />
+              <SignBlock heading="Penerima," image={signature} alt="Tanda Tangan Karyawan" name={form.name} title={form.position} offset={getOffset(form.posisi, 'karyawan')} />
             </div>
           </div>
         </div>
@@ -920,6 +922,12 @@ export default function SlipGaji() {
     }
   };
 
+  // Analog geser tanda tangan/stempel: desktop di atas form, ponsel di kotak bawah
+  const [geser, setGeser] = useState('karyawan');
+  const posPad = (
+    <PositionPad targets={[{ id: 'karyawan', label: 'TTD Karyawan' }, { id: 'manager', label: 'TTD Manager' }]}
+      active={geser} onActive={setGeser} value={form.posisi} onChange={(v) => setForm((prev) => ({ ...prev, posisi: v }))} />
+  );
   // --- Render ---
   return (
     <div className="slip-app p-4 md:p-8">
@@ -938,6 +946,7 @@ export default function SlipGaji() {
           <div className="slip-card bg-white p-6 md:p-8 shadow-lg rounded-xl h-fit">
             <h2 className="text-xl font-semibold mb-6 border-b pb-2 text-gray-700">Formulir Input Data Slip Gaji</h2>
             <div className="hidden lg:block"><div className="mb-4"><TextSizeSlider value={form.skala} onChange={(v) => setForm((prev) => ({ ...prev, skala: v }))} effective={k} /></div></div>
+            <div className="hidden lg:block">{posPad}</div>
             <div className="hidden lg:block">
             <TemplatePicker value={tpl.id} onChange={handleChange} />
             </div>
@@ -966,6 +975,7 @@ export default function SlipGaji() {
         {/* Ponsel: ukuran teks & pilihan di paling bawah, dekat tombol unduh */}
         <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">
           <TextSizeSlider value={form.skala} onChange={(v) => setForm((prev) => ({ ...prev, skala: v }))} effective={k} />
+          {posPad}
           <TemplatePicker id="inputTemplateMobile" value={tpl.id} onChange={handleChange} />
         </div>
 

@@ -11,6 +11,7 @@ import {
 } from '../../shared/components/LetterKit';
 import { Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts, type Gaya } from '../../shared/components/LetterStyles';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
+import PositionPad, { getOffset, type Offsets } from '../../shared/components/PositionPad';
 
 // Surat keterangan sehat (A5): hanya untuk akun admin. Kop diisi sendiri oleh dokter/klinik pemakai.
 
@@ -40,6 +41,7 @@ type Form = {
   idNo: string;
   ttd: string; // data URL, hanya di perangkat ini
   stempel: string;
+  posisi: Offsets; // geseran tanda tangan & stempel (px dokumen)
   gaya: string; // id gaya surat (LetterStyles)
   skala: number; // ukuran teks surat (%)
 };
@@ -71,6 +73,7 @@ const DEFAULT: Form = {
   idNo: '',
   ttd: '',
   stempel: '',
+  posisi: {},
   gaya: 'klasik',
   skala: 100,
 };
@@ -129,8 +132,8 @@ function Letter({ f, k }: { f: Form; k: number }) {
         <div>{f.kota ? <span style={dataStyle}>{f.kota}</span> : <Dots w="6em" />}, {f.tanggal ? <span style={dataStyle}>{fmtTanggal(f.tanggal)}</span> : <Dots w="8em" />}</div>
         <div>{f.jabatan}</div>
         <div style={{ position: 'relative', height: 76 * k }}>
-          {f.stempel && <img src={f.stempel} alt="Stempel" style={{ position: 'absolute', right: 70 * k, top: 0, height: 76 * k, opacity: 0.9, mixBlendMode: 'multiply' }} />}
-          {f.ttd && <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', right: 0, top: 6 * k, height: 64 * k, maxWidth: 200 * k, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
+          {f.stempel && <img src={f.stempel} alt="Stempel" style={{ position: 'absolute', right: 70 * k - getOffset(f.posisi, 'stempel').x, top: getOffset(f.posisi, 'stempel').y, height: 76 * k, opacity: 0.9, mixBlendMode: 'multiply' }} />}
+          {f.ttd && <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', right: -getOffset(f.posisi, 'ttd').x, top: 6 * k + getOffset(f.posisi, 'ttd').y, height: 64 * k, maxWidth: 200 * k, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
         </div>
         <SignName g={g} k={k}>{f.dokter}</SignName>
         {f.idLabel && <div style={{ fontSize: 12 * k }}>{f.idLabel}. {f.idNo || <Dots w="10em" />}</div>}
@@ -177,6 +180,12 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
     notify('info', 'Semua isian dikembalikan ke bawaan.');
   };
 
+  // Analog geser tanda tangan/stempel: desktop di atas form, ponsel di kotak bawah
+  const [geser, setGeser] = useState('ttd');
+  const posPad = (
+    <PositionPad targets={[{ id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
+      active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
+  );
   return (
     <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
@@ -189,6 +198,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6">
             <div className="hidden lg:block"><TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} /></div>
+            <div className="hidden lg:block">{posPad}</div>
             <div className="hidden lg:block">
             <StylePicker value={f.gaya} onChange={(v) => set('gaya', v)} />
             </div>
@@ -225,6 +235,8 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
                 <Field label="Jenis nomor (SIP/NIP)"><input className={inputCls} value={f.idLabel} onChange={(e) => set('idLabel', e.target.value)} /></Field>
                 <Field label="Nomor SIP/NIP"><input className={inputCls} value={f.idNo} onChange={(e) => set('idNo', e.target.value)} /></Field>
               </div>
+              <ImageUpload label="Logo kop (opsional, kiri atas)" value={f.logo} onChange={(v) => set('logo', v)} notify={notify} shown={logo.src} bgBusy={logo.busy} {...bgFor('logo')} />
+              <p className="-mt-2 text-xs text-gray-500">Kosongkan bila surat tanpa logo.</p>
               <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} shown={ttd.src} bgBusy={ttd.busy} {...bgFor('ttd')} />
               <ImageUpload label="Stempel" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify} shown={stempel.src} bgBusy={stempel.busy} {...bgFor('stempel')} />
               <p className="text-xs text-gray-500">Logo, tanda tangan &amp; stempel hanya disimpan di perangkat ini, tidak diunggah ke server.</p>
@@ -236,7 +248,6 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
                 <Field label="Kop baris 1 (nama klinik / praktik)"><input className={inputCls} value={f.instansi} onChange={(e) => set('instansi', e.target.value)} /></Field>
                 <Field label="Kop baris 2 (unit / layanan)"><input className={inputCls} value={f.subKop} onChange={(e) => set('subKop', e.target.value)} /></Field>
                 <Field label="Kop baris 3 (alamat & telepon)"><input className={inputCls} value={f.alamatKop} onChange={(e) => set('alamatKop', e.target.value)} /></Field>
-                <ImageUpload label="Logo kop" value={f.logo} onChange={(v) => set('logo', v)} notify={notify} shown={logo.src} bgBusy={logo.busy} {...bgFor('logo')} />
                 <Field label="Judul"><input className={inputCls} value={f.judul} onChange={(e) => set('judul', e.target.value)} /></Field>
                 <Field label="Kalimat pembuka"><textarea rows={2} className={inputCls} value={f.pembuka} onChange={(e) => set('pembuka', e.target.value)} /></Field>
                 <Field label="Pengantar hasil"><input className={inputCls} value={f.pengantarHasil} onChange={(e) => set('pengantarHasil', e.target.value)} /></Field>
@@ -255,6 +266,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
         {/* Ponsel: ukuran teks & pilihan di paling bawah, dekat tombol unduh */}
         <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">
           <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
+          {posPad}
           <StylePicker value={f.gaya} onChange={(v) => set('gaya', v)} />
         </div>
 

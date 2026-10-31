@@ -11,6 +11,7 @@ import {
 } from '../../shared/components/LetterKit';
 import { FitLine, Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts } from '../../shared/components/LetterStyles';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
+import PositionPad, { getOffset, type Offsets } from '../../shared/components/PositionPad';
 
 // Surat keterangan dokter: hanya untuk akun admin (login lewat tombol mengambang / halaman /login).
 
@@ -43,6 +44,7 @@ type Form = {
   jabatan: string;
   ttd: string; // data URL, hanya di perangkat ini
   stempel: string;
+  posisi: Offsets; // geseran tanda tangan & stempel (px dokumen)
   logo: string; // opsional, kiri atas kop; data URL, hanya di perangkat ini
   gaya: string; // id gaya surat (LetterStyles)
   skala: number; // ukuran teks surat (%)
@@ -74,6 +76,7 @@ const DEFAULT: Form = {
   jabatan: 'Dokter yang memeriksa',
   ttd: '',
   stempel: '',
+  posisi: {},
   logo: '',
   gaya: 'klasik',
   skala: 100,
@@ -181,10 +184,10 @@ function Letter({ f, k }: { f: Form; k: number }) {
         <div>{f.jabatan}</div>
         <div style={{ position: 'relative', height: 80 * k }}>
           {f.stempel && (
-            <img src={f.stempel} alt="Stempel" style={{ position: 'absolute', right: 70 * k, top: 0, height: 80 * k, opacity: 0.9, mixBlendMode: 'multiply' }} />
+            <img src={f.stempel} alt="Stempel" style={{ position: 'absolute', right: 70 * k - getOffset(f.posisi, 'stempel').x, top: getOffset(f.posisi, 'stempel').y, height: 80 * k, opacity: 0.9, mixBlendMode: 'multiply' }} />
           )}
           {f.ttd && (
-            <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', right: 0, top: 6 * k, height: 68 * k, maxWidth: 200 * k, objectFit: 'contain', mixBlendMode: 'multiply' }} />
+            <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', right: -getOffset(f.posisi, 'ttd').x, top: 6 * k + getOffset(f.posisi, 'ttd').y, height: 68 * k, maxWidth: 200 * k, objectFit: 'contain', mixBlendMode: 'multiply' }} />
           )}
         </div>
         <SignName g={g} k={k}>{f.nama}</SignName>
@@ -239,6 +242,12 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
     <ExportButton kind={kind} color={color} exporting={exporting} disabled={logo.busy || ttd.busy || stempel.busy} onRun={run} />
   );
 
+  // Analog geser tanda tangan/stempel: desktop di atas form, ponsel di kotak bawah
+  const [geser, setGeser] = useState('ttd');
+  const posPad = (
+    <PositionPad targets={[{ id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
+      active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
+  );
   return (
     <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
@@ -253,6 +262,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6">
             <div className="hidden lg:block"><TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} /></div>
+            <div className="hidden lg:block">{posPad}</div>
             <div className="hidden lg:block">
             <StylePicker value={f.gaya} onChange={(v) => set('gaya', v)} />
             </div>
@@ -356,6 +366,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
         {/* Ponsel: ukuran teks & pilihan di paling bawah, dekat tombol unduh */}
         <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">
           <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
+          {posPad}
           <StylePicker value={f.gaya} onChange={(v) => set('gaya', v)} />
         </div>
 

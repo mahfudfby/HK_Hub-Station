@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { Link } from 'react-router-dom';
 import FitPreview from './FitPreview';
 import { TextSizeSlider, useFitScale } from './TextScale';
+import PositionPad, { getOffset, type Offset, type Offsets } from './PositionPad';
 import { Toast, type ToastState } from './Feedback';
 import { ExportButton, Field, ImageUpload, inputCls, fmtTanggal, mmToPx, useLetterExport, type Notify, type Paper } from './LetterKit';
 import { useBgRemoved } from '../lib/removeBg';
@@ -108,6 +109,7 @@ type Doc = {
   accent: string;
   bingkai: boolean; // border kotak di tepi kertas
   skala: number; // ukuran teks dokumen (%)
+  posisi: Offsets; // geseran tanda tangan & stempel (px dokumen)
   namaFont: string; // id NAME_FONTS, '' = ikut template
   logo: string;
   penjual: string;
@@ -147,6 +149,7 @@ const makeDefault = (kind: DocKind): Doc => ({
   accent: kind === 'invoice' ? '#1d4ed8' : '#0f766e',
   bingkai: true,
   skala: 100,
+  posisi: {},
   namaFont: '',
   logo: '',
   penjual: 'NAMA USAHA ANDA',
@@ -483,14 +486,14 @@ function Totals({ d, c, fs, short }: Ctx) {
   );
 }
 
-function SignBox({ heading, name, title, ttd, stempel, fs, short = false }: { heading: string; name: string; title: string; ttd?: string; stempel?: string; fs: number; short?: boolean }) {
+function SignBox({ heading, name, title, ttd, stempel, fs, short = false, oTtd, oStempel }: { heading: string; name: string; title: string; ttd?: string; stempel?: string; fs: number; short?: boolean; oTtd?: Offset; oStempel?: Offset }) {
   const h = fs * (short ? 4 : 5.5);
   return (
     <div style={{ textAlign: 'center', minWidth: fs * 13 }}>
       <div>{heading}</div>
       <div style={{ position: 'relative', height: h }}>
-        {stempel && <img src={stempel} alt="Stempel" style={{ position: 'absolute', left: 0, top: 0, height: h, opacity: 0.9, mixBlendMode: 'multiply' }} />}
-        {ttd && <img src={ttd} alt="Tanda tangan" style={{ position: 'absolute', left: '50%', top: fs * 0.4, transform: 'translateX(-50%)', height: h * 0.85, maxWidth: fs * 14, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
+        {stempel && <img src={stempel} alt="Stempel" style={{ position: 'absolute', left: oStempel?.x ?? 0, top: oStempel?.y ?? 0, height: h, opacity: 0.9, mixBlendMode: 'multiply' }} />}
+        {ttd && <img src={ttd} alt="Tanda tangan" style={{ position: 'absolute', left: '50%', top: fs * 0.4 + (oTtd?.y ?? 0), marginLeft: oTtd?.x ?? 0, transform: 'translateX(-50%)', height: h * 0.85, maxWidth: fs * 14, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
       </div>
       <div style={{ fontWeight: 700, borderBottom: '1px solid #000', display: 'inline-block', minWidth: fs * 11 }}>{name || ' '}</div>
       {title && <div style={{ fontSize: fs * 0.9 }}>{title}</div>}
@@ -538,7 +541,8 @@ function DocView(ctx: Ctx & { w: number; h: number }) {
       {(d.kota || d.tanggal) && <div style={{ textAlign: 'right', marginBottom: 2 }}>{[d.kota, fmtTanggal(d.tanggal)].filter(Boolean).join(', ')}</div>}
       <div style={{ display: 'flex', justifyContent: kind === 'faktur' ? 'space-between' : 'flex-end' }}>
         {kind === 'faktur' && <SignBox heading="Penerima," name="" title="" fs={fs} short={ctx.short} />}
-        <SignBox heading="Hormat kami," name={d.ttdNama} title={d.ttdJabatan} ttd={d.ttd} stempel={d.stempel} fs={fs} short={ctx.short} />
+        <SignBox heading="Hormat kami," name={d.ttdNama} title={d.ttdJabatan} ttd={d.ttd} stempel={d.stempel} fs={fs} short={ctx.short}
+          oTtd={getOffset(d.posisi, 'ttd')} oStempel={getOffset(d.posisi, 'stempel')} />
       </div>
       {d.bingkai && (
         <div style={{ position: 'absolute', inset: frameInset(pad), border: T.frame === 'double' ? `4px double ${inkOf(d)}` : `1.5px solid ${inkOf(d)}`, pointerEvents: 'none' }} />
@@ -613,6 +617,12 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
     </Field>
   );
   const seg = (on: boolean) => `px-3 py-2 rounded-lg border text-sm font-medium min-h-[44px] ${on ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`;
+  // Analog geser tanda tangan/stempel: desktop di atas form, ponsel di kotak bawah
+  const [geser, setGeser] = useState('ttd');
+  const posPad = (
+    <PositionPad targets={[{ id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
+      active={geser} onActive={setGeser} value={d.posisi} onChange={(v) => set('posisi', v)} />
+  );
   // Pilihan kertas & orientasi: di form (desktop) dan di paling bawah (ponsel)
   const paperField = (
     <Field label="Ukuran kertas">
@@ -656,6 +666,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
             <section className="space-y-3">
               <h2 className="font-bold">Gaya &amp; Kertas</h2>
               <div className="hidden lg:block"><TextSizeSlider value={d.skala} onChange={(v) => set('skala', v)} effective={k} /></div>
+              <div className="hidden lg:block">{posPad}</div>
               <div className="hidden lg:block">
               <Field label="Template">
                 <select className={inputCls} value={tplOf(d.template).id} onChange={(e) => set('template', e.target.value)}>
@@ -773,6 +784,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
         {/* Ponsel: ukuran teks & pilihan di paling bawah, dekat tombol unduh */}
         <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">
           <TextSizeSlider value={d.skala} onChange={(v) => set('skala', v)} effective={k} />
+          {posPad}
           {paperField}
           {orientButtons}
           {accentField}
