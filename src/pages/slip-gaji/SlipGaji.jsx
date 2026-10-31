@@ -64,6 +64,8 @@ const buildInitialForm = () => ({
   bankAccountNumber: '123-456-7890',
   bankName: 'BANK ABC',
   status: 'TK/0',
+  managerName: 'Nama Manager',
+  managerTitle: 'Direktur',
   basicSalary: '8000000',
   allowance: '500000',
   overtime: '0',
@@ -334,6 +336,20 @@ function SlipLine({ label, value }) {
     </div>
   );
 }
+function SignBlock({ heading, image, alt, name, title }) {
+  return (
+    <div className="text-center" style={{ width: '28%' }}>
+      <p>{heading}</p>
+      <div className="relative h-14 mb-0.5">
+        {image && <img src={image} crossOrigin="anonymous" alt={alt} className="slip-signature" />}
+      </div>
+      <div className="pt-1">
+        <p className="border-b border-black font-semibold inline-block pb-0.5">{name}</p>
+        <p className="text-[9px]">{title}</p>
+      </div>
+    </div>
+  );
+}
 function InfoRow({ label, value, highlight = false }) {
   return (
     <div className="flex">
@@ -424,7 +440,7 @@ function DeductionsForm({ form, onChange, calc }) {
 // ============================================================
 // SECTION: Komponen Preview Slip (area yang di-export ke PNG)
 // ============================================================
-function SlipPreview({ slipRef, form, calc, logo, signature }) {
+function SlipPreview({ slipRef, form, calc, logo, signature, managerSignature }) {
   return (
     <div className="slip-scroll">
       <div id="slip-container" ref={slipRef} className="slip-box doc-font border border-gray-400 p-3">
@@ -516,23 +532,15 @@ function SlipPreview({ slipRef, form, calc, logo, signature }) {
 
           {/* Footer: transfer & tanda tangan */}
           <div className="flex justify-between text-[10px] mt-1">
-            <div className="text-left" style={{ width: '40%' }}>
+            <div className="text-left" style={{ width: '36%' }}>
               <p className="text-[9px] leading-tight">Pembayaran gaji Telah Dilakukan Perusahaan Melalui Transfer</p>
               <div className="relative h-10 mb-1 pt-2">
                 <p className="text-[9px] text-gray-700">Tanggal Transfer: <span>{formatTransferDate(form.transferDate)}</span></p>
               </div>
             </div>
 
-            <div className="text-right" style={{ width: '40%' }}>
-              <p>Tanda Tangan,</p>
-              <div className="relative h-14 mb-0.5">
-                {signature && <img src={signature} crossOrigin="anonymous" alt="Tanda Tangan Karyawan" className="slip-signature" />}
-              </div>
-              <div className="pt-1">
-                <p className="border-b border-black font-semibold inline-block pb-0.5">{form.name}</p>
-                <p className="text-[9px]">{form.position}</p>
-              </div>
-            </div>
+            <SignBlock heading="Mengetahui," image={managerSignature} alt="Tanda Tangan Manager" name={form.managerName} title={form.managerTitle} />
+            <SignBlock heading="Penerima," image={signature} alt="Tanda Tangan Karyawan" name={form.name} title={form.position} />
           </div>
         </div>
       </div>
@@ -548,6 +556,7 @@ export default function SlipGaji() {
   const [form, setForm] = useState(buildInitialForm);
   const [logo, setLogo] = useState('');
   const [signature, setSignature] = useState('');
+  const [managerSignature, setManagerSignature] = useState('');
   const [exporting, setExporting] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -605,6 +614,7 @@ export default function SlipGaji() {
   };
   const handleLogoChange = (e) => handleImage(e, setLogo, LOGO_MAX_WIDTH, LOGO_MAX_HEIGHT, 'Logo perusahaan', 'logo');
   const handleSignatureChange = (e) => handleImage(e, setSignature, SIGNATURE_MAX_WIDTH, SIGNATURE_MAX_HEIGHT, 'Tanda tangan', 'tanda-tangan');
+  const handleManagerSignatureChange = (e) => handleImage(e, setManagerSignature, SIGNATURE_MAX_WIDTH, SIGNATURE_MAX_HEIGHT, 'Tanda tangan manager', 'tanda-tangan');
 
   const captureSlip = async () => {
     await document.fonts.ready; // font dokumen wajib termuat agar tata letak sama di semua perangkat
@@ -701,16 +711,19 @@ export default function SlipGaji() {
             <EarningsForm form={form} onChange={handleChange} />
             <DeductionsForm form={form} onChange={handleChange} calc={calc} />
 
-            <h3 className="text-lg font-medium mt-8 mb-4 border-t pt-4 text-gray-700">Detail Tanda Tangan Penerima</h3>
+            <h3 className="text-lg font-medium mt-8 mb-4 border-t pt-4 text-gray-700">Detail Tanda Tangan</h3>
             <div className="space-y-4">
               <FileField id="inputReceiverSignatureFile" label="Tanda Tangan Karyawan (Opsional)" onChange={handleSignatureChange} />
+              <TextField id="inputManagerName" label="Nama Manager / Direktur" name="managerName" value={form.managerName ?? ''} onChange={handleChange} />
+              <TextField id="inputManagerTitle" label="Jabatan Penandatangan" name="managerTitle" value={form.managerTitle ?? ''} onChange={handleChange} placeholder="Manager / Direktur" />
+              <FileField id="inputManagerSignatureFile" label="Tanda Tangan Manager / Direktur (Opsional)" onChange={handleManagerSignatureChange} />
             </div>
           </div>
 
           {/* Render — Preview Slip */}
           <div className="slip-card bg-white p-2 md:p-4 rounded-xl shadow-lg lg:col-span-1 min-w-0">
             <FitPreview>
-              <SlipPreview slipRef={slipRef} form={form} calc={calc} logo={logo} signature={signature} />
+              <SlipPreview slipRef={slipRef} form={form} calc={calc} logo={logo} signature={signature} managerSignature={managerSignature} />
             </FitPreview>
           </div>
         </div>
