@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { Link } from 'react-router-dom';
 import FitPreview from './FitPreview';
 import { TextSizeSlider, useFitScale } from './TextScale';
-import PositionPad, { getOffset, type Offset, type Offsets } from './PositionPad';
+import PositionPad, { fxOf, getOffset, type Offset, type Offsets } from './PositionPad';
 import { Toast, type ToastState } from './Feedback';
 import { ExportButton, Field, ImageUpload, inputCls, fmtTanggal, mmToPx, useLetterExport, type Notify, type Paper } from './LetterKit';
 import { useBgRemoved } from '../lib/removeBg';
@@ -109,7 +109,7 @@ type Doc = {
   accent: string;
   bingkai: boolean; // border kotak di tepi kertas
   skala: number; // ukuran teks dokumen (%)
-  posisi: Offsets; // geseran tanda tangan & stempel (px dokumen)
+  posisi: Offsets; // geseran logo, tanda tangan & stempel (px dokumen)
   namaFont: string; // id NAME_FONTS, '' = ikut template
   logo: string;
   penjual: string;
@@ -224,10 +224,13 @@ function Seller({ d, fs, color, sub = '#4b5563', align = 'left' }: { d: Doc; fs:
 }
 
 // Logo selalu punya tempat di setiap template; tanpa upload tampil tulisan "LOGO" seperti Slip Gaji
-function Logo({ src, h, color, box }: { src: string; h: number; color: string; box?: boolean }) {
+function Logo({ src, h: h0, color, box, o }: { src: string; h: number; color: string; box?: boolean; o: Offset }) {
+  const { z, a } = fxOf(o, 'logo');
+  const h = h0 * z;
   const wrap: CSSProperties = box ? { background: '#fff', borderRadius: 8, padding: 6, display: 'inline-flex' } : { display: 'inline-flex' };
   return (
-    <span style={{ ...wrap, flexShrink: 0 }}>
+    // relative: geser logo tanpa menggeser isi kop lainnya
+    <span style={{ ...wrap, flexShrink: 0, position: 'relative', left: o.x, top: o.y, opacity: a }}>
       {src
         ? <img src={src} alt="Logo" style={{ height: h, maxWidth: h * 2.4, objectFit: 'contain' }} />
         : <span style={{ height: h, display: 'flex', alignItems: 'center', fontFamily: 'Tinos, serif', fontWeight: 800, fontSize: h * 0.42, color }}>LOGO</span>}
@@ -264,6 +267,7 @@ function Header({ d, kind, fs, pad, short }: Ctx) {
   const col = inkOf(d);
   const title = LABELS[kind].title;
   const logoH = fs * 5.5;
+  const lo = getOffset(d.posisi, 'logo');
   const rule = T.rule?.replace('{a}', a);
   const ruled: CSSProperties = rule ? { borderBottom: rule, paddingBottom: fs * 0.5, marginBottom: fs * 0.8 } : { marginBottom: fs * 0.8 };
   const logoColor = T.ink ? '#b91c1c' : a;
@@ -276,7 +280,7 @@ function Header({ d, kind, fs, pad, short }: Ctx) {
       const bg = T.band === 'dark' ? '#111827' : T.band === 'tint' ? tint(a, 0.85) : a;
       top = (
         <div style={{ margin: `-${pad - inset}px -${pad - inset}px ${fs}px`, padding: `${pad * 0.6 - inset}px ${pad - inset}px`, background: bg, display: 'flex', alignItems: 'center', gap: fs * 1.4 }}>
-          <Logo src={d.logo} h={logoH} color={a} box={light} />
+          <Logo o={lo} src={d.logo} h={logoH} color={a} box={light} />
           <Seller d={d} fs={fs} color={light ? '#fff' : '#111'} sub={light ? '#e5e7eb' : '#374151'} />
         </div>
       );
@@ -285,7 +289,7 @@ function Header({ d, kind, fs, pad, short }: Ctx) {
     case 'center':
       top = (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: fs * 0.5, ...ruled }}>
-          <Logo src={d.logo} h={logoH * 0.85} color={logoColor} />
+          <Logo o={lo} src={d.logo} h={logoH * 0.85} color={logoColor} />
           <Seller d={d} fs={fs} align="center" />
         </div>
       );
@@ -293,7 +297,7 @@ function Header({ d, kind, fs, pad, short }: Ctx) {
     case 'mid': // logo & identitas berdampingan di tengah
       top = (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: fs * 1.4, ...ruled }}>
-          <Logo src={d.logo} h={logoH} color={logoColor} />
+          <Logo o={lo} src={d.logo} h={logoH} color={logoColor} />
           <Seller d={d} fs={fs} />
         </div>
       );
@@ -301,7 +305,7 @@ function Header({ d, kind, fs, pad, short }: Ctx) {
     case 'boxed': // kop dalam kotak membulat berwarna lembut
       top = (
         <div style={{ display: 'flex', alignItems: 'center', gap: fs * 1.4, background: tint(a, 0.92), border: `1px solid ${tint(a, 0.6)}`, borderRadius: fs * 0.8, padding: `${fs * 0.6}px ${fs}px`, marginBottom: fs * 0.8 }}>
-          <Logo src={d.logo} h={logoH * 0.85} color={logoColor} />
+          <Logo o={lo} src={d.logo} h={logoH * 0.85} color={logoColor} />
           <div style={{ flex: 1, minWidth: 0 }}><Seller d={d} fs={fs} /></div>
         </div>
       );
@@ -310,7 +314,7 @@ function Header({ d, kind, fs, pad, short }: Ctx) {
       return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: fs * 1.4, ...ruled, marginBottom: fs * 1.2 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: fs * 1.2, minWidth: 0 }}>
-            <Logo src={d.logo} h={logoH} color={logoColor} />
+            <Logo o={lo} src={d.logo} h={logoH} color={logoColor} />
             <Seller d={d} fs={fs} />
           </div>
           <div style={{ fontSize: fs * 2.4, fontWeight: 800, color: col, letterSpacing: 1, textAlign: 'right', lineHeight: 1.1 }}>{title}</div>
@@ -320,7 +324,7 @@ function Header({ d, kind, fs, pad, short }: Ctx) {
       top = (
         <>
           <div style={{ position: 'relative', minHeight: logoH, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: `0 ${logoH * 1.3}px` }}>
-            <span style={{ position: 'absolute', left: 0, top: 0 }}><Logo src={d.logo} h={logoH} color={logoColor} /></span>
+            <span style={{ position: 'absolute', left: 0, top: 0 }}><Logo o={lo} src={d.logo} h={logoH} color={logoColor} /></span>
             <Seller d={d} fs={fs} align="center" />
           </div>
           <div style={{ borderTop: '3px solid #000', borderBottom: '1px solid #000', height: 2, margin: `${fs * 0.5}px 0 ${fs * 0.8}px` }} />
@@ -331,7 +335,7 @@ function Header({ d, kind, fs, pad, short }: Ctx) {
       top = (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexDirection: T.logo === 'left' ? 'row-reverse' : 'row', gap: fs * 1.4, ...ruled }}>
           <div style={{ flex: 1, minWidth: 0 }}><Seller d={d} fs={fs} /></div>
-          <Logo src={d.logo} h={logoH} color={logoColor} />
+          <Logo o={lo} src={d.logo} h={logoH} color={logoColor} />
         </div>
       );
   }
@@ -488,12 +492,14 @@ function Totals({ d, c, fs, short }: Ctx) {
 
 function SignBox({ heading, name, title, ttd, stempel, fs, short = false, oTtd, oStempel }: { heading: string; name: string; title: string; ttd?: string; stempel?: string; fs: number; short?: boolean; oTtd?: Offset; oStempel?: Offset }) {
   const h = fs * (short ? 4 : 5.5);
+  const fxStempel = fxOf(oStempel, 'stempel');
+  const fxTtd = fxOf(oTtd, 'ttd');
   return (
     <div style={{ textAlign: 'center', minWidth: fs * 13 }}>
       <div>{heading}</div>
       <div style={{ position: 'relative', height: h }}>
-        {stempel && <img src={stempel} alt="Stempel" style={{ position: 'absolute', left: oStempel?.x ?? 0, top: oStempel?.y ?? 0, height: h, opacity: 0.9, mixBlendMode: 'multiply' }} />}
-        {ttd && <img src={ttd} alt="Tanda tangan" style={{ position: 'absolute', left: '50%', top: fs * 0.4 + (oTtd?.y ?? 0), marginLeft: oTtd?.x ?? 0, transform: 'translateX(-50%)', height: h * 0.85, maxWidth: fs * 14, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
+        {stempel && <img src={stempel} alt="Stempel" style={{ position: 'absolute', left: oStempel?.x ?? 0, top: oStempel?.y ?? 0, height: h * fxStempel.z, opacity: fxStempel.a, mixBlendMode: 'multiply' }} />}
+        {ttd && <img src={ttd} alt="Tanda tangan" style={{ position: 'absolute', left: '50%', top: fs * 0.4 + (oTtd?.y ?? 0), marginLeft: oTtd?.x ?? 0, transform: 'translateX(-50%)', height: h * 0.85 * fxTtd.z, maxWidth: fs * 14 * fxTtd.z, opacity: fxTtd.a, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
       </div>
       <div style={{ fontWeight: 700, borderBottom: '1px solid #000', display: 'inline-block', minWidth: fs * 11 }}>{name || ' '}</div>
       {title && <div style={{ fontSize: fs * 0.9 }}>{title}</div>}
@@ -620,7 +626,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
   // Analog geser tanda tangan/stempel: desktop di atas form, ponsel di kotak bawah
   const [geser, setGeser] = useState('ttd');
   const posPad = (
-    <PositionPad targets={[{ id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
+    <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
       active={geser} onActive={setGeser} value={d.posisi} onChange={(v) => set('posisi', v)} />
   );
   // Pilihan kertas & orientasi: di form (desktop) dan di paling bawah (ponsel)

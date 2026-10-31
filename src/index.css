@@ -9,14 +9,106 @@
    membuatnya turun baris sehingga teks di file export bergeser ke bawah & menimpa garis. */
 img[src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"] { display: inline !important; }
 
+/* ============================================================
+   Tema Material minimalis untuk SEMUA menu.
+   Semua aturan memakai :where(:not([data-fit-preview] *)) supaya dokumen di area pratinjau
+   (nota, invoice, surat, resi) dan hasil unduhnya tidak berubah.
+   ============================================================ */
 :root {
-  --text-shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.15);
+  --md-primary: #3F51B5;
+  --md-primary-dark: #303F9F;
+  --md-primary-soft: #E8EAF6;
+  --md-primary-tint: #C5CAE9;
+  --md-primary-line: #7986CB;
+  --md-outline: #767676; /* 4.5:1 di atas putih: batas input jelas (WCAG 1.4.11) */
+  --md-elev-1: 0 1px 2px rgb(0 0 0 / 0.22), 0 1px 3px 1px rgb(0 0 0 / 0.10);
+  --md-elev-2: 0 2px 4px rgb(0 0 0 / 0.22), 0 4px 10px 2px rgb(0 0 0 / 0.12);
 }
 
-/* Text-shadow hanya untuk hub (bukan SPA lain, agar nota/export tidak terpengaruh) */
-.hub, .hub h1, .hub h2, .hub p, .hub span, .hub a, .hub button, .hub strong {
-  text-shadow: var(--text-shadow-subtle);
+body { background: #F5F5F5; -webkit-font-smoothing: antialiased; }
+
+/* Dokumen kembali ke font bawaan sebelumnya (Tailwind sans), agar tata letak hasil unduh tetap sama */
+[data-fit-preview] {
+  font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
+
+/* ---------- Tombol: dibungkus bingkai + bayangan, efek hover saat disentuh mouse ---------- */
+button:where(:not([data-fit-preview] *)) {
+  border: 1px solid rgb(0 0 0 / 0.2);
+  border-radius: 10px;
+  box-shadow: var(--md-elev-1);
+  cursor: pointer;
+  transition: translate 150ms ease, box-shadow 150ms ease, background-color 150ms ease, filter 150ms ease, border-color 150ms ease;
+}
+/* shortcut: padding hanya untuk tombol tanpa kelas p-/px-/py-/h- (tebakan dari nama kelas); tambah kelas padding bila ada tombol yang sempit */
+button:where(:not([data-fit-preview] *)):where(:not([class*="p-"], [class*="px-"], [class*="py-"], [class*="h-"])) {
+  padding: 0.25rem 0.625rem;
+}
+button:where(:not([data-fit-preview] *)):where(:not(:disabled)):hover {
+  translate: 0 -2px;
+  box-shadow: var(--md-elev-2);
+  border-color: var(--md-primary-line);
+  filter: brightness(1.06);
+}
+button:where(:not([data-fit-preview] *)):where(:not(:disabled)):active {
+  translate: 0 0;
+  box-shadow: var(--md-elev-1);
+}
+button:where(:not([data-fit-preview] *)):disabled { cursor: not-allowed; box-shadow: none; }
+
+/* Fokus keyboard selalu terlihat */
+:where(a, button, [role="switch"], summary, input, select, textarea):where(:not([data-fit-preview] *)):focus-visible {
+  outline: 3px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+/* ---------- Isian: garis tepi kontras (>= 3:1), hover & fokus ala Material ---------- */
+:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), select, textarea):where(:not([data-fit-preview] *)) {
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--md-outline);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), select, textarea):where(:not([data-fit-preview] *)):hover:not(:disabled) {
+  border-color: #212121;
+}
+:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), select, textarea):where(:not([data-fit-preview] *)):focus {
+  border-color: var(--md-primary);
+  box-shadow: 0 0 0 3px rgb(63 81 181 / 0.28);
+  outline: 2px solid transparent;
+}
+:where(input[type="checkbox"], input[type="radio"], input[type="range"]):where(:not([data-fit-preview] *)) { accent-color: var(--md-primary); cursor: pointer; }
+
+/* ---------- Area upload: kotak 3D supaya jelas terlihat ---------- */
+.upload-box {
+  padding: 0.875rem;
+  border: 2px dashed var(--md-primary-line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, var(--md-primary-soft) 100%);
+  box-shadow: inset 0 1px 0 #fff, 5px 5px 0 var(--md-primary-tint), 5px 5px 0 1px var(--md-primary-line);
+  transition: translate 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+.upload-box:hover, .upload-box:focus-within {
+  translate: -2px -2px;
+  border-color: var(--md-primary);
+  box-shadow: inset 0 1px 0 #fff, 7px 7px 0 var(--md-primary-tint), 7px 7px 0 1px var(--md-primary);
+}
+.upload-box input[type="file"] { font-size: 0.875rem; color: #212121; max-width: 100%; cursor: pointer; }
+input[type="file"]::file-selector-button {
+  margin-right: 0.75rem;
+  padding: 0.5rem 0.875rem;
+  min-height: 40px;
+  border: 1px solid var(--md-primary-dark);
+  border-radius: 8px;
+  background: var(--md-primary);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--md-elev-1);
+  transition: background-color 150ms ease, box-shadow 150ms ease;
+}
+input[type="file"]::file-selector-button:hover { background: var(--md-primary-dark); box-shadow: var(--md-elev-2); }
 
 .spinner {
   width: 20px; height: 20px;

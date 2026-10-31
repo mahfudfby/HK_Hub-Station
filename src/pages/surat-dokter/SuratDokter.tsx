@@ -11,7 +11,7 @@ import {
 } from '../../shared/components/LetterKit';
 import { FitLine, Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts } from '../../shared/components/LetterStyles';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import PositionPad, { getOffset, type Offsets } from '../../shared/components/PositionPad';
+import PositionPad, { fxOf, getOffset, type Offsets } from '../../shared/components/PositionPad';
 
 // Surat keterangan dokter: hanya untuk akun admin (login lewat tombol mengambang / halaman /login).
 
@@ -44,7 +44,7 @@ type Form = {
   jabatan: string;
   ttd: string; // data URL, hanya di perangkat ini
   stempel: string;
-  posisi: Offsets; // geseran tanda tangan & stempel (px dokumen)
+  posisi: Offsets; // geseran logo, tanda tangan & stempel (px dokumen)
   logo: string; // opsional, kiri atas kop; data URL, hanya di perangkat ini
   gaya: string; // id gaya surat (LetterStyles)
   skala: number; // ukuran teks surat (%)
@@ -155,7 +155,7 @@ function Letter({ f, k }: { f: Form; k: number }) {
   return (
     <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '48px 56px', background: '#fff', color: '#000', fontFamily: g.font, fontSize: g.size * k, lineHeight: 1.4 }}>
       {/* KOP 3 baris; garis pemisah & judul mengikuti gaya (klasik: garis tebal + tipis, judul bergaris bawah) */}
-      <Kop g={g} k={k} logo={f.logo} logoH={58 * k} name={f.nama} nameStyle={{ fontWeight: 700, fontSize: 24 * k, lineHeight: 1.15, letterSpacing: 0.5 }}>
+      <Kop g={g} k={k} logo={f.logo} logoOffset={getOffset(f.posisi, 'logo')} logoH={58 * k} name={f.nama} nameStyle={{ fontWeight: 700, fontSize: 24 * k, lineHeight: 1.15, letterSpacing: 0.5 }}>
         <div style={{ lineHeight: 1.35, marginTop: 2 * k }}>
           {kopLines.map((line, i) => <FitLine key={i} style={{ fontSize: (i === kopLines.length - 1 ? 11 : 11.5) * k }}>{line}</FitLine>)}
         </div>
@@ -184,10 +184,10 @@ function Letter({ f, k }: { f: Form; k: number }) {
         <div>{f.jabatan}</div>
         <div style={{ position: 'relative', height: 80 * k }}>
           {f.stempel && (
-            <img src={f.stempel} alt="Stempel" style={{ position: 'absolute', right: 70 * k - getOffset(f.posisi, 'stempel').x, top: getOffset(f.posisi, 'stempel').y, height: 80 * k, opacity: 0.9, mixBlendMode: 'multiply' }} />
+            <img src={f.stempel} alt="Stempel" style={{ position: 'absolute', right: 70 * k - getOffset(f.posisi, 'stempel').x, top: getOffset(f.posisi, 'stempel').y, height: 80 * k * fxOf(getOffset(f.posisi, 'stempel'), 'stempel').z, opacity: fxOf(getOffset(f.posisi, 'stempel'), 'stempel').a, mixBlendMode: 'multiply' }} />
           )}
           {f.ttd && (
-            <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', right: -getOffset(f.posisi, 'ttd').x, top: 6 * k + getOffset(f.posisi, 'ttd').y, height: 68 * k, maxWidth: 200 * k, objectFit: 'contain', mixBlendMode: 'multiply' }} />
+            <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', right: -getOffset(f.posisi, 'ttd').x, top: 6 * k + getOffset(f.posisi, 'ttd').y, height: 68 * k * fxOf(getOffset(f.posisi, 'ttd'), 'ttd').z, maxWidth: 200 * k * fxOf(getOffset(f.posisi, 'ttd'), 'ttd').z, opacity: fxOf(getOffset(f.posisi, 'ttd'), 'ttd').a, objectFit: 'contain', mixBlendMode: 'multiply' }} />
           )}
         </div>
         <SignName g={g} k={k}>{f.nama}</SignName>
@@ -245,7 +245,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
   // Analog geser tanda tangan/stempel: desktop di atas form, ponsel di kotak bawah
   const [geser, setGeser] = useState('ttd');
   const posPad = (
-    <PositionPad targets={[{ id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
+    <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
       active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
   );
   return (

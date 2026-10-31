@@ -39,23 +39,23 @@ export default function AdminFab() {
     <>
       <div className="fixed bottom-3 right-3 z-40 flex flex-col items-end gap-2 font-sans print:hidden">
         {user && open && (
-          <div className="flex items-center gap-2 rounded-xl border border-emerald-600 bg-emerald-900 p-1 pl-3 text-sm text-emerald-50 shadow-lg">
+          <div className="flex items-center gap-2 rounded-xl border border-green-600 bg-white p-1 pl-3 text-sm text-green-800 shadow-lg">
             <span className="max-w-[12rem] truncate" title={user.email ?? ''}>{user.email}</span>
             <button onClick={logout} disabled={busy}
-              className="flex h-9 items-center gap-1 rounded-lg bg-emerald-700 px-3 font-semibold hover:bg-emerald-600 disabled:opacity-60">
+              className="flex h-9 items-center gap-1 rounded-lg bg-green-600 px-3 font-semibold text-white hover:bg-green-700 disabled:opacity-60">
               {busy ? <Spinner /> : <LogOut size={16} aria-hidden="true" />} Keluar
             </button>
           </div>
         )}
         {user === undefined ? (
-          <span className={`${dot} border-slate-600 bg-slate-800 text-slate-300`} role="status" aria-label="Cek login"><Spinner /></span>
+          <span className={`${dot} border-gray-300 bg-white text-gray-700`} role="status" aria-label="Cek login"><Spinner /></span>
         ) : user ? (
           <button onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label={`Login sebagai ${user.email}`} title={user.email ?? ''}
             className={`${dot} border-emerald-600 bg-emerald-700 text-white`}>
             <ShieldCheck size={20} aria-hidden="true" />
           </button>
         ) : (
-          <Link to="/login" aria-label="Login Admin" title="Login Admin" className={`${dot} border-sky-500 bg-sky-600 text-white hover:bg-sky-500`}>
+          <Link to="/login" aria-label="Login Admin" title="Login Admin" className={`${dot} border-primary-700 bg-primary-500 text-white hover:bg-primary-700`}>
             <LogIn size={20} aria-hidden="true" />
           </Link>
         )}

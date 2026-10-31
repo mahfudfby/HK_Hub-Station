@@ -1010,7 +1010,7 @@ const App = () => {
                         </div>
                         
                         {/* Upload Logo */}
-                        <div className="space-y-2">
+                        <div className="upload-box space-y-2">
                             {/* PERUBAHAN KRUSIAL DI SINI: Label dibuat 2 baris */}
                             <label htmlFor="logo-upload" className="text-sm font-medium text-gray-700 block mb-1 leading-snug">
                                 Upload Logo SPBU<br/>(Max {LOGO_MAX_WIDTH}px)

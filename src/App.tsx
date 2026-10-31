@@ -9,7 +9,7 @@ import ShareSheet from './shared/components/ShareSheet';
 // ============================================================
 function PageLoader() {
   return (
-    <div className="hub min-h-screen bg-slate-900 text-slate-200 flex flex-col items-center justify-center gap-4" role="status" aria-live="polite">
+    <div className="min-h-screen bg-gray-100 text-gray-700 flex flex-col items-center justify-center gap-4" role="status" aria-live="polite">
       <div className="spinner" aria-hidden="true" />
       <div className="progress-track" aria-hidden="true"><div className="progress-fill" /></div>
       <span className="text-sm">Memuat halaman...</span>
