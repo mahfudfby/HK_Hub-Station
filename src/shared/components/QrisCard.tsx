@@ -56,7 +56,10 @@ function QrisModal({ onClose }: { onClose: () => void }) {
             />
           </>
         )}
-        <p className="mt-3 text-sm text-slate-600">Terima kasih banyak atas traktirannya!</p>
+        <p className="mt-3 text-sm font-medium text-slate-700">
+          Bisa scan menggunakan <span className="font-semibold">mBanking / DANA / ShopeePay / OVO / GoPay</span> dan semua metode pembayaran QRIS
+        </p>
+        <p className="mt-2 text-sm text-slate-600">Terima kasih banyak atas donasinya!</p>
       </div>
     </div>
   );
