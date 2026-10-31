@@ -25,6 +25,34 @@ const PAPERS: Record<PaperId, Paper & { label: string }> = {
   F4: { w: 215, h: 330, label: 'F4 / Folio (215×330 mm)' },
 };
 
+// Font tebal untuk nama usaha (Google Fonts, dimuat saat dipilih agar sama di semua perangkat)
+type NameFont = { id: string; label: string; family: string; weight: number; fallback: string };
+const NAME_FONTS: NameFont[] = [
+  { id: 'montserrat', label: 'Montserrat ExtraBold', family: 'Montserrat', weight: 800, fallback: 'sans-serif' },
+  { id: 'poppins', label: 'Poppins Bold', family: 'Poppins', weight: 700, fallback: 'sans-serif' },
+  { id: 'raleway', label: 'Raleway ExtraBold', family: 'Raleway', weight: 800, fallback: 'sans-serif' },
+  { id: 'archivo', label: 'Archivo Black', family: 'Archivo Black', weight: 400, fallback: 'sans-serif' },
+  { id: 'oswald', label: 'Oswald Bold', family: 'Oswald', weight: 700, fallback: 'sans-serif' },
+  { id: 'anton', label: 'Anton', family: 'Anton', weight: 400, fallback: 'sans-serif' },
+  { id: 'bebas', label: 'Bebas Neue', family: 'Bebas Neue', weight: 400, fallback: 'sans-serif' },
+  { id: 'playfair', label: 'Playfair Display Bold', family: 'Playfair Display', weight: 700, fallback: 'serif' },
+  { id: 'merriweather', label: 'Merriweather Black', family: 'Merriweather', weight: 900, fallback: 'serif' },
+  { id: 'robotoslab', label: 'Roboto Slab Bold', family: 'Roboto Slab', weight: 700, fallback: 'serif' },
+  { id: 'cinzel', label: 'Cinzel Bold', family: 'Cinzel', weight: 700, fallback: 'serif' },
+  { id: 'lobster', label: 'Lobster', family: 'Lobster', weight: 400, fallback: 'cursive' },
+];
+const findFont = (id: string) => NAME_FONTS.find((f) => f.id === id);
+// shortcut: font dimuat saat dipilih; ekspor menunggu document.fonts.ready, cukup selama font sudah selesai dimuat sebelum tombol unduh diklik
+function loadNameFont(f?: NameFont) {
+  if (!f || document.getElementById(`gf-${f.id}`)) return;
+  const link = document.createElement('link');
+  link.id = `gf-${f.id}`;
+  link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?family=${f.family.replace(/ /g, '+')}:wght@${f.weight}&display=swap`;
+  link.onload = () => void document.fonts.load(`${f.weight} 24px "${f.family}"`);
+  document.head.appendChild(link);
+}
+
 const LABELS = {
   invoice: { title: 'INVOICE', nomor: 'No. Invoice', kepada: 'Ditagihkan kepada', file: 'invoice' },
   faktur: { title: 'FAKTUR PENJUALAN', nomor: 'No. Faktur', kepada: 'Kepada Yth.', file: 'faktur' },
@@ -37,6 +65,7 @@ type Doc = {
   landscape: boolean;
   accent: string;
   bingkai: boolean; // border kotak di tepi kertas
+  namaFont: string; // id NAME_FONTS, '' = ikut template
   logo: string;
   penjual: string;
   penjualAlamat: string;
@@ -71,6 +100,7 @@ const makeDefault = (kind: DocKind): Doc => ({
   landscape: false,
   accent: kind === 'invoice' ? '#1d4ed8' : '#0f766e',
   bingkai: true,
+  namaFont: '',
   logo: '',
   penjual: 'NAMA USAHA ANDA',
   penjualAlamat: 'Alamat usaha, Kota',
@@ -131,10 +161,11 @@ const FONTS: Record<TemplateId, string> = {
 
 // Nama & detail usaha: 2× ukuran sebelumnya (nama 1,35→2,7; detail 0,9→1,8 × teks isi)
 function Seller({ d, fs, color, sub = '#4b5563', align = 'left' }: { d: Doc; fs: number; color?: string; sub?: string; align?: 'left' | 'right' | 'center' }) {
+  const nf = findFont(d.namaFont);
   const det: CSSProperties = { fontSize: fs * 1.8, color: sub, lineHeight: 1.25, whiteSpace: 'pre-line' };
   return (
     <div style={{ textAlign: align, color, minWidth: 0 }}>
-      <div style={{ fontWeight: 700, fontSize: fs * 2.7, lineHeight: 1.15 }}>{d.penjual}</div>
+      <div style={{ fontWeight: nf?.weight ?? 700, fontFamily: nf ? `"${nf.family}", ${nf.fallback}` : undefined, fontSize: fs * 2.7, lineHeight: 1.15 }}>{d.penjual}</div>
       {d.penjualAlamat && <div style={det}>{d.penjualAlamat}</div>}
       {d.penjualKontak && <div style={det}>{d.penjualKontak}</div>}
       {d.penjualNpwp && <div style={det}>NPWP: {d.penjualNpwp}</div>}
@@ -415,6 +446,8 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
     }
   }, [d, storageKey, notify]);
 
+  useEffect(() => loadNameFont(findFont(d.namaFont)), [d.namaFont]);
+
   const set = <K extends keyof Doc>(k: K, v: Doc[K]) => setD((p) => ({ ...p, [k]: v }));
   const setItem = (i: number, patch: Partial<Item>) => set('items', d.items.map((it, j) => (j === i ? { ...it, ...patch } : it)));
 
@@ -485,6 +518,12 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
             <section className="space-y-3">
               <h2 className="font-bold">Penjual</h2>
               {txt('penjual', 'Nama usaha')}
+              <Field label="Font nama usaha (tebal)">
+                <select className={inputCls} value={d.namaFont} onChange={(e) => set('namaFont', e.target.value)}>
+                  <option value="">Bawaan template</option>
+                  {NAME_FONTS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </select>
+              </Field>
               {txt('penjualAlamat', 'Alamat', 2)}
               <div className="grid sm:grid-cols-2 gap-2">
                 {txt('penjualKontak', 'Telepon / email')}
