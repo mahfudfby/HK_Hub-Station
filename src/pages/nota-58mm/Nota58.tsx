@@ -23,9 +23,13 @@ type Nota = {
   kasir: string;
   pelanggan: string;
   items: Item[];
+  pajak: string; // persen
+  biayaLabel: string;
+  biaya: string; // Rp
+  diskonMode: '%' | 'Rp';
   diskon: string;
-  pajak: string;
-  metode: string;
+  metode: 'Tunai' | 'Non-Tunai';
+  nonTunai: string; // QRIS, Transfer Bank, dll.
   bayar: string;
   footer: string;
 };
@@ -48,26 +52,34 @@ const DEFAULT: Nota = {
     { nama: 'Kopi Susu', qty: '2', harga: '18000' },
     { nama: 'Roti Bakar Coklat', qty: '1', harga: '22000' },
   ],
-  diskon: '',
   pajak: '',
+  biayaLabel: 'Kemasan (Take Away)',
+  biaya: '',
+  diskonMode: '%',
+  diskon: '',
   metode: 'Tunai',
+  nonTunai: 'QRIS',
   bayar: '100000',
   footer: 'Terima kasih atas kunjungan Anda\nBarang yang sudah dibeli tidak dapat ditukar/dikembalikan',
 };
 
+// total = jumlah harga produk; pajak % dari total; diskon % dari total atau nominal; bayarTotal = akhir
 function calc(n: Nota) {
   const lines = n.items.map((it) => num(it.qty) * num(it.harga));
-  const subtotal = lines.reduce((a, b) => a + b, 0);
-  const diskon = num(n.diskon);
-  const pajak = Math.round(((subtotal - diskon) * num(n.pajak)) / 100);
-  const total = subtotal - diskon + pajak;
+  const total = lines.reduce((a, b) => a + b, 0);
+  const pajak = Math.round((total * num(n.pajak)) / 100);
+  const biaya = num(n.biaya);
+  const diskon = Math.min(total, n.diskonMode === '%' ? Math.round((total * num(n.diskon)) / 100) : num(n.diskon));
+  const bayarTotal = total + pajak + biaya - diskon;
   const bayar = num(n.bayar);
-  return { lines, subtotal, diskon, pajak, total, bayar, kembali: bayar - total };
+  return { lines, total, pajak, biaya, diskon, bayarTotal, bayar, kembali: bayar - bayarTotal };
 }
 {
-  const c = calc({ ...DEFAULT, diskon: '8000', pajak: '10' });
-  // 2×18000 + 22000 = 58000; -8000 = 50000; pajak 5000; total 55000; kembali 45000
-  console.assert(c.subtotal === 58000 && c.pajak === 5000 && c.total === 55000 && c.kembali === 45000, 'Nota58 calc');
+  // 58000; pajak 10% = 5800; kemasan 2000; diskon 5% = 2900; akhir 62900; kembali 37100
+  const c = calc({ ...DEFAULT, pajak: '10', biaya: '2000', diskonMode: '%', diskon: '5' });
+  console.assert(c.total === 58000 && c.pajak === 5800 && c.diskon === 2900 && c.bayarTotal === 62900 && c.kembali === 37100, 'Nota58 calc %');
+  const d = calc({ ...DEFAULT, diskonMode: 'Rp', diskon: '8000' });
+  console.assert(d.bayarTotal === 50000, 'Nota58 calc Rp');
 }
 
 const fmtWaktu = (v: string) => {
@@ -109,13 +121,26 @@ function Receipt({ n }: { n: Nota }) {
         </div>
       ))}
       <div style={line} />
-      <Row l="Subtotal" r={rupiah(c.subtotal)} />
-      {c.diskon > 0 && <Row l="Diskon" r={`-${rupiah(c.diskon)}`} />}
-      {c.pajak > 0 && <Row l={`Pajak ${n.pajak}%`} r={rupiah(c.pajak)} />}
-      <div style={{ fontSize: 12 }}><Row l="TOTAL" r={rupiah(c.total)} bold /></div>
+      <Row l="TOTAL" r={rupiah(c.total)} bold />
+      {(c.pajak > 0 || c.biaya > 0 || c.diskon > 0) && (
+        <>
+          {c.pajak > 0 && <Row l={`Pajak ${n.pajak}%`} r={rupiah(c.pajak)} />}
+          {c.biaya > 0 && <Row l={n.biayaLabel || 'Biaya lain'} r={rupiah(c.biaya)} />}
+          {c.diskon > 0 && <Row l={n.diskonMode === '%' ? `Diskon ${n.diskon}%` : 'Diskon'} r={`-${rupiah(c.diskon)}`} />}
+        </>
+      )}
       <div style={line} />
-      <Row l={n.metode || 'Bayar'} r={rupiah(c.bayar)} />
-      {n.metode === 'Tunai' && <Row l="Kembali" r={rupiah(Math.max(0, c.kembali))} />}
+      <div style={{ fontSize: 12 }}><Row l="TOTAL PEMBAYARAN" r={rupiah(c.bayarTotal)} bold /></div>
+      <div style={line} />
+      <Row l="Metode Bayar" r={n.metode} />
+      {n.metode === 'Tunai' ? (
+        <>
+          <Row l="Tunai" r={rupiah(c.bayar)} />
+          <Row l="Kembali" r={rupiah(Math.max(0, c.kembali))} />
+        </>
+      ) : (
+        <Row l={n.nonTunai || 'Non-Tunai'} r={rupiah(c.bayarTotal)} />
+      )}
       <div style={line} />
       {n.footer && <div style={{ textAlign: 'center', whiteSpace: 'pre-line' }}>{n.footer}</div>}
     </div>
@@ -130,7 +155,13 @@ export default function Nota58() {
   const [n, setN] = useState<Nota>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      return saved ? { ...DEFAULT, ...saved } : DEFAULT;
+      if (!saved) return DEFAULT;
+      if (!saved.diskonMode) saved.diskonMode = 'Rp'; // simpanan lama: diskon selalu nominal
+      if (saved.metode && saved.metode !== 'Tunai' && saved.metode !== 'Non-Tunai') { // simpanan lama: QRIS/Debit/Transfer
+        saved.nonTunai = saved.metode === 'Transfer' ? 'Transfer Bank' : saved.metode;
+        saved.metode = 'Non-Tunai';
+      }
+      return { ...DEFAULT, ...saved };
     } catch {
       return DEFAULT;
     }
@@ -158,7 +189,7 @@ export default function Nota58() {
   const transaksiBaru = () => {
     const m = n.nomor.match(/^(.*?)(\d+)$/);
     const nomor = m ? `${m[1]}${String(Number(m[2]) + 1).padStart(m[2].length, '0')}` : n.nomor;
-    setN((p) => ({ ...p, nomor, waktu: nowLocal(), pelanggan: '', items: [{ nama: '', qty: '1', harga: '' }], diskon: '', bayar: '' }));
+    setN((p) => ({ ...p, nomor, waktu: nowLocal(), pelanggan: '', items: [{ nama: '', qty: '1', harga: '' }], diskon: '', biaya: '', bayar: '' }));
     notify('info', `Transaksi baru ${nomor}.`);
   };
   const txt = (k: keyof Nota, label: string, rows = 1) => (
@@ -179,11 +210,11 @@ export default function Nota58() {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             <section className="space-y-3">
               <h2 className="font-bold">Toko</h2>
+              <ImageUpload label="Upload logo (tampil di atas nota)" value={n.logo} onChange={(v) => set('logo', v)} notify={notify}
+                bg={logoBg} onBg={setLogoBg} shown={logo.src} bgBusy={logo.busy} />
               {txt('toko', 'Nama toko')}
               {txt('alamat', 'Alamat', 2)}
               {txt('telp', 'Telepon')}
-              <ImageUpload label="Logo (opsional)" value={n.logo} onChange={(v) => set('logo', v)} notify={notify}
-                bg={logoBg} onBg={setLogoBg} shown={logo.src} bgBusy={logo.busy} />
             </section>
 
             <section className="space-y-3">
@@ -204,18 +235,39 @@ export default function Nota58() {
                 </div>
               ))}
               <button type="button" onClick={() => set('items', [...n.items, { nama: '', qty: '1', harga: '' }])} className="text-sm font-medium text-blue-700">+ Tambah barang</button>
+              <div className="text-right text-sm">TOTAL produk <b>Rp {rupiah(c.total)}</b></div>
+              <h3 className="font-semibold text-sm text-gray-700">Rincian tambahan</h3>
               <div className="grid grid-cols-2 gap-2">
-                <Field label="Diskon (Rp)"><input type="number" min={0} className={inputCls} value={n.diskon} onChange={(e) => set('diskon', e.target.value)} /></Field>
-                <Field label="Pajak %"><input type="number" min={0} className={inputCls} value={n.pajak} onChange={(e) => set('pajak', e.target.value)} /></Field>
+                <Field label={`Pajak % (= Rp ${rupiah(c.pajak)})`}><input type="number" min={0} className={inputCls} value={n.pajak} onChange={(e) => set('pajak', e.target.value)} placeholder="mis. 10" /></Field>
+                <Field label="Diskon">
+                  <div className="flex gap-1">
+                    <input type="number" min={0} className={inputCls} value={n.diskon} onChange={(e) => set('diskon', e.target.value)} placeholder={n.diskonMode === '%' ? 'persen' : 'nominal'} />
+                    <select aria-label="Jenis diskon" className="rounded-lg border border-gray-300 px-1 text-sm" value={n.diskonMode} onChange={(e) => set('diskonMode', e.target.value as Nota['diskonMode'])}>
+                      <option value="%">%</option>
+                      <option value="Rp">Rp</option>
+                    </select>
+                  </div>
+                </Field>
+                <Field label="Biaya lain-lain (nama)"><input className={inputCls} value={n.biayaLabel} onChange={(e) => set('biayaLabel', e.target.value)} placeholder="mis. Kemasan" /></Field>
+                <Field label="Biaya lain-lain (Rp)"><input type="number" min={0} className={inputCls} value={n.biaya} onChange={(e) => set('biaya', e.target.value)} /></Field>
                 <Field label="Metode bayar">
-                  <select className={inputCls} value={n.metode} onChange={(e) => set('metode', e.target.value)}>
-                    {['Tunai', 'QRIS', 'Debit', 'Transfer'].map((m) => <option key={m}>{m}</option>)}
+                  <select className={inputCls} value={n.metode} onChange={(e) => set('metode', e.target.value as Nota['metode'])}>
+                    <option>Tunai</option>
+                    <option>Non-Tunai</option>
                   </select>
                 </Field>
-                <Field label="Dibayar (Rp)"><input type="number" min={0} className={inputCls} value={n.bayar} onChange={(e) => set('bayar', e.target.value)} /></Field>
+                {n.metode === 'Tunai' ? (
+                  <Field label="Uang diterima (Rp)"><input type="number" min={0} className={inputCls} value={n.bayar} onChange={(e) => set('bayar', e.target.value)} /></Field>
+                ) : (
+                  <Field label="Bayar lewat">
+                    <select className={inputCls} value={n.nonTunai} onChange={(e) => set('nonTunai', e.target.value)}>
+                      {['QRIS', 'Transfer Bank', 'Kartu Debit', 'Kartu Kredit', 'E-Wallet'].map((m) => <option key={m}>{m}</option>)}
+                    </select>
+                  </Field>
+                )}
               </div>
               <div className="text-right text-sm">
-                Total <b>Rp {rupiah(c.total)}</b>
+                Total Pembayaran <b>Rp {rupiah(c.bayarTotal)}</b>
                 {n.metode === 'Tunai' && <> • Kembali <b className={c.kembali < 0 ? 'text-red-600' : ''}>Rp {rupiah(c.kembali)}</b></>}
               </div>
               {txt('footer', 'Pesan bawah nota', 2)}
