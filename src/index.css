@@ -137,3 +137,24 @@ input[type="file"]::file-selector-button:hover { background: var(--md-primary-da
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+/* ---------- Hiasan latar Home: bulatan pastel melayang, bergeser halus mengikuti mouse ---------- */
+.bg-orbs { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.bg-orbs::before { /* pola titik halus, memudar ke tepi */
+  content: ''; position: absolute; inset: 0;
+  background-image: radial-gradient(rgb(63 81 181 / 0.10) 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%);
+}
+.bg-orb {
+  position: absolute; border-radius: 9999px; opacity: 0.55; filter: blur(64px);
+  animation: orb-float 20s ease-in-out infinite alternate;
+  translate: calc(var(--mx, 0) * var(--depth, 0px) * 4) calc(var(--my, 0) * var(--depth, 0px) * 4);
+  transition: translate 700ms cubic-bezier(.2,.7,.2,1);
+}
+@keyframes orb-float {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, -30px) scale(1.08); }
+  100% { transform: translate(-30px, 35px) scale(0.95); }
+}
