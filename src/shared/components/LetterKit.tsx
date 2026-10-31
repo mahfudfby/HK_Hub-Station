@@ -84,28 +84,36 @@ export function ImageUpload({ label, value, onChange, notify, bg, onBg, shown, b
 }
 
 // ---------------- Ekspor ----------------
-// Hasil selalu 1677×2382 px (≈288 DPI) & PDF A5, tidak bergantung layar/zoom perangkat
-export async function exportLetter(page: HTMLElement, kind: ExportKind, fileName: string) {
+export type Paper = { w: number; h: number }; // mm
+export const A5: Paper = { w: 148, h: 210 };
+export const mmToPx = (mm: number) => Math.round((mm * 96) / 25.4); // 96 DPI CSS
+
+// Render halaman (ukuran px tetap) ke PNG/PDF/Print sesuai ukuran kertas; tidak bergantung layar/zoom perangkat.
+// scale 3 ≈ 288 DPI di kertas.
+export async function exportPage(page: HTMLElement, kind: ExportKind, fileName: string, paper: Paper, scale = 3) {
   await document.fonts.ready; // font dokumen wajib termuat agar tata letak sama di semua perangkat
-  if (page.scrollHeight > PAGE_H + 1) throw new Error('isi surat melebihi 1 halaman A5. Persingkat teksnya.');
+  const width = page.offsetWidth;
+  const height = page.offsetHeight;
+  if (page.scrollHeight > height + 1) throw new Error('isi melebihi 1 halaman. Kurangi isinya atau pilih kertas lebih besar.');
   const { default: html2canvas } = await import('html2canvas');
-  const canvas = await html2canvas(page, { scale: 3, width: PAGE_W, height: PAGE_H, windowWidth: 1280, backgroundColor: '#fff', onclone: unfitPreview });
-  if (kind === 'Print') return printImage(canvas.toDataURL('image/png'), fileName, { w: '148mm', h: '210mm' });
+  const canvas = await html2canvas(page, { scale, width, height, windowWidth: 1280, backgroundColor: '#fff', useCORS: true, onclone: unfitPreview });
+  if (kind === 'Print') return printImage(canvas.toDataURL('image/png'), fileName, { w: `${paper.w}mm`, h: `${paper.h}mm` });
   if (kind === 'PNG') return saveFile(await canvasToBlob(canvas), `${fileName}.png`);
   const { jsPDF } = await import('jspdf');
-  const pdf = new jsPDF({ unit: 'mm', format: 'a5', orientation: 'portrait' });
-  pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 148, 210); // JPEG: PNG bikin PDF ~8 MB
+  const pdf = new jsPDF({ unit: 'mm', format: [paper.w, paper.h], orientation: paper.w > paper.h ? 'landscape' : 'portrait' });
+  pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, paper.w, paper.h); // JPEG: PNG bikin PDF ~8 MB
   saveFile(pdf.output('blob'), `${fileName}.pdf`);
 }
 
-// State + handler tombol PDF/PNG/Print dengan notifikasi
-export function useLetterExport(getPage: () => HTMLElement, fileName: string, notify: Notify) {
+// State + handler tombol PDF/PNG/Print dengan notifikasi. paper/scale bawaan: surat A5.
+export function useLetterExport(getPage: () => HTMLElement, fileName: string, notify: Notify, paper: Paper | ((page: HTMLElement) => Paper) = A5, scale = 3) {
   const [exporting, setExporting] = useState<'' | ExportKind>('');
   const run = async (kind: ExportKind) => {
     setExporting(kind);
     notify('loading', kind === 'Print' ? 'Menyiapkan cetakan…' : `Membuat file ${kind}…`);
     try {
-      await exportLetter(getPage(), kind, fileName);
+      const page = getPage();
+      await exportPage(page, kind, fileName, typeof paper === 'function' ? paper(page) : paper, scale);
       notify('success', kind === 'Print' ? 'Jendela cetak dibuka.' : `${fileName}.${kind.toLowerCase()} berhasil diunduh.`);
     } catch (err: any) {
       notify('error', `Gagal ${kind === 'Print' ? 'mencetak' : `membuat ${kind}`}: ${err?.message || 'proses render gagal.'}`);

@@ -31,4 +31,22 @@ export const routes = [
     title: 'Surat Keterangan Sehat',
     desc: 'Khusus dokter terdaftar: surat sehat dengan BB, TB, tensi & golongan darah, ekspor PDF & PNG.',
   },
+  {
+    path: '/invoice/*',
+    component: lazy(() => import('../pages/invoice')),
+    title: 'Generator Invoice',
+    desc: '4 gaya template, kertas A4/A5/Letter/F4, vertikal atau landscape. Ekspor PDF & PNG.',
+  },
+  {
+    path: '/faktur-penjualan/*',
+    component: lazy(() => import('../pages/faktur-penjualan')),
+    title: 'Generator Faktur Penjualan',
+    desc: 'Faktur dengan PPN, terbilang & tanda tangan; pilih gaya, ukuran kertas & orientasi.',
+  },
+  {
+    path: '/nota-58mm/*',
+    component: lazy(() => import('../pages/nota-58mm')),
+    title: 'Nota Pembelian 58mm',
+    desc: 'Nota kasir untuk printer thermal 58mm (PNG 384px siap RawBT), PDF & Print.',
+  },
 ];
