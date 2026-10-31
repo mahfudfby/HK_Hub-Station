@@ -9,15 +9,51 @@ import { num, rupiah, terbilangRupiah } from '../lib/money';
 // Generator Invoice & Faktur Penjualan: satu mesin, beberapa template gaya, ukuran kertas & orientasi bebas.
 
 export type DocKind = 'invoice' | 'faktur';
-type TemplateId = 'klasik' | 'modern' | 'minimal' | 'tegas';
+type HeadKind = 'rule' | 'band' | 'center' | 'split' | 'formal';
+type TitleKind = 'lines' | 'plain' | 'box' | 'pill' | 'dark' | 'big';
+type TableKind = 'grid' | 'accentHead' | 'lines' | 'darkHead' | 'tintHead' | 'dashed';
+type TotalKind = 'double' | 'accent' | 'big' | 'dark' | 'outline' | 'dashed';
+// Satu template = kombinasi gaya kop, judul, tabel, total, font, strip & bingkai.
+// ink: hitam-putih (abaikan warna aksen untuk garis/judul); rule: garis bawah kop ({a} = warna aksen).
+type Tpl = {
+  id: string; name: string; desc: string; font: string;
+  head: HeadKind; logo?: 'left' | 'right'; rule?: string; band?: 'accent' | 'dark' | 'tint';
+  title: TitleKind; table: TableKind; total: TotalKind;
+  stripe?: 'left' | 'top'; frame?: 'double'; ink?: boolean;
+};
+const SERIF = 'Tinos, "Times New Roman", serif';
+const SANS = 'Arimo, Arial, sans-serif';
+const HUMANIST = 'Carlito, Calibri, Arimo, sans-serif';
+const MONO = 'Cousine, "Courier New", monospace';
+const TEMPLATES: Tpl[] = [
+  { id: 'klasik', name: 'Klasik', desc: 'Gaya Slip Gaji, tabel bergaris', font: SERIF, head: 'rule', logo: 'right', rule: '2px solid #000', title: 'lines', table: 'grid', total: 'double', ink: true },
+  { id: 'modern', name: 'Modern', desc: 'Pita warna di atas', font: SANS, head: 'band', band: 'accent', title: 'lines', table: 'accentHead', total: 'accent' },
+  { id: 'minimal', name: 'Minimal', desc: 'Logo tengah, garis tipis', font: SANS, head: 'center', rule: '1px solid #d4d4d4', title: 'plain', table: 'lines', total: 'big' },
+  { id: 'tegas', name: 'Tegas', desc: 'Strip samping, kontras', font: HUMANIST, head: 'rule', logo: 'left', rule: '4px solid {a}', title: 'dark', table: 'darkHead', total: 'accent', stripe: 'left' },
+  { id: 'elegan', name: 'Elegan', desc: 'Serif, bingkai ganda', font: SERIF, head: 'center', rule: '1px solid {a}', title: 'lines', table: 'lines', total: 'outline', frame: 'double' },
+  { id: 'korporat', name: 'Korporat', desc: 'Judul besar di kanan kop', font: SANS, head: 'split', logo: 'left', rule: '3px solid {a}', title: 'lines', table: 'accentHead', total: 'dark' },
+  { id: 'profesional', name: 'Profesional', desc: 'Judul pil, tabel lembut', font: HUMANIST, head: 'rule', logo: 'left', rule: '2px solid {a}', title: 'pill', table: 'tintHead', total: 'accent' },
+  { id: 'kreatif', name: 'Kreatif', desc: 'Strip atas, judul besar', font: SANS, head: 'rule', logo: 'right', title: 'big', table: 'lines', total: 'big', stripe: 'top' },
+  { id: 'formal', name: 'Formal', desc: 'Kop surat resmi garis ganda', font: SERIF, head: 'formal', title: 'lines', table: 'grid', total: 'double', ink: true },
+  { id: 'monokrom', name: 'Monokrom', desc: 'Huruf ketik, cocok dot-matrix', font: MONO, head: 'rule', logo: 'left', rule: '1px dashed #000', title: 'plain', table: 'dashed', total: 'dashed', ink: true },
+  { id: 'retail', name: 'Retail', desc: 'Kop gelap, judul kotak', font: SANS, head: 'band', band: 'dark', title: 'box', table: 'darkHead', total: 'dark' },
+  { id: 'startup', name: 'Startup', desc: 'Strip atas, tabel lembut', font: SANS, head: 'split', logo: 'left', title: 'lines', table: 'tintHead', total: 'accent', stripe: 'top' },
+  { id: 'bingkai', name: 'Bingkai Ganda', desc: 'Judul berbingkai, klasik', font: SERIF, head: 'rule', logo: 'left', rule: '1px solid #000', title: 'box', table: 'grid', total: 'double', frame: 'double', ink: true },
+  { id: 'pastel', name: 'Pastel', desc: 'Kop warna lembut', font: SANS, head: 'band', band: 'tint', title: 'lines', table: 'tintHead', total: 'outline' },
+];
+type TemplateId = string;
+const tplOf = (id: string) => TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0];
+
+// Warna aksen dicampur putih (t: 0 = asli, 1 = putih); hex biasa agar aman untuk html2canvas
+export function tint(hex: string, t: number) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  const mix = (c: number) => Math.round(c + (255 - c) * t).toString(16).padStart(2, '0');
+  return `#${mix((n >> 16) & 255)}${mix((n >> 8) & 255)}${mix(n & 255)}`;
+}
+console.assert(tint('#000000', 0.5) === '#808080' && tint('#1d4ed8', 0) === '#1d4ed8' && tint('#123456', 1) === '#ffffff', 'tint');
+
 type PaperId = 'A4' | 'A5' | 'Letter' | 'F4' | 'CF95x11' | 'CF95x55' | 'CF15x11' | 'T80x100';
 
-const TEMPLATES: { id: TemplateId; name: string; desc: string }[] = [
-  { id: 'klasik', name: 'Klasik', desc: 'Serif, tabel bergaris penuh' },
-  { id: 'modern', name: 'Modern', desc: 'Pita warna di atas' },
-  { id: 'minimal', name: 'Minimal', desc: 'Bersih, garis tipis' },
-  { id: 'tegas', name: 'Tegas', desc: 'Strip samping, kontras' },
-];
 // group: label kelompok di dropdown; fixed: orientasi tetap (continuous form & thermal)
 const PAPERS: Record<PaperId, Paper & { label: string; group: string; fixed?: boolean }> = {
   A4: { w: 210, h: 297, label: 'A4 (210×297 mm)', group: 'Kertas biasa' },
@@ -154,16 +190,11 @@ function calc(d: Doc) {
 }
 
 // ---------------- Tampilan dokumen ----------------
-type Ctx = { d: Doc; kind: DocKind; c: ReturnType<typeof calc>; fs: number; pad: number };
+type Ctx = { d: Doc; kind: DocKind; c: ReturnType<typeof calc>; fs: number; pad: number; short: boolean };
+// Warna garis/judul template: hitam untuk template ink, selain itu warna aksen
+const inkOf = (d: Doc) => (tplOf(d.template).ink ? '#000' : d.accent);
 // Jarak bingkai dari tepi kertas
 const frameInset = (pad: number) => Math.round(pad * 0.35);
-
-const FONTS: Record<TemplateId, string> = {
-  klasik: 'Tinos, "Times New Roman", serif',
-  modern: 'Arimo, Arial, sans-serif',
-  minimal: 'Arimo, Arial, sans-serif',
-  tegas: 'Carlito, Calibri, Arimo, sans-serif',
-};
 
 // Nama usaha besar (2,7× teks isi); alamat & kontak seukuran teks isi
 function Seller({ d, fs, color, sub = '#4b5563', align = 'left' }: { d: Doc; fs: number; color?: string; sub?: string; align?: 'left' | 'right' | 'center' }) {
@@ -191,65 +222,97 @@ function Logo({ src, h, color, box }: { src: string; h: number; color: string; b
   );
 }
 
-// Judul dokumen di antara dua garis (gaya Slip Gaji)
-function TitleBar({ text, fs, color = '#000', style }: { text: string; fs: number; color?: string; style?: CSSProperties }) {
-  return (
-    <div style={{ textAlign: 'center', fontWeight: 700, fontSize: fs * 1.5, letterSpacing: 3, textTransform: 'uppercase', color,
-      borderTop: `1px solid ${color}`, borderBottom: `1px solid ${color}`, padding: `${fs * 0.3}px 0`, marginBottom: fs * 1.2, ...style }}>{text}</div>
-  );
+// Judul dokumen; 'lines' = di antara dua garis (gaya Slip Gaji)
+function Title({ kind, text, fs, col }: { kind: TitleKind; text: string; fs: number; col: string }) {
+  const base: CSSProperties = { fontWeight: 700, fontSize: fs * 1.5, letterSpacing: 3, textTransform: 'uppercase', marginBottom: fs * 1.2 };
+  switch (kind) {
+    case 'plain':
+      return <div style={{ ...base, textAlign: 'center', color: col, letterSpacing: 6 }}>{text}</div>;
+    case 'box':
+      return <div style={{ textAlign: 'center', marginBottom: base.marginBottom }}><span style={{ ...base, display: 'inline-block', margin: 0, border: `2px solid ${col}`, color: col, padding: `${fs * 0.2}px ${fs * 1.2}px` }}>{text}</span></div>;
+    case 'pill':
+      return <div style={{ textAlign: 'right', marginBottom: base.marginBottom }}><span style={{ ...base, display: 'inline-block', margin: 0, background: col, color: '#fff', borderRadius: 999, padding: `${fs * 0.25}px ${fs * 1.4}px`, fontSize: fs * 1.3 }}>{text}</span></div>;
+    case 'dark':
+      return <div style={{ ...base, textAlign: 'center', background: '#1f2937', color: '#fff', padding: `${fs * 0.3}px 0` }}>{text}</div>;
+    case 'big':
+      return <div style={{ ...base, color: col, fontSize: fs * 2.6, fontWeight: 800, letterSpacing: 1, lineHeight: 1.1 }}>{text}</div>;
+    default:
+      return <div style={{ ...base, textAlign: 'center', color: col, borderTop: `1px solid ${col}`, borderBottom: `1px solid ${col}`, padding: `${fs * 0.3}px 0` }}>{text}</div>;
+  }
 }
 
-function Header({ d, kind, fs, pad }: Ctx) {
-  const band = d.bingkai ? frameInset(pad) + 2 : 0; // pita Modern berhenti di dalam bingkai
+function Header({ d, kind, fs, pad, short }: Ctx) {
+  const T = tplOf(d.template);
+  const a = d.accent;
+  const col = inkOf(d);
   const title = LABELS[kind].title;
   const logoH = fs * 5.5;
-  switch (d.template) {
-    case 'modern': // logo kiri dalam kotak putih, pita warna penuh
-      return (
-        <>
-          <div style={{ margin: `-${pad - band}px -${pad - band}px ${fs * 1}px`, padding: `${pad * 0.6 - band}px ${pad - band}px`, background: d.accent, color: '#fff', display: 'flex', alignItems: 'center', gap: fs * 1.4 }}>
-            <Logo src={d.logo} h={logoH} color={d.accent} box />
-            <Seller d={d} fs={fs} color="#fff" sub="#f1f5f9" />
-          </div>
-          <TitleBar text={title} fs={fs} color={d.accent} />
-        </>
+  const rule = T.rule?.replace('{a}', a);
+  const ruled: CSSProperties = rule ? { borderBottom: rule, paddingBottom: fs * 0.5, marginBottom: fs * 0.8 } : { marginBottom: fs * 0.8 };
+  const logoColor = T.ink ? '#b91c1c' : a;
+  const head = short && T.head === 'center' ? 'rule' : T.head; // kertas pendek: kop mendatar agar muat
+  let top: JSX.Element;
+  switch (head) {
+    case 'band': {
+      const inset = d.bingkai ? frameInset(pad) + 2 : 0; // pita berhenti di dalam bingkai
+      const light = T.band !== 'tint';
+      const bg = T.band === 'dark' ? '#111827' : T.band === 'tint' ? tint(a, 0.85) : a;
+      top = (
+        <div style={{ margin: `-${pad - inset}px -${pad - inset}px ${fs}px`, padding: `${pad * 0.6 - inset}px ${pad - inset}px`, background: bg, display: 'flex', alignItems: 'center', gap: fs * 1.4 }}>
+          <Logo src={d.logo} h={logoH} color={a} box={light} />
+          <Seller d={d} fs={fs} color={light ? '#fff' : '#111'} sub={light ? '#e5e7eb' : '#374151'} />
+        </div>
       );
-    case 'minimal': // logo di tengah atas, semua rata tengah
+      break;
+    }
+    case 'center':
+      top = (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: fs * 0.5, ...ruled }}>
+          <Logo src={d.logo} h={logoH * 0.85} color={logoColor} />
+          <Seller d={d} fs={fs} align="center" />
+        </div>
+      );
+      break;
+    case 'split': // identitas kiri, judul besar kanan (judul tidak diulang di bawah)
       return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: fs * 1.4, ...ruled, marginBottom: fs * 1.2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: fs * 1.2, minWidth: 0 }}>
+            <Logo src={d.logo} h={logoH} color={logoColor} />
+            <Seller d={d} fs={fs} />
+          </div>
+          <div style={{ fontSize: fs * 2.4, fontWeight: 800, color: col, letterSpacing: 1, textAlign: 'right', lineHeight: 1.1 }}>{title}</div>
+        </div>
+      );
+    case 'formal': // kop surat resmi: logo kiri, identitas tengah, garis ganda tebal-tipis
+      top = (
         <>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: fs * 0.5, paddingBottom: fs * 0.8, borderBottom: '1px solid #d4d4d4', marginBottom: fs * 0.8 }}>
-            <Logo src={d.logo} h={logoH * 0.85} color={d.accent} />
+          <div style={{ position: 'relative', minHeight: logoH, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: `0 ${logoH * 1.3}px` }}>
+            <span style={{ position: 'absolute', left: 0, top: 0 }}><Logo src={d.logo} h={logoH} color={logoColor} /></span>
             <Seller d={d} fs={fs} align="center" />
           </div>
-          <TitleBar text={title} fs={fs} color={d.accent} style={{ borderTop: 0, borderBottom: 0, letterSpacing: 6 }} />
+          <div style={{ borderTop: '3px solid #000', borderBottom: '1px solid #000', height: 2, margin: `${fs * 0.5}px 0 ${fs * 0.8}px` }} />
         </>
       );
-    case 'tegas': // logo kiri besar, garis aksen tebal, judul dalam pita gelap
-      return (
-        <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: fs * 1.4, paddingBottom: fs * 0.6, borderBottom: `4px solid ${d.accent}`, marginBottom: fs * 0.8 }}>
-            <Logo src={d.logo} h={logoH} color={d.accent} />
-            <Seller d={d} fs={fs} />
-          </div>
-          <TitleBar text={title} fs={fs} color="#fff" style={{ background: '#1f2937', borderTop: 0, borderBottom: 0 }} />
-        </>
-      );
-    default: // klasik = Slip Gaji: identitas kiri, logo kanan, garis tebal
-      return (
-        <>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: fs * 1.4, paddingBottom: fs * 0.4, borderBottom: '2px solid #000', marginBottom: fs * 0.8 }}>
-            <Seller d={d} fs={fs} />
-            <Logo src={d.logo} h={logoH} color="#b91c1c" />
-          </div>
-          <TitleBar text={title} fs={fs} />
-        </>
+      break;
+    default: // rule: identitas + logo di kiri/kanan, garis bawah kop
+      top = (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexDirection: T.logo === 'left' ? 'row-reverse' : 'row', gap: fs * 1.4, ...ruled }}>
+          <div style={{ flex: 1, minWidth: 0 }}><Seller d={d} fs={fs} /></div>
+          <Logo src={d.logo} h={logoH} color={logoColor} />
+        </div>
       );
   }
+  return (
+    <>
+      {top}
+      <Title kind={T.title} text={title} fs={fs} col={col} />
+    </>
+  );
 }
 
 function Parties({ d, kind, fs }: Ctx) {
   const L = LABELS[kind];
-  const label: CSSProperties = { color: d.template === 'klasik' ? '#000' : '#555', fontSize: fs * 0.85, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 };
+  const label: CSSProperties = { color: tplOf(d.template).ink ? '#000' : '#555', fontSize: fs * 0.85, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 };
   const meta: [string, string][] = [
     [L.nomor, d.nomor],
     ['Tanggal', fmtTanggal(d.tanggal)],
@@ -277,22 +340,29 @@ function Parties({ d, kind, fs }: Ctx) {
   );
 }
 
-function tableStyle(t: TemplateId, accent: string, fs: number) {
+function tableStyle(d: Doc, fs: number) {
+  const T = tplOf(d.template);
+  const col = inkOf(d);
   const cell: CSSProperties = { padding: `${fs * 0.35}px ${fs * 0.5}px`, verticalAlign: 'top' };
-  switch (t) {
-    case 'modern':
-      return { th: { ...cell, background: accent, color: '#fff', fontWeight: 700, border: `1px solid ${accent}` }, td: { ...cell, borderBottom: '1px solid #e5e7eb' }, zebra: '#f8fafc' };
-    case 'minimal':
-      return { th: { ...cell, borderBottom: '1.5px solid #111', color: '#555', fontSize: fs * 0.85, textTransform: 'uppercase' as const, letterSpacing: 0.5 }, td: { ...cell, borderBottom: '1px solid #eee' }, zebra: '' };
-    case 'tegas':
+  const up: CSSProperties = { fontSize: fs * 0.85, textTransform: 'uppercase', letterSpacing: 0.5 };
+  switch (T.table) {
+    case 'accentHead':
+      return { th: { ...cell, background: col, color: '#fff', fontWeight: 700, border: `1px solid ${col}` }, td: { ...cell, borderBottom: '1px solid #e5e7eb' }, zebra: '#f8fafc' };
+    case 'lines':
+      return { th: { ...cell, ...up, borderBottom: `1.5px solid ${T.font === SERIF ? col : '#111'}`, color: '#555' }, td: { ...cell, borderBottom: '1px solid #eee' }, zebra: '' };
+    case 'darkHead':
       return { th: { ...cell, background: '#1f2937', color: '#fff', fontWeight: 700, border: '1px solid #1f2937' }, td: { ...cell, borderBottom: '1px solid #d1d5db' }, zebra: '#f3f4f6' };
-    default:
+    case 'tintHead':
+      return { th: { ...cell, background: tint(col, 0.85), color: col, fontWeight: 700, borderBottom: `2px solid ${col}` }, td: { ...cell, borderBottom: '1px solid #e5e7eb' }, zebra: tint(col, 0.95) };
+    case 'dashed':
+      return { th: { ...cell, ...up, fontWeight: 700, borderTop: '1px dashed #000', borderBottom: '1px dashed #000' }, td: { ...cell, borderBottom: '1px dashed #999' }, zebra: '' };
+    default: // grid
       return { th: { ...cell, border: '1px solid #000', background: '#e5e5e5', fontWeight: 700 }, td: { ...cell, border: '1px solid #000' }, zebra: '' };
   }
 }
 
 function Items({ d, c, fs }: Ctx) {
-  const s = tableStyle(d.template, d.accent, fs);
+  const s = tableStyle(d, fs);
   const hasDisc = d.items.some((it) => num(it.diskon) > 0);
   const R: CSSProperties = { textAlign: 'right', whiteSpace: 'nowrap' };
   return (
@@ -334,12 +404,15 @@ function Totals({ d, c, fs }: Ctx) {
     ...(num(d.ppn) ? [[`PPN ${d.ppn}%`, c.ppn] as [string, number]] : []),
     ...(c.ongkir ? [['Ongkos Kirim', c.ongkir] as [string, number]] : []),
   ];
-  const totalStyle: CSSProperties =
-    d.template === 'modern' || d.template === 'tegas'
-      ? { background: d.accent, color: '#fff', fontWeight: 700, fontSize: fs * 1.15 }
-      : d.template === 'minimal'
-        ? { color: d.accent, fontWeight: 700, fontSize: fs * 1.3, borderTop: '1.5px solid #111' }
-        : { fontWeight: 700, fontSize: fs * 1.1, borderTop: '3px double #000' };
+  const col = inkOf(d);
+  const totalStyle: CSSProperties = {
+    accent: { background: col, color: '#fff', fontWeight: 700, fontSize: fs * 1.15 },
+    big: { color: col, fontWeight: 700, fontSize: fs * 1.3, borderTop: '1.5px solid #111' },
+    dark: { background: '#111827', color: '#fff', fontWeight: 700, fontSize: fs * 1.15 },
+    outline: { color: col, fontWeight: 700, fontSize: fs * 1.15, border: `2px solid ${col}` },
+    dashed: { fontWeight: 700, fontSize: fs * 1.1, borderTop: '1px dashed #000', borderBottom: '1px dashed #000' },
+    double: { fontWeight: 700, fontSize: fs * 1.1, borderTop: '3px double #000' },
+  }[tplOf(d.template).total];
   const cell: CSSProperties = { padding: `${fs * 0.25}px ${fs * 0.5}px` };
   return (
     <table style={{ borderCollapse: 'collapse', minWidth: '45%', marginLeft: 'auto' }}>
@@ -376,10 +449,12 @@ function SignBox({ heading, name, title, ttd, stempel, fs }: { heading: string; 
 
 function DocView(ctx: Ctx & { w: number; h: number }) {
   const { d, kind, c, fs, pad, w, h } = ctx;
+  const T = tplOf(d.template);
   const box: CSSProperties = {
     width: w, height: h, overflow: 'hidden', boxSizing: 'border-box', padding: pad, background: '#fff', color: '#111',
-    fontFamily: FONTS[d.template], fontSize: fs, lineHeight: 1.4, position: 'relative',
-    ...(d.template === 'tegas' ? { borderLeft: `${Math.round(fs * 0.9)}px solid ${d.accent}` } : {}),
+    fontFamily: T.font, fontSize: fs, lineHeight: 1.4, position: 'relative',
+    ...(T.stripe === 'left' ? { borderLeft: `${Math.round(fs * 0.9)}px solid ${d.accent}` } : {}),
+    ...(T.stripe === 'top' ? { borderTop: `${Math.round(fs * 0.9)}px solid ${d.accent}` } : {}),
   };
   return (
     <div style={box}>
@@ -415,7 +490,7 @@ function DocView(ctx: Ctx & { w: number; h: number }) {
         <SignBox heading="Hormat kami," name={d.ttdNama} title={d.ttdJabatan} ttd={d.ttd} stempel={d.stempel} fs={fs} />
       </div>
       {d.bingkai && (
-        <div style={{ position: 'absolute', inset: frameInset(pad), border: `1.5px solid ${d.template === 'klasik' ? '#000' : d.accent}`, pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', inset: frameInset(pad), border: T.frame === 'double' ? `4px double ${inkOf(d)}` : `1.5px solid ${inkOf(d)}`, pointerEvents: 'none' }} />
       )}
     </div>
   );
@@ -494,7 +569,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             <section className="space-y-3">
               <h2 className="font-bold">Gaya &amp; Kertas</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" role="radiogroup" aria-label="Template">
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2" role="radiogroup" aria-label="Template">
                 {TEMPLATES.map((t) => (
                   <button key={t.id} type="button" role="radio" aria-checked={d.template === t.id} onClick={() => set('template', t.id)}
                     className={`${seg(d.template === t.id)} text-left`}>
@@ -602,7 +677,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
 
           <FitPreview>
             <div ref={ref} className="w-max shadow-lg">
-              <DocView d={{ ...d, logo: logo.src, ttd: ttd.src, stempel: stempel.src }} kind={kind} c={c} fs={fs} pad={pad} w={W} h={H} />
+              <DocView d={{ ...d, logo: logo.src, ttd: ttd.src, stempel: stempel.src }} kind={kind} c={c} fs={fs} pad={pad} w={W} h={H} short={H < 600} />
             </div>
           </FitPreview>
         </div>
