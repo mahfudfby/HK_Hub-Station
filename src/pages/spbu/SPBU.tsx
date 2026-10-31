@@ -6,7 +6,8 @@ import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
 import BgToggle from '../../shared/components/BgToggle';
 import { useBgRemoved } from '../../shared/lib/removeBg';
-import { ADDRESS_TEMPLATES, PRICE_TEMPLATES, PLATE_REGIONS, GENERIC_LOGOS, buildPlate, randomRegionCode, svgToDataUri } from './SPBU.templates';
+import { ADDRESS_TEMPLATES, PRICE_TEMPLATES, PLATE_REGIONS, GENERIC_LOGOS, buildPlate, randomRegionCode, svgToDataUri, GAYA_NOTA, GAYA_NOTA_KEY } from './SPBU.templates';
+import { useGoogleFonts, cssFamily, fontsReady } from '../../shared/lib/fonts';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
@@ -172,6 +173,124 @@ const TransactionInput = React.memo(({ label, name, value, inputType = 'text', d
 });
 
 
+// --- GAYA NOTA (selain 'klasik') ---
+// Hanya #000/#fff (thermal) dan CSS aman html2canvas: warna solid, border, flex. Tanpa filter/shadow/transform.
+const INK = '#000';
+const PAPER = '#fff';
+const SEP_CHAR = { dash: '-', eq: '=', dot: '.', star: '*' };
+
+const GayaNotaReceipt = ({ g, spbu, trans, logoSrc, priceLiter, volume, total }) => {
+    const fs = g.size;
+    const sep = () => SEP_CHAR[g.sep]
+        ? <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', lineHeight: 1.1, margin: '2px 0', letterSpacing: 0 }}>{SEP_CHAR[g.sep].repeat(120)}</div>
+        : g.sep === 'double'
+            ? <div style={{ borderTop: `1px solid ${INK}`, borderBottom: `1px solid ${INK}`, height: 4, margin: '5px 0' }} />
+            : <div style={{ borderTop: `${g.sep === 'solid' ? 2 : 1}px ${g.sep === 'dashline' ? 'dashed' : 'solid'} ${INK}`, margin: '5px 0' }} />;
+
+    const logo = (
+        <img src={logoSrc} alt="Logo SPBU" crossOrigin="anonymous"
+            style={{ display: 'block', height: 'auto', maxWidth: g.header === 'left' ? '100%' : `min(100%, ${LOGO_MAX_WIDTH}px)` }}
+            onError={(e) => { e.target.onerror = null; e.target.src = FALLBACK_LOGO_URL; }} />
+    );
+    const titleStyle = {
+        display: 'block', fontSize: fs + 3, fontWeight: 700, margin: '1px 0',
+        ...(g.title === 'invert' && { background: INK, color: PAPER, padding: '2px 4px' }),
+        ...(g.title === 'box' && { border: `2px solid ${INK}`, padding: '2px 4px' }),
+        ...(g.title === 'spaced' && { letterSpacing: 3, textTransform: 'uppercase' }),
+    };
+    const nameAddr = (
+        <div>
+            <p style={titleStyle}>{spbu.name}</p>
+            {(spbu.address || '').split('\n').slice(0, 2).map((line, i) => <p key={`addr-${i}`} style={{ fontSize: fs - 1 }}>{line}</p>)}
+        </div>
+    );
+
+    const row = ([label, value], i, rows) => {
+        if (g.rows === 'stack') return (
+            <div key={label} style={{ marginBottom: 3 }}>
+                <p style={{ fontSize: fs - 3 }}>{label}</p>
+                <p style={{ fontWeight: 700 }}>{value}</p>
+            </div>
+        );
+        if (g.rows === 'table') return (
+            <div key={label} style={{ display: 'flex', borderTop: i ? `1px solid ${INK}` : 'none' }}>
+                <span style={{ width: '45%', flexShrink: 0, padding: '1px 4px', borderRight: `1px solid ${INK}` }}>{label}</span>
+                <span style={{ flexGrow: 1, padding: '1px 4px', textAlign: 'right' }}>{value}</span>
+            </div>
+        );
+        return (
+            <div key={label} style={{ display: 'flex' }}>
+                <span style={{ width: '46%', flexShrink: 0, whiteSpace: 'nowrap' }}>{label}</span>
+                <span style={{ flexShrink: 0 }}>:</span>
+                <span style={{ flexGrow: 1, textAlign: 'right' }}>{value}</span>
+            </div>
+        );
+    };
+    const group = (rows) => (
+        <div style={g.rows === 'table' ? { border: `1px solid ${INK}` } : undefined}>{rows.map(row)}</div>
+    );
+
+    const totalValue = `Rp. ${formatRupiah(total)}`;
+    const totalBlock = g.total === 'big' ? (
+        <div style={{ textAlign: 'center', margin: '4px 0' }}>
+            <p style={{ fontSize: fs - 2, letterSpacing: 2, textTransform: 'uppercase' }}>Total Harga</p>
+            <p style={{ fontSize: fs + 10, fontWeight: 700, lineHeight: 1.1 }}>{totalValue}</p>
+        </div>
+    ) : (
+        <div style={{
+            display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: fs + 1, margin: '3px 0',
+            ...(g.total === 'invert' && { background: INK, color: PAPER, padding: '3px 4px' }),
+            ...(g.total === 'box' && { border: `2px solid ${INK}`, padding: '3px 4px' }),
+        }}>
+            <span>Total Harga</span><span>{totalValue}</span>
+        </div>
+    );
+
+    const footerLines = (spbu.footerNote || '').split('\n');
+    return (
+        <div id="receipt-preview" className="text-left"
+            style={{ width: `${spbu.receiptWidth || 275}px`, padding: 8, background: PAPER, color: INK, fontFamily: cssFamily(g.font.family, g.font.fallback), fontSize: fs, lineHeight: 1.25, textTransform: g.upper ? 'uppercase' : 'none' }}>
+            {g.header === 'left' ? (
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
+                    <div style={{ width: '36%', flexShrink: 0, marginRight: 6 }}>{logo}</div>
+                    <div style={{ flexGrow: 1, minWidth: 0 }}>{nameAddr}</div>
+                </div>
+            ) : (
+                <div style={{ textAlign: 'center', marginBottom: 4 }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>{logo}</div>
+                    {nameAddr}
+                </div>
+            )}
+            {sep()}
+            {g.meta === 'grid' ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+                    {[['Shift', trans.shift, 'left'], ['No.Trans', trans.noTrans, 'right'], ['Tanggal', trans.date, 'left'], ['Jam', trans.time, 'right']].map(([label, value, align]) => (
+                        <div key={label} style={{ width: '50%', textAlign: align, marginBottom: 2 }}>
+                            <p style={{ fontSize: fs - 2 }}>{label}:</p>
+                            <p style={{ fontWeight: 700 }}>{value}</p>
+                        </div>
+                    ))}
+                </div>
+            ) : group([['Shift', trans.shift], ['No.Trans', trans.noTrans], ['Tanggal', trans.date], ['Jam', trans.time]])}
+            {sep()}
+            {group([
+                ['Pulau/Pompa', trans.islandPump],
+                ['Nama Produk', trans.productName],
+                ['Harga/Liter', `Rp. ${formatRupiah(priceLiter)}`],
+                ['Volume', `(L) ${volume.toFixed(2)}`],
+            ])}
+            {totalBlock}
+            {group([['Operator', trans.operator], ['Nopol', trans.nopol]])}
+            {sep()}
+            <div style={{ textAlign: 'center', marginTop: 6, overflow: 'hidden', fontWeight: g.footer === 'bold' ? 700 : 400 }}>
+                {footerLines.map((line, i) => (
+                    <p key={`footer-${i}`} style={{ whiteSpace: 'pre-wrap', ...(g.footer === 'invert' && i === 0 && { background: INK, color: PAPER, fontWeight: 700, padding: '2px 0' }) }}>{line || ' '}</p>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 // --- MAIN REACT COMPONENT ---
 const App = () => {
     // --- STATE MANAGEMENT ---
@@ -200,6 +319,11 @@ const App = () => {
     const [logoBg, setLogoBg] = useState(false);
     const [isAiGenerating, setIsAiGenerating] = useState(false);
     const [isLibReady, setIsLibReady] = useState(false);
+    // Gaya Nota = tampilan visual struk (lokal per perangkat), terpisah dari Template SPBU di Firestore
+    const [gayaNota, setGayaNota] = useState(() => { try { return localStorage.getItem(GAYA_NOTA_KEY) || 'klasik'; } catch { return 'klasik'; } });
+    const pilihGayaNota = (id) => { setGayaNota(id); try { localStorage.setItem(GAYA_NOTA_KEY, id); } catch { /* mode privat */ } };
+    const gaya = GAYA_NOTA.find(g => g.id === gayaNota) || GAYA_NOTA[0];
+    useGoogleFonts([gaya.font.google ? gaya.font : null]);
 
     // --- EFFECT: FIREBASE INITIALIZATION & AUTH ---
     useEffect(() => {
@@ -558,6 +682,10 @@ const App = () => {
         const displayPrice = finalPrice || parseFloat(trans.cashAmount) || 0;
         const priceLiter = parseFloat(trans.pricePerLiter) || 0;
 
+        if (gaya.id !== 'klasik') {
+            return <GayaNotaReceipt g={gaya} spbu={spbu} trans={trans} logoSrc={logoShown.src} priceLiter={priceLiter} volume={displayVolume} total={displayPrice} />;
+        }
+
         // Batasi Address hanya 2 baris saat dirender
         const addressLines = (spbu.address || '').split('\n').slice(0, 2).map((line, i) => (
             <p key={`addr-${i}`} className="text-base font-normal">{line}</p>
@@ -631,7 +759,7 @@ const App = () => {
                 </div>
             </div>
         );
-    }, [transactionData, currentSpbu, calculatedVolume, finalPrice, logoShown.src]);
+    }, [transactionData, currentSpbu, calculatedVolume, finalPrice, logoShown.src, gaya]);
 
     // --- EXPORT/PRINT LOGIC ---
 
@@ -645,7 +773,7 @@ const App = () => {
         }
         
         await new Promise(r => setTimeout(r, 100)); // Tunggu rendering React selesai
-        await document.fonts.ready; // font dokumen wajib termuat agar tata letak sama di semua perangkat
+        await fontsReady(); // font dokumen (termasuk Google Font gaya nota) wajib termuat agar tata letak sama di semua perangkat
 
         // Skala tetap (bukan dibagi devicePixelRatio) supaya resolusi nota sama di semua perangkat
         const width = currentSpbu.receiptWidth || 275;
@@ -996,6 +1124,13 @@ const App = () => {
                         {/* Bagian Preview & Aksi */}
                         <div className="mb-6 p-4 bg-white rounded-xl shadow-2xl border-t-4 border-indigo-600">
                             <h2 className="text-xl font-bold mb-3 text-indigo-700">3. Preview & Aksi</h2>
+                            <label htmlFor="gaya-nota" className="block text-sm font-semibold text-gray-700 mb-1">Gaya Nota</label>
+                            <select id="gaya-nota" aria-label="Gaya nota" value={gaya.id} onChange={(e) => pilihGayaNota(e.target.value)}
+                                className="w-full p-2 border rounded-lg bg-white mb-4">
+                                {GAYA_NOTA.map((g, i) => (
+                                    <option key={g.id} value={g.id}>{i + 1}. {g.name} — {g.desc}</option>
+                                ))}
+                            </select>
                             <div className="bg-gray-100 border border-dashed p-4">
                                 <FitPreview>{ReceiptPreviewComponent()}</FitPreview>
                             </div>

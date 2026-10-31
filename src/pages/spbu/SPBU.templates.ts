@@ -68,3 +68,52 @@ export const GENERIC_LOGOS = [
 ];
 
 export const svgToDataUri = (svg: string) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+
+// ============================================================
+// SECTION: Gaya Nota (tampilan visual struk; BUKAN "Template SPBU" yang berisi data stasiun)
+// Pilihan disimpan di localStorage. Semua gaya hanya pakai #000/#fff (kertas thermal).
+// ============================================================
+export type GayaNota = {
+  id: string;
+  name: string;
+  desc: string;
+  font: { family: string; weights?: number[]; google?: boolean; fallback: string };
+  size: number; // px teks dasar
+  header: 'center' | 'left'; // logo di atas tengah / logo di kiri nama
+  title: 'plain' | 'invert' | 'box' | 'spaced';
+  sep: 'dash' | 'eq' | 'dot' | 'star' | 'solid' | 'double' | 'dashline';
+  meta: 'grid' | 'rows'; // Shift/No.Trans/Tanggal/Jam
+  rows: 'cols' | 'stack' | 'table';
+  total: 'plain' | 'invert' | 'box' | 'big';
+  footer: 'bold' | 'normal' | 'invert';
+  upper?: boolean;
+};
+
+export const GAYA_NOTA_KEY = 'spbu:gaya-nota:v1';
+
+const mono = (family: string, weights = [400, 700]) => ({ family, weights, google: true, fallback: 'monospace' });
+const sans = (family: string, weights = [400, 700]) => ({ family, weights, google: true, fallback: 'sans-serif' });
+const local = (family: string, fallback: string) => ({ family, fallback });
+
+export const GAYA_NOTA: GayaNota[] = [
+  { id: 'klasik', name: 'Klasik', desc: 'Tampilan asli', font: local('Arimo', 'sans-serif'), size: 16, header: 'center', title: 'plain', sep: 'dashline', meta: 'grid', rows: 'cols', total: 'plain', footer: 'bold' },
+  { id: 'space-mono', name: 'Struk Mono', desc: 'Space Mono, garis -', font: mono('Space Mono'), size: 13, header: 'center', title: 'plain', sep: 'dash', meta: 'grid', rows: 'cols', total: 'plain', footer: 'bold' },
+  { id: 'plex', name: 'Kasir Plex', desc: 'Nama & total blok hitam', font: mono('IBM Plex Mono'), size: 14, header: 'center', title: 'invert', sep: 'eq', meta: 'rows', rows: 'cols', total: 'invert', footer: 'bold' },
+  { id: 'roboto-mono', name: 'Logo Kiri', desc: 'Roboto Mono, berkotak', font: mono('Roboto Mono'), size: 13, header: 'left', title: 'box', sep: 'solid', meta: 'rows', rows: 'cols', total: 'box', footer: 'normal' },
+  { id: 'source-code', name: 'Total Besar', desc: 'Source Code Pro, titik', font: mono('Source Code Pro'), size: 14, header: 'center', title: 'spaced', sep: 'dot', meta: 'grid', rows: 'stack', total: 'big', footer: 'bold' },
+  { id: 'jetbrains', name: 'Tabel', desc: 'JetBrains Mono, tabel', font: mono('JetBrains Mono'), size: 13, header: 'center', title: 'invert', sep: 'double', meta: 'rows', rows: 'table', total: 'invert', footer: 'normal' },
+  { id: 'courier', name: 'Mesin Ketik', desc: 'Courier Prime, kapital', font: mono('Courier Prime'), size: 14, header: 'center', title: 'plain', sep: 'dash', meta: 'rows', rows: 'cols', total: 'plain', footer: 'bold', upper: true },
+  { id: 'inconsolata', name: 'Kiri Tabel', desc: 'Inconsolata, garis =', font: mono('Inconsolata'), size: 15, header: 'left', title: 'plain', sep: 'eq', meta: 'grid', rows: 'table', total: 'box', footer: 'normal' },
+  { id: 'share-tech', name: 'Digital', desc: 'Share Tech Mono, bintang', font: mono('Share Tech Mono', [400]), size: 15, header: 'center', title: 'spaced', sep: 'star', meta: 'rows', rows: 'cols', total: 'invert', footer: 'normal' },
+  { id: 'pt-mono', name: 'Bertumpuk', desc: 'PT Mono, label di atas', font: mono('PT Mono', [400]), size: 14, header: 'center', title: 'box', sep: 'dot', meta: 'grid', rows: 'stack', total: 'big', footer: 'normal' },
+  { id: 'fira-mono', name: 'Fira Garis', desc: 'Fira Mono, garis tegas', font: mono('Fira Mono', [400, 500, 700]), size: 13, header: 'center', title: 'invert', sep: 'solid', meta: 'rows', rows: 'cols', total: 'box', footer: 'invert' },
+  { id: 'vt323', name: 'Dot Matrix', desc: 'VT323 retro', font: mono('VT323', [400]), size: 19, header: 'center', title: 'plain', sep: 'dash', meta: 'rows', rows: 'cols', total: 'invert', footer: 'normal', upper: true },
+  { id: 'condensed', name: 'Ramping', desc: 'Roboto Condensed', font: sans('Roboto Condensed'), size: 16, header: 'left', title: 'invert', sep: 'dashline', meta: 'rows', rows: 'table', total: 'big', footer: 'bold' },
+  { id: 'oswald', name: 'Poster', desc: 'Oswald, kapital renggang', font: sans('Oswald'), size: 15, header: 'center', title: 'spaced', sep: 'double', meta: 'grid', rows: 'stack', total: 'invert', footer: 'invert', upper: true },
+  { id: 'barlow', name: 'Barlow', desc: 'Barlow Condensed, kotak', font: sans('Barlow Condensed'), size: 17, header: 'center', title: 'box', sep: 'solid', meta: 'rows', rows: 'cols', total: 'big', footer: 'bold' },
+  { id: 'tinos', name: 'Formal', desc: 'Tinos serif, garis ganda', font: local('Tinos', 'serif'), size: 15, header: 'center', title: 'plain', sep: 'double', meta: 'rows', rows: 'cols', total: 'box', footer: 'normal' },
+  { id: 'cousine', name: 'Cousine', desc: 'Mono bawaan, tabel', font: local('Cousine', 'monospace'), size: 13, header: 'center', title: 'box', sep: 'eq', meta: 'grid', rows: 'table', total: 'plain', footer: 'bold' },
+  { id: 'carlito', name: 'Modern', desc: 'Carlito, logo kiri', font: local('Carlito', 'sans-serif'), size: 16, header: 'left', title: 'spaced', sep: 'dashline', meta: 'grid', rows: 'stack', total: 'invert', footer: 'normal' },
+  { id: 'minimal', name: 'Minimal', desc: 'Arimo, garis tipis', font: local('Arimo', 'sans-serif'), size: 15, header: 'center', title: 'plain', sep: 'solid', meta: 'rows', rows: 'cols', total: 'big', footer: 'normal' },
+  { id: 'tebal', name: 'Tebal', desc: 'Arimo, blok hitam', font: local('Arimo', 'sans-serif'), size: 16, header: 'center', title: 'invert', sep: 'eq', meta: 'grid', rows: 'cols', total: 'invert', footer: 'invert', upper: true },
+];

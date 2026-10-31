@@ -6,9 +6,10 @@ import FitPreview from '../../shared/components/FitPreview';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import {
-  DOTTED, Dots, ExportButton, Field, ImageUpload, LETTER_FONT as FONT, PAGE_H, PAGE_W, dataStyle as data,
+  DOTTED, Dots, ExportButton, Field, ImageUpload, PAGE_H, PAGE_W, dataStyle as data,
   fmtTanggal, inputCls, orDots, useLetterExport, type Notify,
 } from '../../shared/components/LetterKit';
+import { Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts } from '../../shared/components/LetterStyles';
 
 // Surat keterangan dokter: hanya untuk akun admin (login lewat tombol mengambang / halaman /login).
 
@@ -37,6 +38,7 @@ type Form = {
   jabatan: string;
   ttd: string; // data URL, hanya di perangkat ini
   stempel: string;
+  gaya: string; // id gaya surat (LetterStyles)
 };
 
 const DEFAULT: Form = {
@@ -61,6 +63,7 @@ const DEFAULT: Form = {
   jabatan: 'Dokter yang memeriksa',
   ttd: '',
   stempel: '',
+  gaya: 'klasik',
 };
 
 const SATUAN = ['nol', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'];
@@ -93,6 +96,8 @@ function loadForm(): Form {
 
 // ---------------- Letter preview ----------------
 function Letter({ f }: { f: Form }) {
+  const g = getGaya(f.gaya);
+  useLetterFonts(g);
   const hari = parseInt(f.hari, 10);
   const status = (
     <span>
@@ -120,22 +125,20 @@ function Letter({ f }: { f: Form }) {
   const alamat = [[f.alamat1, f.alamat2].filter(Boolean).join(', '), f.telp && `Telp. ${f.telp}`].filter(Boolean).join('  •  ');
 
   return (
-    <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '36px 44px', background: '#fff', color: '#000', fontFamily: FONT, fontSize: 13, lineHeight: 1.4 }}>
-      {/* KOP */}
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontWeight: 700, fontSize: 24, lineHeight: 1.15, letterSpacing: 0.5 }}>{f.nama}</div>
+    <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '48px 56px', background: '#fff', color: '#000', fontFamily: g.font, fontSize: g.size, lineHeight: 1.4 }}>
+      {/* KOP 3 baris; garis pemisah & judul mengikuti gaya (klasik: garis tebal + tipis, judul bergaris bawah) */}
+      <Kop g={g} name={f.nama} nameStyle={{ fontWeight: 700, fontSize: 24, lineHeight: 1.15, letterSpacing: 0.5 }}>
         <div style={{ fontSize: 11, lineHeight: 1.35, marginTop: 2 }}>
           {[izin, alamat].filter(Boolean).map((line, i) => <div key={i}>{line}</div>)}
         </div>
-      </div>
-      {/* Garis pemisah kop: tebal di atas, tipis di bawah */}
-      <div style={{ borderTop: '3px solid #000', borderBottom: '1px solid #000', height: 2, margin: '6px 0 14px' }} />
-      <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 14, textDecoration: 'underline', letterSpacing: 1, marginBottom: 10 }}>{f.judul}</div>
+      </Kop>
+      <Rule g={g} mb={14} />
+      <div style={{ textAlign: 'center', marginBottom: 10 }}><Title g={g}>{f.judul}</Title></div>
       <p style={{ marginBottom: 4 }}>{f.pembuka}</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 8, rowGap: 2, marginBottom: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 8, rowGap: g.rowGap, marginBottom: 8 }}>
         {f.rows.map((r, i) => (
           <div key={i} style={{ display: 'contents' }}>
-            <span style={{ minWidth: 96 }}>{r.label}</span>
+            <span style={{ minWidth: 96 + g.labelExtra }}>{r.label}</span>
             <span style={{ display: 'flex', gap: 6 }}>
               <span>:</span>
               {r.value ? <span style={{ ...data, flex: 1, whiteSpace: 'pre-line' }}>{r.value}</span> : <span style={{ flex: 1, borderBottom: DOTTED }} />}
@@ -158,7 +161,7 @@ function Letter({ f }: { f: Form }) {
             <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', right: 0, top: 6, height: 68, maxWidth: 200, objectFit: 'contain', mixBlendMode: 'multiply' }} />
           )}
         </div>
-        <div style={{ fontWeight: 700, textDecoration: 'underline' }}>{f.nama}</div>
+        <SignName g={g}>{f.nama}</SignName>
       </div>
     </div>
   );
@@ -218,6 +221,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6">
+            <StylePicker value={f.gaya} onChange={(v) => set('gaya', v)} />
             <section className="space-y-3">
               <h2 className="font-bold">Data Pasien</h2>
               {f.rows.map((r, i) => (

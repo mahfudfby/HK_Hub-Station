@@ -3,20 +3,26 @@ import { useEffect } from 'react';
 // Google Fonts dimuat saat dibutuhkan (template yang dipilih), bukan di index.html, agar halaman tetap ringan.
 // Ekspor (exportPage) memanggil fontsReady() supaya hasil unduhan selalu memakai font yang benar.
 
-export type WebFont = { family: string; weights?: number[] };
+// italic: bobot miring yang juga dimuat (mis. [400] untuk isian data miring)
+export type WebFont = { family: string; weights?: number[]; italic?: number[] };
 
 const pending = new Map<string, Promise<void>>();
 
-export function loadGoogleFont({ family, weights = [400, 700] }: WebFont): Promise<void> {
-  const key = `${family}:${weights.join(',')}`;
+export function loadGoogleFont({ family, weights = [400, 700], italic = [] }: WebFont): Promise<void> {
+  const key = `${family}:${weights.join(',')}:i${italic.join(',')}`;
   const known = pending.get(key);
   if (known) return known;
   const p = new Promise<void>((resolve) => {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = `https://fonts.googleapis.com/css2?family=${family.replace(/ /g, '+')}:wght@${[...weights].sort((a, b) => a - b).join(';')}&display=swap`;
+    const up = [...weights].sort((a, b) => a - b);
+    const axis = italic.length
+      ? `ital,wght@${[...up.map((w) => `0,${w}`), ...[...italic].sort((a, b) => a - b).map((w) => `1,${w}`)].join(';')}`
+      : `wght@${up.join(';')}`;
+    link.href = `https://fonts.googleapis.com/css2?family=${family.replace(/ /g, '+')}:${axis}&display=swap`;
     link.onload = () => {
-      Promise.all(weights.map((w) => document.fonts.load(`${w} 16px "${family}"`))).then(() => resolve(), () => resolve());
+      const faces = [...weights.map((w) => `${w} 16px "${family}"`), ...italic.map((w) => `italic ${w} 16px "${family}"`)];
+      Promise.all(faces.map((f) => document.fonts.load(f))).then(() => resolve(), () => resolve());
     };
     link.onerror = () => resolve(); // offline: pakai font cadangan, jangan gantung ekspor
     document.head.appendChild(link);
@@ -33,7 +39,7 @@ export async function fontsReady() {
 
 // Muat font milik template aktif; aman dipanggil tiap render
 export function useGoogleFonts(fonts: (WebFont | undefined | null)[]) {
-  const key = fonts.filter(Boolean).map((f) => `${f!.family}:${(f!.weights ?? []).join(',')}`).join('|');
+  const key = fonts.filter(Boolean).map((f) => `${f!.family}:${(f!.weights ?? []).join(',')}:i${(f!.italic ?? []).join(',')}`).join('|');
   useEffect(() => {
     fonts.forEach((f) => f && void loadGoogleFont(f));
     // eslint-disable-next-line react-hooks/exhaustive-deps

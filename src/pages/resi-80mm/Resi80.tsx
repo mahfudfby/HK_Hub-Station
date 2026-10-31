@@ -6,6 +6,7 @@ import { ExportButton, Field, ImageUpload, inputCls, fmtTanggal, useLetterExport
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { num, rupiah } from '../../shared/lib/money';
 import { code128 } from '../../shared/lib/code128';
+import { cssFamily, useGoogleFonts, type WebFont } from '../../shared/lib/fonts';
 
 // Resi / label pengiriman untuk printer thermal 80mm (gaya label marketplace, tanpa merek).
 // Lebar 288px × skala 2 = PNG 576px = lebar titik cetak printer 80mm. Barcode Code 128 dibuat otomatis dari nomor.
@@ -20,6 +21,7 @@ const STORAGE_KEY = 'resi-80mm:v1';
 type Item = { nama: string; qty: string };
 type Resi = {
   ukuran: Ukuran;
+  template: string;
   logo: string;
   toko: string;
   ekspedisi: string;
@@ -45,6 +47,7 @@ type Resi = {
 
 const DEFAULT: Resi = {
   ukuran: 'label',
+  template: 'klasik',
   logo: '',
   toko: 'TOKO ANDA',
   ekspedisi: 'EKSPEDISI',
@@ -91,66 +94,180 @@ function Barcode({ text, height, maxWidth }: { text: string; height: number; max
   );
 }
 
+// ---------------- Template ----------------
+// Satu template = kombinasi kop, barcode, nomor, COD, kotak & font. Hanya hitam/putih (printer thermal).
+// Mode label (tinggi tetap 360px) disisakan ±20px untuk data contoh; garis/padding tiap opsi dihitung agar tetap muat.
+type Tpl = {
+  id: string; name: string; desc: string;
+  font: string; web?: WebFont; k?: number; // k = skala ukuran huruf
+  head: 'kanan' | 'kiri' | 'bar' | 'tengah'; // kurir besar di kanan / kiri / pita hitam / tengah
+  code?: 'kotak'; // barcode resi dalam bingkai (zona putih tetap ada di dalam)
+  num: 'tebal' | 'besar' | 'balik' | 'renggang' | 'garis'; // gaya teks nomor resi
+  cod: 'balik' | 'garis' | 'cap'; // COD hitam terbalik / bingkai tebal / cap berbingkai ganda
+  box: 'kotak' | 'tab' | 'putus' | 'garis'; // kotak bergaris / judul pita hitam / putus-putus / garis pemisah saja
+  bw?: number; // tebal garis kotak
+  cols?: boolean; // continuous: penerima & pengirim berdampingan
+  isi?: 'nomor'; // continuous: daftar isi bernomor
+  foot?: 'bar' | 'garis';
+};
+const ARIMO = 'Arimo, Arial, sans-serif';
+const CARLITO = 'Carlito, Calibri, Arimo, sans-serif';
+const TINOS = 'Tinos, "Times New Roman", serif';
+const COUSINE = 'Cousine, "Courier New", monospace';
+const MONO_FB = 'Cousine, "Courier New", monospace';
+const gf = (family: string, fallback = ARIMO) => ({ font: cssFamily(family, fallback), web: { family } as WebFont });
+const TEMPLATES: Tpl[] = [
+  { id: 'klasik', name: 'Klasik', desc: 'Kurir di kanan, kotak bergaris', font: ARIMO, head: 'kanan', num: 'tebal', cod: 'balik', box: 'kotak' },
+  { id: 'kurir-kiri', name: 'Kurir Kiri', desc: 'Kurir besar di kiri, nomor besar', ...gf('Roboto Condensed'), k: 1.05, head: 'kiri', num: 'besar', cod: 'garis', box: 'kotak', cols: true },
+  { id: 'pita-hitam', name: 'Pita Hitam', desc: 'Kop hitam, judul tab', ...gf('Barlow Condensed'), k: 1.08, head: 'bar', num: 'balik', cod: 'balik', box: 'tab', cols: true, foot: 'bar' },
+  { id: 'terpusat', name: 'Terpusat', desc: 'Kurir di tengah, barcode berbingkai', ...gf('Inter'), k: 0.95, head: 'tengah', code: 'kotak', num: 'tebal', cod: 'cap', box: 'kotak', bw: 1 },
+  { id: 'garis-putus', name: 'Garis Putus', desc: 'Huruf ketik, kotak putus-putus', font: COUSINE, head: 'kanan', num: 'renggang', cod: 'garis', box: 'putus', isi: 'nomor', foot: 'garis' },
+  { id: 'bingkai-tebal', name: 'Bingkai Tebal', desc: 'Garis tebal, nomor besar', ...gf('Archivo Narrow'), k: 1.05, head: 'kiri', code: 'kotak', num: 'besar', cod: 'balik', box: 'kotak', bw: 2.5 },
+  { id: 'minimalis', name: 'Minimalis', desc: 'Tanpa kotak, garis pemisah', ...gf('IBM Plex Sans'), k: 0.95, head: 'kanan', num: 'garis', cod: 'garis', box: 'garis', bw: 1, foot: 'garis' },
+  { id: 'tab-label', name: 'Tab Label', desc: 'Judul pita hitam, cap COD', ...gf('Roboto'), head: 'bar', num: 'tebal', cod: 'cap', box: 'tab', cols: true },
+  { id: 'ekspres', name: 'Ekspres', desc: 'Huruf tinggi, barcode berbingkai', ...gf('Oswald'), k: 1.05, head: 'bar', code: 'kotak', num: 'besar', cod: 'balik', box: 'kotak', bw: 2 },
+  { id: 'mesin-ketik', name: 'Mesin Ketik', desc: 'Space Mono, kotak putus', ...gf('Space Mono', MONO_FB), k: 0.9, head: 'kiri', num: 'renggang', cod: 'cap', box: 'putus', isi: 'nomor' },
+  { id: 'modern', name: 'Modern', desc: 'Kurir tengah, nomor terbalik', ...gf('Rubik'), k: 0.95, head: 'tengah', num: 'balik', cod: 'garis', box: 'tab', cols: true },
+  { id: 'ringkas', name: 'Ringkas', desc: 'Huruf sempit, garis pemisah', ...gf('PT Sans Narrow'), k: 1.08, head: 'kanan', num: 'garis', cod: 'balik', box: 'garis', isi: 'nomor' },
+  { id: 'serif', name: 'Serif', desc: 'Huruf berkait, cap COD', font: TINOS, head: 'tengah', num: 'tebal', cod: 'cap', box: 'kotak', bw: 1, foot: 'garis' },
+  { id: 'kantor', name: 'Kantor', desc: 'Carlito, alamat berdampingan', font: CARLITO, k: 1.05, head: 'kiri', num: 'tebal', cod: 'balik', box: 'kotak', cols: true, isi: 'nomor' },
+  { id: 'gudang', name: 'Gudang', desc: 'Mono, kop hitam, kotak putus', ...gf('Roboto Mono', MONO_FB), k: 0.92, head: 'bar', code: 'kotak', num: 'renggang', cod: 'garis', box: 'putus' },
+  { id: 'tegas', name: 'Tegas', desc: 'Montserrat, garis tebal', ...gf('Montserrat'), k: 0.9, head: 'kiri', num: 'balik', cod: 'balik', box: 'kotak', bw: 2.5 },
+  { id: 'bersih', name: 'Bersih', desc: 'Lato, barcode berbingkai', ...gf('Lato'), head: 'kanan', code: 'kotak', num: 'garis', cod: 'cap', box: 'garis', bw: 1 },
+  { id: 'marketplace', name: 'Marketplace', desc: 'Kop hitam, nomor besar', ...gf('Source Sans 3'), k: 1.02, head: 'bar', num: 'besar', cod: 'balik', box: 'tab', foot: 'bar' },
+  { id: 'kontras', name: 'Kontras', desc: 'Work Sans, bingkai 2px', ...gf('Work Sans'), k: 0.93, head: 'tengah', code: 'kotak', num: 'balik', cod: 'balik', box: 'kotak', bw: 2, cols: true },
+  { id: 'cap-pos', name: 'Cap Pos', desc: 'Kurir tengah, cap COD, tab', ...gf('Roboto Condensed'), k: 1.05, head: 'tengah', num: 'renggang', cod: 'cap', box: 'tab', isi: 'nomor', foot: 'bar' },
+];
+console.assert(TEMPLATES.length === 20 && new Set(TEMPLATES.map((t) => t.id)).size === 20, 'TEMPLATES');
+const tplOf = (id: string) => TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0];
+
 // ---------------- Tampilan resi ----------------
 // Label 80×100mm memakai tata letak ringkas agar muat; continuous memakai tata letak lega
 function Label({ r }: { r: Resi }) {
+  const t = tplOf(r.template);
   const c = r.ukuran === 'label';
+  const f = (n: number) => n * (t.k ?? 1);
+  const bw = t.bw ?? 1.5;
+  const line = `${bw}px ${t.box === 'putus' ? 'dashed' : 'solid'} #000`;
+  const tab = t.box === 'tab';
   const hp = (v: string) => (r.samarkanHp ? samarkan(v) : v);
   const pad = c ? 6 : 8;
   const gap = c ? 4 : 6;
   const inner = W - pad * 2;
-  const box: CSSProperties = { border: '1.5px solid #000', padding: c ? '3px 5px' : 6, marginBottom: gap };
-  const head: CSSProperties = { fontSize: c ? 8 : 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 };
-  const Sec = ({ title, children }: { title: string; children: ReactNode }) => (
-    <div style={box}><div style={head}>{title}</div>{children}</div>
-  );
+  const bpad = c ? '3px 5px' : 6;
+  const frame: CSSProperties = { border: line, padding: bpad };
+  const box: CSSProperties = t.box === 'garis' ? { borderBottom: line, padding: c ? '3px 0' : '6px 0', marginBottom: gap } : { ...frame, marginBottom: gap };
+  const head: CSSProperties = { fontSize: f(c ? 8 : 9), fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 };
+  const inv: CSSProperties = { background: '#000', color: '#fff' };
+  const Sec = ({ title, children, st }: { title: string; children: ReactNode; st?: CSSProperties }) => (tab
+    ? <div style={{ ...box, padding: 0, ...st }}><div style={{ ...head, ...inv, padding: '1px 5px' }}>{title}</div><div style={{ padding: bpad }}>{children}</div></div>
+    : <div style={{ ...box, ...st }}><div style={head}>{title}</div>{children}</div>);
+  const Tag = ({ children }: { children: string }) => (tab
+    ? <span style={{ ...head, ...inv, padding: '0 3px', marginRight: 3 }}>{children}</span>
+    : <span style={head}>{children}: </span>);
   const isi = r.items.filter((it) => it.nama);
-  return (
-    <div style={{ width: W, ...(c ? { height: LABEL_H, overflow: 'hidden' } : {}), boxSizing: 'border-box', padding: pad, background: '#fff', color: '#000', fontFamily: 'Arimo, Arial, sans-serif', fontSize: c ? 9.5 : 11, lineHeight: c ? 1.25 : 1.3, wordBreak: 'break-word' }}>
-      {/* Kepala: toko & ekspedisi */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderBottom: '2px solid #000', paddingBottom: gap, marginBottom: gap }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-          {r.logo && <img src={r.logo} alt="Logo" style={{ height: c ? 24 : 34, maxWidth: 80, objectFit: 'contain' }} />}
-          <div style={{ fontWeight: 700, fontSize: c ? 11 : 12 }}>{r.toko}</div>
-        </div>
-        <div style={{ textAlign: 'right', flexShrink: 0, display: c ? 'flex' : 'block', alignItems: 'center', gap: 4 }}>
-          <div style={{ fontWeight: 800, fontSize: c ? 13 : 15, lineHeight: 1.1 }}>{r.ekspedisi}</div>
-          {r.layanan && <div style={{ display: 'inline-block', marginTop: c ? 0 : 2, padding: '0 5px', border: '1.5px solid #000', fontWeight: 700 }}>{r.layanan}</div>}
+
+  // Kepala
+  const logo = (h: number) => r.logo && <img src={r.logo} alt="Logo" style={{ height: h, maxWidth: 80, objectFit: 'contain' }} />;
+  const toko = <div style={{ fontWeight: 700, fontSize: f(c ? 11 : 12) }}>{r.toko}</div>;
+  const kurir = (align: 'left' | 'right' | 'center', white = false) => (
+    <div style={{ textAlign: align, flexShrink: 0, display: c ? 'flex' : 'block', alignItems: 'center', justifyContent: align === 'center' ? 'center' : undefined, gap: 4 }}>
+      <div style={{ fontWeight: 800, fontSize: f(c ? 13 : 15) * (align === 'center' ? 1.15 : 1), lineHeight: 1.1 }}>{r.ekspedisi}</div>
+      {r.layanan && <div style={{ display: 'inline-block', marginTop: c ? 0 : 2, padding: '0 5px', border: `1.5px solid ${white ? '#fff' : '#000'}`, fontWeight: 700 }}>{r.layanan}</div>}
+    </div>
+  );
+  const rowHead: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderBottom: '2px solid #000', paddingBottom: gap, marginBottom: gap };
+  const kepala = {
+    kanan: <div style={rowHead}><div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>{logo(c ? 24 : 34)}{toko}</div>{kurir('right')}</div>,
+    kiri: <div style={rowHead}>{kurir('left')}<div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, textAlign: 'right' }}>{toko}{logo(c ? 24 : 34)}</div></div>,
+    // logo di luar pita hitam agar logo gelap tetap terlihat
+    bar: (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: gap }}>
+        {logo(c ? 24 : 34)}
+        <div style={{ ...inv, flex: 1, minWidth: 0, padding: '3px 6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          {kurir('left', true)}
+          <div style={{ fontWeight: 700, fontSize: f(c ? 10 : 11), textAlign: 'right', minWidth: 0 }}>{r.toko}</div>
         </div>
       </div>
+    ),
+    tengah: (
+      <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: gap, marginBottom: gap }}>
+        {kurir('center')}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 2 }}>
+          {logo(c ? 16 : 26)}
+          <div style={{ fontWeight: 700, fontSize: f(c ? 9.5 : 11) }}>{r.toko}</div>
+        </div>
+      </div>
+    ),
+  }[t.head];
+
+  // Barcode + nomor resi (bingkai tidak menyentuh batang: Barcode menyisakan ≥10 modul putih di tiap sisi)
+  const kotak = t.code === 'kotak';
+  const numBase: CSSProperties = { textAlign: 'center', fontWeight: 700, fontSize: f(c ? 12 : 14), letterSpacing: 1.5, margin: `2px 0 ${kotak ? 0 : gap}px` };
+  const numStyle: CSSProperties = {
+    tebal: numBase,
+    besar: { ...numBase, fontWeight: 800, fontSize: f(c ? 15 : 18), letterSpacing: 1, lineHeight: 1.15 },
+    balik: { ...numBase, ...inv, letterSpacing: 2, padding: '1px 0', marginTop: 4 },
+    renggang: { ...numBase, fontFamily: COUSINE, letterSpacing: 3 },
+    garis: { ...numBase, fontSize: f(c ? 11.5 : 13), letterSpacing: 2, borderTop: '1px solid #000', borderBottom: '1px solid #000', padding: '1px 0', marginTop: 4 },
+  }[t.num];
+  const kode = <>
+    <Barcode text={r.noResi} height={c ? (kotak ? 40 : 42) : (kotak ? 54 : 58)} maxWidth={kotak ? inner - Math.ceil(bw) * 2 - 12 : inner} />
+    <div style={numStyle}>{r.noResi}</div>
+  </>;
+
+  // COD
+  const codIsi = r.cod
+    ? <><div style={{ fontSize: f(c ? 8 : 10) }}>COD</div><div style={{ fontSize: f(c ? 13 : 15) }}>Rp {rupiah(num(r.nilaiCod))}</div></>
+    : <div style={{ fontSize: f(c ? 12 : 14) }}>NON-COD</div>;
+  const tengahKol: CSSProperties = { textAlign: 'center', fontWeight: 800, display: 'flex', flexDirection: 'column', justifyContent: 'center' };
+  const codEl = t.cod === 'cap'
+    ? <div style={{ flex: 1, display: 'flex', border: '2px solid #000', padding: 2 }}>
+        <div style={{ flex: 1, border: '1px solid #000', padding: c ? 1 : 4, letterSpacing: 1, ...tengahKol, ...(r.cod ? inv : {}) }}>{codIsi}</div>
+      </div>
+    : <div style={{ flex: 1, ...(r.cod && t.cod === 'balik' ? inv : { border: `${t.cod === 'garis' ? 3 : 1.5}px solid #000` }), padding: c ? 3 : 6, ...tengahKol }}>{codIsi}</div>;
+
+  const penerima = (st?: CSSProperties) => (
+    <Sec title="Penerima" st={st}>
+      <div style={{ fontWeight: 700, fontSize: f(c ? 11 : 13) }}>{r.penerima}{c && r.penerimaTelp && <span style={{ fontWeight: 400, fontSize: f(9.5) }}> • {hp(r.penerimaTelp)}</span>}</div>
+      {!c && r.penerimaTelp && <div>{hp(r.penerimaTelp)}</div>}
+      {r.penerimaAlamat && <div>{r.penerimaAlamat}</div>}
+      {r.penerimaKota && <div style={{ fontWeight: 700 }}>{r.penerimaKota}</div>}
+    </Sec>
+  );
+  const pengirim = (st?: CSSProperties) => (
+    <Sec title="Pengirim" st={st}>
+      <div style={{ fontWeight: 700 }}>{r.pengirim}</div>
+      {r.pengirimTelp && <div>{hp(r.pengirimTelp)}</div>}
+      {r.pengirimAlamat && <div>{r.pengirimAlamat}</div>}
+    </Sec>
+  );
+
+  return (
+    <div style={{ width: W, ...(c ? { height: LABEL_H, overflow: 'hidden' } : {}), boxSizing: 'border-box', padding: pad, background: '#fff', color: '#000', fontFamily: t.font, fontSize: f(c ? 9.5 : 11), lineHeight: c ? 1.25 : 1.3, wordBreak: 'break-word' }}>
+      {kepala}
 
       {/* Barcode nomor resi */}
-      <Barcode text={r.noResi} height={c ? 42 : 58} maxWidth={inner} />
-      <div style={{ textAlign: 'center', fontWeight: 700, fontSize: c ? 12 : 14, letterSpacing: 1.5, margin: `2px 0 ${gap}px` }}>{r.noResi}</div>
+      {kotak ? <div style={{ border: `${bw}px solid #000`, padding: '4px 6px', marginBottom: gap }}>{kode}</div> : kode}
 
       {/* COD / berat / koli */}
       <div style={{ display: 'flex', gap, marginBottom: gap }}>
-        <div style={{ flex: 1, ...(r.cod ? { background: '#000', color: '#fff' } : { border: '1.5px solid #000' }), padding: c ? 3 : 6, textAlign: 'center', fontWeight: 800, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          {r.cod
-            ? <><div style={{ fontSize: c ? 8 : 10 }}>COD</div><div style={{ fontSize: c ? 13 : 15 }}>Rp {rupiah(num(r.nilaiCod))}</div></>
-            : <div style={{ fontSize: c ? 12 : 14 }}>NON-COD</div>}
-        </div>
-        <div style={{ ...box, marginBottom: 0, minWidth: c ? 74 : 82 }}>
+        {codEl}
+        <div style={{ ...frame, minWidth: c ? 74 : 82 }}>
           <div>Berat: <b>{r.berat}</b></div>
           <div>Koli: <b>{r.koli}</b></div>
         </div>
       </div>
 
-      <Sec title="Penerima">
-        <div style={{ fontWeight: 700, fontSize: c ? 11 : 13 }}>{r.penerima}{c && r.penerimaTelp && <span style={{ fontWeight: 400, fontSize: 9.5 }}> • {hp(r.penerimaTelp)}</span>}</div>
-        {!c && r.penerimaTelp && <div>{hp(r.penerimaTelp)}</div>}
-        {r.penerimaAlamat && <div>{r.penerimaAlamat}</div>}
-        {r.penerimaKota && <div style={{ fontWeight: 700 }}>{r.penerimaKota}</div>}
-      </Sec>
-      {c ? (
-        <div style={box}><span style={head}>Pengirim: </span><b>{r.pengirim}</b>{r.pengirimTelp && ` • ${hp(r.pengirimTelp)}`}{r.pengirimAlamat && ` • ${r.pengirimAlamat}`}</div>
-      ) : (
-        <Sec title="Pengirim">
-          <div style={{ fontWeight: 700 }}>{r.pengirim}</div>
-          {r.pengirimTelp && <div>{hp(r.pengirimTelp)}</div>}
-          {r.pengirimAlamat && <div>{r.pengirimAlamat}</div>}
-        </Sec>
-      )}
+      {c ? <>
+        {penerima()}
+        <div style={box}><Tag>Pengirim</Tag><b>{r.pengirim}</b>{r.pengirimTelp && ` • ${hp(r.pengirimTelp)}`}{r.pengirimAlamat && ` • ${r.pengirimAlamat}`}</div>
+      </> : t.cols ? (
+        <div style={{ display: 'flex', gap }}>
+          {penerima({ flex: 3, minWidth: 0 })}
+          {pengirim({ flex: 2, minWidth: 0 })}
+        </div>
+      ) : <>{penerima()}{pengirim()}</>}
 
       {/* Nomor pesanan + barcode kecil */}
       {r.noPesanan && (
@@ -164,21 +281,25 @@ function Label({ r }: { r: Resi }) {
       )}
 
       {c ? (
-        isi.length > 0 && <div style={box}><span style={head}>Isi: </span>{isi.map((it) => `${it.nama} x${it.qty}`).join(', ')}</div>
+        isi.length > 0 && <div style={box}><Tag>Isi</Tag>{isi.map((it) => `${it.nama} x${it.qty}`).join(', ')}</div>
       ) : (
         <Sec title="Isi paket">
           {isi.map((it, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
-              <span>{it.nama}</span>
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 6, ...(t.isi === 'nomor' && i < isi.length - 1 ? { borderBottom: '1px dashed #000' } : {}) }}>
+              <span>{t.isi === 'nomor' && `${i + 1}. `}{it.nama}</span>
               <b style={{ whiteSpace: 'nowrap' }}>x{it.qty}</b>
             </div>
           ))}
         </Sec>
       )}
       {r.catatan && (c
-        ? <div style={box}><span style={head}>Catatan: </span>{r.catatan}</div>
+        ? <div style={box}><Tag>Catatan</Tag>{r.catatan}</div>
         : <Sec title="Catatan"><div style={{ whiteSpace: 'pre-line' }}>{r.catatan}</div></Sec>)}
-      {!c && <div style={{ textAlign: 'center', fontSize: 9 }}>Simpan resi ini sebagai bukti pengiriman</div>}
+      {!c && (
+        <div style={{ textAlign: 'center', fontSize: f(9), ...(t.foot === 'bar' ? { ...inv, fontWeight: 700, padding: '2px 0' } : t.foot === 'garis' ? { borderTop: '1px dashed #000', paddingTop: 4 } : {}) }}>
+          Simpan resi ini sebagai bukti pengiriman
+        </div>
+      )}
     </div>
   );
 }
@@ -199,6 +320,7 @@ export default function Resi80() {
   const [logoBg, setLogoBg] = useState(false);
   const logo = useBgRemoved(r.logo, logoBg, (m) => notify('error', m));
   const ref = useRef<HTMLDivElement>(null);
+  useGoogleFonts([tplOf(r.template).web]);
 
   useEffect(() => {
     try {
@@ -239,6 +361,11 @@ export default function Resi80() {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             <section className="space-y-3">
+              <Field label="Template resi">
+                <select className={inputCls} value={tplOf(r.template).id} onChange={(e) => set('template', e.target.value)}>
+                  {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
+                </select>
+              </Field>
               <h2 className="font-bold">Ukuran kertas</h2>
               <div className="flex gap-2" role="radiogroup" aria-label="Ukuran kertas">
                 {([['label', 'Label 80×100mm'], ['continuous', 'Continuous 80mm']] as [Ukuran, string][]).map(([v, l]) => (

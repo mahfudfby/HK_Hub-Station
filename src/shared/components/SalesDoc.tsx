@@ -5,15 +5,15 @@ import { Toast, type ToastState } from './Feedback';
 import { ExportButton, Field, ImageUpload, inputCls, fmtTanggal, mmToPx, useLetterExport, type Notify, type Paper } from './LetterKit';
 import { useBgRemoved } from '../lib/removeBg';
 import { num, rupiah, terbilangRupiah } from '../lib/money';
-import { loadGoogleFont } from '../lib/fonts';
+import { cssFamily, loadGoogleFont, useGoogleFonts, type WebFont } from '../lib/fonts';
 
 // Generator Invoice & Faktur Penjualan: satu mesin, beberapa template gaya, ukuran kertas & orientasi bebas.
 
 export type DocKind = 'invoice' | 'faktur';
-type HeadKind = 'rule' | 'band' | 'center' | 'split' | 'formal';
-type TitleKind = 'lines' | 'plain' | 'box' | 'pill' | 'dark' | 'big';
-type TableKind = 'grid' | 'accentHead' | 'lines' | 'darkHead' | 'tintHead' | 'dashed';
-type TotalKind = 'double' | 'accent' | 'big' | 'dark' | 'outline' | 'dashed';
+type HeadKind = 'rule' | 'band' | 'center' | 'split' | 'formal' | 'mid' | 'boxed';
+type TitleKind = 'lines' | 'plain' | 'box' | 'pill' | 'dark' | 'big' | 'under' | 'tab';
+type TableKind = 'grid' | 'accentHead' | 'lines' | 'darkHead' | 'tintHead' | 'dashed' | 'zebra' | 'rule2';
+type TotalKind = 'double' | 'accent' | 'big' | 'dark' | 'outline' | 'dashed' | 'tint' | 'under';
 // Satu template = kombinasi gaya kop, judul, tabel, total, font, strip & bingkai.
 // ink: hitam-putih (abaikan warna aksen untuk garis/judul); rule: garis bawah kop ({a} = warna aksen).
 type Tpl = {
@@ -21,6 +21,7 @@ type Tpl = {
   head: HeadKind; logo?: 'left' | 'right'; rule?: string; band?: 'accent' | 'dark' | 'tint';
   title: TitleKind; table: TableKind; total: TotalKind;
   stripe?: 'left' | 'top'; frame?: 'double'; ink?: boolean;
+  web?: WebFont; // Google Font template (dimuat saat dipilih)
 };
 const SERIF = 'Tinos, "Times New Roman", serif';
 const SANS = 'Arimo, Arial, sans-serif';
@@ -41,6 +42,12 @@ const TEMPLATES: Tpl[] = [
   { id: 'startup', name: 'Startup', desc: 'Strip atas, tabel lembut', font: SANS, head: 'split', logo: 'left', title: 'lines', table: 'tintHead', total: 'accent', stripe: 'top' },
   { id: 'bingkai', name: 'Bingkai Ganda', desc: 'Judul berbingkai, klasik', font: SERIF, head: 'rule', logo: 'left', rule: '1px solid #000', title: 'box', table: 'grid', total: 'double', frame: 'double', ink: true },
   { id: 'pastel', name: 'Pastel', desc: 'Kop warna lembut', font: SANS, head: 'band', band: 'tint', title: 'lines', table: 'tintHead', total: 'outline' },
+  { id: 'geometris', name: 'Geometris', desc: 'Montserrat, kop tengah mendatar', font: cssFamily('Montserrat'), web: { family: 'Montserrat', weights: [400, 700] }, head: 'mid', rule: '2px solid {a}', title: 'under', table: 'zebra', total: 'tint' },
+  { id: 'kartu', name: 'Kartu', desc: 'Lato, kop dalam kotak membulat', font: cssFamily('Lato'), web: { family: 'Lato', weights: [400, 700] }, head: 'boxed', title: 'tab', table: 'rule2', total: 'under' },
+  { id: 'editorial', name: 'Editorial', desc: 'Playfair, gaya majalah hitam-putih', font: cssFamily('Playfair Display', 'serif'), web: { family: 'Playfair Display', weights: [400, 700] }, head: 'mid', rule: '3px double #000', title: 'big', table: 'rule2', total: 'double', ink: true },
+  { id: 'teknik', name: 'Teknik', desc: 'IBM Plex, strip samping, kotak kop', font: cssFamily('IBM Plex Sans'), web: { family: 'IBM Plex Sans', weights: [400, 700] }, head: 'boxed', title: 'under', table: 'zebra', total: 'dark', stripe: 'left' },
+  { id: 'slab', name: 'Slab', desc: 'Roboto Slab, judul tab, garis tebal', font: cssFamily('Roboto Slab', 'serif'), web: { family: 'Roboto Slab', weights: [400, 700] }, head: 'rule', logo: 'left', rule: '6px solid {a}', title: 'tab', table: 'darkHead', total: 'tint' },
+  { id: 'butik', name: 'Butik', desc: 'Josefin Sans, lembut & lapang', font: cssFamily('Josefin Sans'), web: { family: 'Josefin Sans', weights: [400, 700] }, head: 'center', rule: '1px solid {a}', title: 'plain', table: 'rule2', total: 'under', stripe: 'top' },
 ];
 type TemplateId = string;
 const tplOf = (id: string) => TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0];
@@ -117,6 +124,9 @@ type Doc = {
   ongkir: string;
   catatan: string;
   pembayaran: string;
+  metode: '' | 'Tunai' | 'Non-Tunai'; // '' = tidak ditampilkan
+  nonTunai: string; // QRIS, Transfer Bank, dll.
+  diterima: string; // uang tunai diterima (Rp)
   terbilang: boolean;
   kota: string;
   ttdNama: string;
@@ -155,6 +165,9 @@ const makeDefault = (kind: DocKind): Doc => ({
   ongkir: '',
   catatan: kind === 'invoice' ? 'Terima kasih atas kepercayaan Anda.' : 'Barang yang sudah dibeli tidak dapat dikembalikan.',
   pembayaran: 'Transfer ke Bank ABC 123-456-7890 a.n. Nama Usaha Anda',
+  metode: '',
+  nonTunai: 'Transfer Bank',
+  diterima: '',
   terbilang: kind === 'faktur',
   kota: '',
   ttdNama: 'Nama Penanggung Jawab',
@@ -184,6 +197,8 @@ function calc(d: Doc) {
 // ---------------- Tampilan dokumen ----------------
 type Ctx = { d: Doc; kind: DocKind; c: ReturnType<typeof calc>; fs: number; pad: number; short: boolean };
 // Warna garis/judul template: hitam untuk template ink, selain itu warna aksen
+// Kertas pendek (A5 landscape, ½ continuous, thermal): jarak vertikal dirapatkan agar muat
+const gapK = (short: boolean) => (short ? 0.55 : 1);
 const inkOf = (d: Doc) => (tplOf(d.template).ink ? '#000' : d.accent);
 // Jarak bingkai dari tepi kertas
 const frameInset = (pad: number) => Math.round(pad * 0.35);
@@ -215,8 +230,8 @@ function Logo({ src, h, color, box }: { src: string; h: number; color: string; b
 }
 
 // Judul dokumen; 'lines' = di antara dua garis (gaya Slip Gaji)
-function Title({ kind, text, fs, col }: { kind: TitleKind; text: string; fs: number; col: string }) {
-  const base: CSSProperties = { fontWeight: 700, fontSize: fs * 1.5, letterSpacing: 3, textTransform: 'uppercase', marginBottom: fs * 1.2 };
+function Title({ kind, text, fs, col, short = false }: { kind: TitleKind; text: string; fs: number; col: string; short?: boolean }) {
+  const base: CSSProperties = { fontWeight: 700, fontSize: fs * 1.5, letterSpacing: 3, textTransform: 'uppercase', marginBottom: fs * 1.2 * gapK(short) };
   switch (kind) {
     case 'plain':
       return <div style={{ ...base, textAlign: 'center', color: col, letterSpacing: 6 }}>{text}</div>;
@@ -228,6 +243,10 @@ function Title({ kind, text, fs, col }: { kind: TitleKind; text: string; fs: num
       return <div style={{ ...base, textAlign: 'center', background: '#1f2937', color: '#fff', padding: `${fs * 0.3}px 0` }}>{text}</div>;
     case 'big':
       return <div style={{ ...base, color: col, fontSize: fs * 2.6, fontWeight: 800, letterSpacing: 1, lineHeight: 1.1 }}>{text}</div>;
+    case 'under': // kiri, garis bawah tebal sepanjang judul
+      return <div style={{ display: 'flex', marginBottom: base.marginBottom }}><span style={{ ...base, margin: 0, color: col, borderBottom: `3px solid ${col}`, paddingBottom: fs * 0.15 }}>{text}</span></div>;
+    case 'tab': // tab berwarna menempel di garis selebar halaman
+      return <div style={{ display: 'flex', borderBottom: `2px solid ${col}`, marginBottom: base.marginBottom }}><span style={{ ...base, margin: 0, background: col, color: '#fff', padding: `${fs * 0.25}px ${fs}px`, borderRadius: `${fs * 0.4}px ${fs * 0.4}px 0 0` }}>{text}</span></div>;
     default:
       return <div style={{ ...base, textAlign: 'center', color: col, borderTop: `1px solid ${col}`, borderBottom: `1px solid ${col}`, padding: `${fs * 0.3}px 0` }}>{text}</div>;
   }
@@ -265,6 +284,22 @@ function Header({ d, kind, fs, pad, short }: Ctx) {
         </div>
       );
       break;
+    case 'mid': // logo & identitas berdampingan di tengah
+      top = (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: fs * 1.4, ...ruled }}>
+          <Logo src={d.logo} h={logoH} color={logoColor} />
+          <Seller d={d} fs={fs} />
+        </div>
+      );
+      break;
+    case 'boxed': // kop dalam kotak membulat berwarna lembut
+      top = (
+        <div style={{ display: 'flex', alignItems: 'center', gap: fs * 1.4, background: tint(a, 0.92), border: `1px solid ${tint(a, 0.6)}`, borderRadius: fs * 0.8, padding: `${fs * 0.6}px ${fs}px`, marginBottom: fs * 0.8 }}>
+          <Logo src={d.logo} h={logoH * 0.85} color={logoColor} />
+          <div style={{ flex: 1, minWidth: 0 }}><Seller d={d} fs={fs} /></div>
+        </div>
+      );
+      break;
     case 'split': // identitas kiri, judul besar kanan (judul tidak diulang di bawah)
       return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: fs * 1.4, ...ruled, marginBottom: fs * 1.2 }}>
@@ -297,12 +332,12 @@ function Header({ d, kind, fs, pad, short }: Ctx) {
   return (
     <>
       {top}
-      <Title kind={T.title} text={title} fs={fs} col={col} />
+      <Title kind={T.title} text={title} fs={fs} col={col} short={short} />
     </>
   );
 }
 
-function Parties({ d, kind, fs }: Ctx) {
+function Parties({ d, kind, fs, short }: Ctx) {
   const L = LABELS[kind];
   const label: CSSProperties = { color: tplOf(d.template).ink ? '#000' : '#555', fontSize: fs * 0.85, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 };
   const meta: [string, string][] = [
@@ -311,7 +346,7 @@ function Parties({ d, kind, fs }: Ctx) {
     ...(d.jatuhTempo ? [['Jatuh Tempo', fmtTanggal(d.jatuhTempo)] as [string, string]] : []),
   ];
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24, marginBottom: fs * 1.2 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24, marginBottom: fs * 1.2 * gapK(short) }}>
       <div style={{ minWidth: 0 }}>
         <div style={label}>{L.kepada}</div>
         <div style={{ fontWeight: 700 }}>{d.pembeli || '—'}</div>
@@ -348,17 +383,21 @@ function tableStyle(d: Doc, fs: number) {
       return { th: { ...cell, background: tint(col, 0.85), color: col, fontWeight: 700, borderBottom: `2px solid ${col}` }, td: { ...cell, borderBottom: '1px solid #e5e7eb' }, zebra: tint(col, 0.95) };
     case 'dashed':
       return { th: { ...cell, ...up, fontWeight: 700, borderTop: '1px dashed #000', borderBottom: '1px dashed #000' }, td: { ...cell, borderBottom: '1px dashed #999' }, zebra: '' };
+    case 'zebra':
+      return { th: { ...cell, ...up, fontWeight: 700, color: col, borderBottom: `2px solid ${col}` }, td: cell, zebra: '#f3f4f6' };
+    case 'rule2':
+      return { th: { ...cell, ...up, fontWeight: 700, borderTop: `2px solid ${col}`, borderBottom: `2px solid ${col}` }, td: { ...cell, borderBottom: `1px solid ${tint(col, 0.75)}` }, zebra: '' };
     default: // grid
       return { th: { ...cell, border: '1px solid #000', background: '#e5e5e5', fontWeight: 700 }, td: { ...cell, border: '1px solid #000' }, zebra: '' };
   }
 }
 
-function Items({ d, c, fs }: Ctx) {
+function Items({ d, c, fs, short }: Ctx) {
   const s = tableStyle(d, fs);
   const hasDisc = d.items.some((it) => num(it.diskon) > 0);
   const R: CSSProperties = { textAlign: 'right', whiteSpace: 'nowrap' };
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: fs * 1.2 }}>
+    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: fs * 1.2 * gapK(short) }}>
       <thead>
         <tr>
           <th style={{ ...s.th, width: '1%', textAlign: 'center' }}>No</th>
@@ -388,7 +427,7 @@ function Items({ d, c, fs }: Ctx) {
   );
 }
 
-function Totals({ d, c, fs }: Ctx) {
+function Totals({ d, c, fs, short }: Ctx) {
   const rows: [string, number][] = [
     ['Subtotal', c.subtotal],
     ...(c.potongan ? [['Potongan', -c.potongan] as [string, number]] : []),
@@ -404,6 +443,8 @@ function Totals({ d, c, fs }: Ctx) {
     outline: { color: col, fontWeight: 700, fontSize: fs * 1.15, border: `2px solid ${col}` },
     dashed: { fontWeight: 700, fontSize: fs * 1.1, borderTop: '1px dashed #000', borderBottom: '1px dashed #000' },
     double: { fontWeight: 700, fontSize: fs * 1.1, borderTop: '3px double #000' },
+    tint: { background: tint(col, 0.85), color: col, fontWeight: 700, fontSize: fs * 1.15 },
+    under: { color: col, fontWeight: 700, fontSize: fs * 1.15, borderTop: `1px solid ${col}`, borderBottom: `3px solid ${col}` },
   }[tplOf(d.template).total];
   const cell: CSSProperties = { padding: `${fs * 0.25}px ${fs * 0.5}px` };
   return (
@@ -419,13 +460,28 @@ function Totals({ d, c, fs }: Ctx) {
           <td style={{ ...cell, padding: `${fs * 0.45}px ${fs * 0.5}px` }}>TOTAL</td>
           <td style={{ ...cell, padding: `${fs * 0.45}px ${fs * 0.5}px`, textAlign: 'right', whiteSpace: 'nowrap' }}>Rp {rupiah(c.total)}</td>
         </tr>
+        {d.metode && (
+          <tr>
+            <td style={cell}>Metode Bayar</td>
+            <td style={{ ...cell, textAlign: 'right', fontWeight: 700 }}>{d.metode === 'Tunai' ? 'Tunai' : `Non-Tunai (${d.nonTunai})`}</td>
+          </tr>
+        )}
+        {d.metode === 'Tunai' && num(d.diterima) > 0 && short && (
+          <tr><td style={cell} colSpan={2}>Diterima Rp {rupiah(num(d.diterima))} • Kembali Rp {rupiah(Math.max(0, num(d.diterima) - c.total))}</td></tr>
+        )}
+        {d.metode === 'Tunai' && num(d.diterima) > 0 && !short && (
+          <>
+            <tr><td style={cell}>Diterima</td><td style={{ ...cell, textAlign: 'right', whiteSpace: 'nowrap' }}>Rp {rupiah(num(d.diterima))}</td></tr>
+            <tr><td style={cell}>Kembali</td><td style={{ ...cell, textAlign: 'right', whiteSpace: 'nowrap' }}>Rp {rupiah(Math.max(0, num(d.diterima) - c.total))}</td></tr>
+          </>
+        )}
       </tbody>
     </table>
   );
 }
 
-function SignBox({ heading, name, title, ttd, stempel, fs }: { heading: string; name: string; title: string; ttd?: string; stempel?: string; fs: number }) {
-  const h = fs * 5.5;
+function SignBox({ heading, name, title, ttd, stempel, fs, short = false }: { heading: string; name: string; title: string; ttd?: string; stempel?: string; fs: number; short?: boolean }) {
+  const h = fs * (short ? 4 : 5.5);
   return (
     <div style={{ textAlign: 'center', minWidth: fs * 13 }}>
       <div>{heading}</div>
@@ -453,7 +509,7 @@ function DocView(ctx: Ctx & { w: number; h: number }) {
       <Header {...ctx} />
       <Parties {...ctx} />
       <Items {...ctx} />
-      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', marginBottom: fs * 1.4 }}>
+      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', marginBottom: fs * 1.4 * gapK(ctx.short) }}>
         <div style={{ flex: 1, minWidth: 0, fontSize: fs * 0.92 }}>
           {d.terbilang && (
             <div style={{ marginBottom: fs * 0.6 }}>
@@ -478,8 +534,8 @@ function DocView(ctx: Ctx & { w: number; h: number }) {
       </div>
       {(d.kota || d.tanggal) && <div style={{ textAlign: 'right', marginBottom: 2 }}>{[d.kota, fmtTanggal(d.tanggal)].filter(Boolean).join(', ')}</div>}
       <div style={{ display: 'flex', justifyContent: kind === 'faktur' ? 'space-between' : 'flex-end' }}>
-        {kind === 'faktur' && <SignBox heading="Penerima," name="" title="" fs={fs} />}
-        <SignBox heading="Hormat kami," name={d.ttdNama} title={d.ttdJabatan} ttd={d.ttd} stempel={d.stempel} fs={fs} />
+        {kind === 'faktur' && <SignBox heading="Penerima," name="" title="" fs={fs} short={ctx.short} />}
+        <SignBox heading="Hormat kami," name={d.ttdNama} title={d.ttdJabatan} ttd={d.ttd} stempel={d.stempel} fs={fs} short={ctx.short} />
       </div>
       {d.bingkai && (
         <div style={{ position: 'absolute', inset: frameInset(pad), border: T.frame === 'double' ? `4px double ${inkOf(d)}` : `1.5px solid ${inkOf(d)}`, pointerEvents: 'none' }} />
@@ -520,6 +576,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
   }, [d, storageKey, notify]);
 
   useEffect(() => { loadNameFont(findFont(d.namaFont)); }, [d.namaFont]);
+  useGoogleFonts([tplOf(d.template).web]);
 
   const set = <K extends keyof Doc>(k: K, v: Doc[K]) => setD((p) => ({ ...p, [k]: v }));
   const setItem = (i: number, patch: Partial<Item>) => set('items', d.items.map((it, j) => (j === i ? { ...it, ...patch } : it)));
@@ -531,7 +588,8 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
   // Huruf & margin mengikuti sisi terpendek kertas: thermal 80mm sangat kecil, A5/½ continuous kecil
   const minSide = Math.min(paper.w, paper.h);
   const fs = minSide < 100 ? 7 : minSide < 160 ? 10 : 12;
-  const pad = minSide < 100 ? 10 : minSide < 160 ? 28 : 44;
+  // Margin tepi kertas: A4/Letter/F4/continuous ±16mm, A5/½ continuous ±10,5mm; thermal tetap rapat
+  const pad = minSide < 100 ? 10 : H < 600 ? 30 : minSide < 160 ? 40 : 60;
   const c = calc(d);
 
   const fileName = `${L.file}-${(d.nomor || 'dokumen').replace(/[^\w-]+/g, '-').toLowerCase()}`;
@@ -561,15 +619,11 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             <section className="space-y-3">
               <h2 className="font-bold">Gaya &amp; Kertas</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2" role="radiogroup" aria-label="Template">
-                {TEMPLATES.map((t) => (
-                  <button key={t.id} type="button" role="radio" aria-checked={d.template === t.id} onClick={() => set('template', t.id)}
-                    className={`${seg(d.template === t.id)} text-left`}>
-                    <div className="font-semibold">{t.name}</div>
-                    <div className={`text-xs ${d.template === t.id ? 'text-blue-100' : 'text-gray-500'}`}>{t.desc}</div>
-                  </button>
-                ))}
-              </div>
+              <Field label="Template">
+                <select className={inputCls} value={tplOf(d.template).id} onChange={(e) => set('template', e.target.value)}>
+                  {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
+                </select>
+              </Field>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
                 <Field label="Ukuran kertas">
                   <select className={inputCls} value={d.paper} onChange={(e) => set('paper', e.target.value as PaperId)}>
@@ -651,6 +705,27 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
 
             <section className="space-y-3">
               <h2 className="font-bold">Pembayaran, Catatan &amp; Tanda Tangan</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Field label="Metode bayar">
+                  <select className={inputCls} value={d.metode} onChange={(e) => set('metode', e.target.value as Doc['metode'])}>
+                    <option value="">Tidak ditampilkan</option>
+                    <option value="Tunai">Tunai</option>
+                    <option value="Non-Tunai">Non-Tunai</option>
+                  </select>
+                </Field>
+                {d.metode === 'Tunai' && (
+                  <Field label={`Uang diterima (Rp)${num(d.diterima) > 0 ? ` • kembali Rp ${rupiah(Math.max(0, num(d.diterima) - c.total))}` : ''}`}>
+                    <input type="number" min={0} className={inputCls} value={d.diterima} onChange={(e) => set('diterima', e.target.value)} />
+                  </Field>
+                )}
+                {d.metode === 'Non-Tunai' && (
+                  <Field label="Bayar lewat">
+                    <select className={inputCls} value={d.nonTunai} onChange={(e) => set('nonTunai', e.target.value)}>
+                      {['Transfer Bank', 'QRIS', 'Kartu Debit', 'Kartu Kredit', 'E-Wallet', 'Giro / Cek'].map((m) => <option key={m}>{m}</option>)}
+                    </select>
+                  </Field>
+                )}
+              </div>
               {txt('pembayaran', 'Info pembayaran', 2)}
               {txt('catatan', 'Catatan', 2)}
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 min-h-[44px]">

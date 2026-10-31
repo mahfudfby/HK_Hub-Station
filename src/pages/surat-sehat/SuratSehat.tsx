@@ -6,9 +6,10 @@ import FitPreview from '../../shared/components/FitPreview';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import {
-  DOTTED, Dots, ExportButton, Field, ImageUpload, LETTER_FONT, PAGE_H, PAGE_W, dataStyle,
+  DOTTED, Dots, ExportButton, Field, ImageUpload, PAGE_H, PAGE_W, dataStyle,
   fmtTanggal, inputCls, useLetterExport, type Notify,
 } from '../../shared/components/LetterKit';
+import { Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts, type Gaya } from '../../shared/components/LetterStyles';
 
 // Surat keterangan sehat (A5): hanya untuk akun admin. Kop diisi sendiri oleh dokter/klinik pemakai.
 
@@ -38,6 +39,7 @@ type Form = {
   idNo: string;
   ttd: string; // data URL, hanya di perangkat ini
   stempel: string;
+  gaya: string; // id gaya surat (LetterStyles)
 };
 
 const DEFAULT: Form = {
@@ -67,6 +69,7 @@ const DEFAULT: Form = {
   idNo: '',
   ttd: '',
   stempel: '',
+  gaya: 'klasik',
 };
 
 function loadForm(): Form {
@@ -79,11 +82,10 @@ function loadForm(): Form {
 }
 
 // ---------------- Letter preview ----------------
-const grid = { display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 8, rowGap: 2 } as const;
-function DataRow({ label, value, unit }: { label: string; value: string; unit?: string }) {
+function DataRow({ g, label, value, unit }: { g: Gaya; label: string; value: string; unit?: string }) {
   return (
     <div style={{ display: 'contents' }}>
-      <span style={{ minWidth: 110 }}>{label}</span>
+      <span style={{ minWidth: 110 + g.labelExtra }}>{label}</span>
       <span style={{ display: 'flex', gap: 6 }}>
         <span>:</span>
         {value ? <span style={{ ...dataStyle, flex: 1, whiteSpace: 'pre-line' }}>{value}{unit && ` ${unit}`}</span> : <span style={{ flex: 1, borderBottom: DOTTED }} />}
@@ -93,33 +95,31 @@ function DataRow({ label, value, unit }: { label: string; value: string; unit?: 
 }
 
 function Letter({ f }: { f: Form }) {
+  const g = getGaya(f.gaya);
+  useLetterFonts(g);
+  const grid = { display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 8, rowGap: g.rowGap } as const;
   return (
-    <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '32px 44px', background: '#fff', color: '#000', fontFamily: LETTER_FONT, fontSize: 13, lineHeight: 1.4 }}>
-      {/* KOP 3 baris + logo opsional di kiri */}
-      <div style={{ position: 'relative', textAlign: 'center', minHeight: f.logo ? 58 : undefined }}>
-        {f.logo && <img src={f.logo} alt="Logo" style={{ position: 'absolute', left: 0, top: 0, height: 58, maxWidth: 70, objectFit: 'contain' }} />}
-        <div style={{ padding: f.logo ? '0 72px' : 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 20, lineHeight: 1.2, letterSpacing: 0.3 }}>{f.instansi}</div>
-          {f.subKop && <div style={{ fontWeight: 700, fontSize: 13 }}>{f.subKop}</div>}
-          {f.alamatKop && <div style={{ fontSize: 11 }}>{f.alamatKop}</div>}
-        </div>
-      </div>
-      {/* Garis pemisah kop: tebal di atas, tipis di bawah */}
-      <div style={{ borderTop: '3px solid #000', borderBottom: '1px solid #000', height: 2, margin: '6px 0 12px' }} />
+    <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '48px 56px', background: '#fff', color: '#000', fontFamily: g.font, fontSize: g.size, lineHeight: 1.4 }}>
+      {/* KOP 3 baris + logo opsional di kiri; garis pemisah & judul mengikuti gaya */}
+      <Kop g={g} logo={f.logo} name={f.instansi} nameStyle={{ fontWeight: 700, fontSize: 20, lineHeight: 1.2, letterSpacing: 0.3 }}>
+        {f.subKop && <div style={{ fontWeight: 700, fontSize: 13 }}>{f.subKop}</div>}
+        {f.alamatKop && <div style={{ fontSize: 11 }}>{f.alamatKop}</div>}
+      </Kop>
+      <Rule g={g} mb={12} />
       <div style={{ textAlign: 'center', marginBottom: 10 }}>
-        <div style={{ fontWeight: 700, fontSize: 14, textDecoration: 'underline', letterSpacing: 1 }}>{f.judul}</div>
+        <Title g={g}>{f.judul}</Title>
         <div style={{ fontSize: 12 }}>Nomor : {f.nomor ? <span style={dataStyle}>{f.nomor}</span> : <Dots w="12em" />}</div>
       </div>
       <p style={{ textAlign: 'justify', marginBottom: 4 }}>{f.pembuka}</p>
       <div style={{ ...grid, marginBottom: 8 }}>
-        {f.rows.map((r, i) => <DataRow key={i} label={r.label} value={r.value} />)}
+        {f.rows.map((r, i) => <DataRow key={i} g={g} label={r.label} value={r.value} />)}
       </div>
       <p style={{ marginBottom: 2 }}>{f.pengantarHasil}</p>
       <p style={{ textAlign: 'justify', fontWeight: 700, marginBottom: 8 }}>“{f.hasil}”</p>
       <p style={{ marginBottom: 2 }}>{f.pengantarKeperluan}</p>
       <p style={{ marginBottom: 8 }}>{f.keperluan ? <span style={dataStyle}>{f.keperluan}</span> : <Dots w="100%" />}</p>
       <div style={{ ...grid, marginBottom: 12 }}>
-        {f.ukur.map((r, i) => <DataRow key={i} label={r.label} value={r.value} unit={r.unit} />)}
+        {f.ukur.map((r, i) => <DataRow key={i} g={g} label={r.label} value={r.value} unit={r.unit} />)}
       </div>
       {/* Tanggal, keterangan, tanda tangan, nama: rata kanan */}
       <div style={{ textAlign: 'right' }}>
@@ -129,7 +129,7 @@ function Letter({ f }: { f: Form }) {
           {f.stempel && <img src={f.stempel} alt="Stempel" style={{ position: 'absolute', right: 70, top: 0, height: 76, opacity: 0.9, mixBlendMode: 'multiply' }} />}
           {f.ttd && <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', right: 0, top: 6, height: 64, maxWidth: 200, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
         </div>
-        <div style={{ fontWeight: 700, textDecoration: 'underline' }}>{f.dokter}</div>
+        <SignName g={g}>{f.dokter}</SignName>
         {f.idLabel && <div style={{ fontSize: 12 }}>{f.idLabel}. {f.idNo || <Dots w="10em" />}</div>}
       </div>
     </div>
@@ -183,6 +183,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6">
+            <StylePicker value={f.gaya} onChange={(v) => set('gaya', v)} />
             <section className="space-y-3">
               <h2 className="font-bold">Data Pasien</h2>
               <Field label="Nomor surat"><input className={inputCls} value={f.nomor} onChange={(e) => set('nomor', e.target.value)} placeholder="mis. 445/012/SKS/2026" /></Field>

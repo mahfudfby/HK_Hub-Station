@@ -7,6 +7,7 @@ import { printImage } from '../../shared/lib/printImage';
 import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
 import BgToggle from '../../shared/components/BgToggle';
 import { useBgRemoved } from '../../shared/lib/removeBg';
+import { cssFamily, fontsReady, useGoogleFonts } from '../../shared/lib/fonts';
 import './SlipGaji.css';
 
 // ============================================================
@@ -46,6 +47,35 @@ const SIGNATURE_MAX_HEIGHT = 70;
 const SLIP_WIDTH = 912; // kertas dot-matrix continuous form 9,5" @96DPI (241 mm)
 const SLIP_HEIGHT = 528; // 5,5" @96DPI (140 mm, setengah lembar 9,5×11")
 
+// ============================================================
+// SECTION: Template slip (tata letak + font). font kosong = Arimo via .doc-font (tampilan asli).
+// header: right|left|center|band|box · title: lines|bar|big|pill · info: cols|table|pills
+// body: tables|ruled|zebra|cards · total: classic|bar|box|big · dash: garis putus-putus tanpa blok warna (dot-matrix)
+// ============================================================
+const gf = (family, weights, fallback = 'sans-serif') => ({ font: cssFamily(family, fallback), gf: { family, weights } });
+const SLIP_TEMPLATES = [
+  { id: 'klasik', name: 'Klasik', desc: 'Arimo, tabel bergaris', header: 'right', title: 'lines', info: 'cols', body: 'tables', total: 'classic' },
+  { id: 'dot-matrix', name: 'Dot Matrix', desc: 'Cousine, garis putus', font: cssFamily('Cousine', 'monospace'), dash: true, header: 'right', title: 'lines', info: 'cols', body: 'ruled', total: 'classic' },
+  { id: 'mesin-ketik', name: 'Mesin Ketik', desc: 'Courier Prime, hitam putih', ...gf('Courier Prime', [400, 700], 'monospace'), dash: true, header: 'left', title: 'big', info: 'table', body: 'ruled', total: 'box' },
+  { id: 'kontinu', name: 'Form Kontinu', desc: 'IBM Plex Mono, tabel', ...gf('IBM Plex Mono', [400, 700], 'monospace'), dash: true, header: 'center', title: 'lines', info: 'cols', body: 'tables', total: 'box' },
+  { id: 'space-mono', name: 'Space Mono', desc: 'Mono, label bingkai', ...gf('Space Mono', [400, 700], 'monospace'), dash: true, header: 'box', title: 'pill', info: 'pills', body: 'ruled', total: 'classic' },
+  { id: 'tegas', name: 'Tegas', desc: 'Carlito, bar hitam', font: cssFamily('Carlito'), header: 'right', title: 'bar', info: 'table', body: 'tables', total: 'bar' },
+  { id: 'serif-resmi', name: 'Serif Resmi', desc: 'Tinos, tengah', font: cssFamily('Tinos', 'serif'), header: 'center', title: 'lines', info: 'cols', body: 'ruled', total: 'box' },
+  { id: 'korporat-biru', name: 'Korporat Biru', desc: 'Roboto Condensed, pita', ...gf('Roboto Condensed', [400, 700]), accent: '#1d4ed8', soft: '#eff6ff', header: 'band', title: 'bar', info: 'table', body: 'zebra', total: 'bar' },
+  { id: 'hijau-segar', name: 'Hijau Segar', desc: 'IBM Plex Sans, kartu', ...gf('IBM Plex Sans', [400, 600, 700]), accent: '#047857', soft: '#ecfdf5', header: 'left', title: 'pill', info: 'pills', body: 'cards', total: 'big' },
+  { id: 'merah-bata', name: 'Merah Bata', desc: 'Source Sans 3, kotak', ...gf('Source Sans 3', [400, 600, 700]), accent: '#b91c1c', soft: '#fef2f2', header: 'box', title: 'big', info: 'cols', body: 'tables', total: 'box' },
+  { id: 'navy', name: 'Navy', desc: 'Lato, daftar bergaris', ...gf('Lato', [400, 700, 900]), accent: '#1e3a8a', soft: '#eef2ff', header: 'right', title: 'pill', info: 'table', body: 'ruled', total: 'bar' },
+  { id: 'modern-teal', name: 'Modern Teal', desc: 'Inter, angka besar', ...gf('Inter', [400, 600, 700, 800]), accent: '#0f766e', soft: '#f0fdfa', header: 'left', title: 'big', info: 'pills', body: 'zebra', total: 'big' },
+  { id: 'ungu', name: 'Ungu', desc: 'Barlow, pita & kartu', ...gf('Barlow', [400, 600, 700, 800]), accent: '#6d28d9', soft: '#f5f3ff', header: 'band', title: 'lines', info: 'cols', body: 'cards', total: 'box' },
+  { id: 'ringkas', name: 'Ringkas', desc: 'Barlow Condensed, B/W', ...gf('Barlow Condensed', [400, 600, 700, 800]), header: 'box', title: 'bar', info: 'table', body: 'zebra', total: 'bar' },
+  { id: 'oranye', name: 'Oranye', desc: 'Archivo Narrow, tengah', ...gf('Archivo Narrow', [400, 600, 700]), accent: '#c2410c', soft: '#fff7ed', header: 'center', title: 'bar', info: 'pills', body: 'tables', total: 'big' },
+  { id: 'biru-laut', name: 'Biru Laut', desc: 'PT Sans Narrow, kartu', ...gf('PT Sans Narrow', [400, 700]), accent: '#0369a1', soft: '#f0f9ff', header: 'left', title: 'lines', info: 'table', body: 'cards', total: 'bar' },
+  { id: 'elegan', name: 'Elegan', desc: 'Merriweather, B/W', ...gf('Merriweather', [400, 700, 900], 'serif'), header: 'center', title: 'big', info: 'cols', body: 'ruled', total: 'box' },
+  { id: 'cokelat', name: 'Cokelat', desc: 'Lora, baris selang', ...gf('Lora', [400, 600, 700], 'serif'), accent: '#92400e', soft: '#fffbeb', header: 'right', title: 'pill', info: 'cols', body: 'zebra', total: 'big' },
+  { id: 'kotak-mono', name: 'Kotak Mono', desc: 'Cousine, blok hitam', font: cssFamily('Cousine', 'monospace'), header: 'box', title: 'bar', info: 'table', body: 'cards', total: 'bar' },
+  { id: 'minimalis', name: 'Minimalis', desc: 'Arimo, abu slate', font: cssFamily('Arimo'), accent: '#334155', soft: '#f1f5f9', header: 'left', title: 'pill', info: 'pills', body: 'ruled', total: 'big' },
+];
+
 const todayLocal = () => {
   const d = new Date();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -54,6 +84,7 @@ const todayLocal = () => {
 };
 
 const buildInitialForm = () => ({
+  template: 'klasik',
   companyName: 'PT. Nama Perusahaan Anda',
   addressLine1: 'Jl. Contoh Raya No. 12',
   addressLine2: 'Kec. Sudirman, Jakarta Pusat',
@@ -445,97 +476,282 @@ function DeductionsForm({ form, onChange, calc }) {
 // ============================================================
 // SECTION: Komponen Preview Slip (area yang di-export ke PNG)
 // ============================================================
-function SlipPreview({ slipRef, form, calc, logo, signature, managerSignature }) {
+function LogoMark({ logo, h }) {
+  if (logo) return <img src={logo} crossOrigin="anonymous" alt="Logo Perusahaan" className="slip-logo" style={h ? { height: h } : undefined} />;
+  return <div className="slip-logo-text font-extrabold text-red-700" style={h ? { fontSize: Math.round(h * 0.6), lineHeight: `${h}px` } : undefined}>LOGO</div>;
+}
+
+function CompanyText({ form, ink, oneLine }) {
+  const c = ink ? { color: ink } : undefined;
+  const addr = 'text-[9px] text-gray-600 leading-tight slip-pre';
+  return (
+    <>
+      <p className="text-sm font-bold text-black slip-pre" style={c}>{form.companyName}</p>
+      {oneLine ? (
+        <p className={addr} style={c}>{[form.addressLine1, form.addressLine2, form.addressLine3].filter(Boolean).join(' · ')}</p>
+      ) : (
+        <>
+          <p className={addr} style={c}>{form.addressLine1}</p>
+          <p className={addr} style={c}>{form.addressLine2}</p>
+          <p className={addr} style={c}>{form.addressLine3}</p>
+        </>
+      )}
+    </>
+  );
+}
+
+function SlipHeader({ t, form, logo, A }) {
+  if (t.header === 'left') return (
+    <div className="flex items-center gap-3 border-b-2 pb-1 mb-2" style={{ borderColor: A }}>
+      <div className="flex-shrink-0"><LogoMark logo={logo} /></div>
+      <div className="flex-1"><CompanyText form={form} /></div>
+    </div>
+  );
+  if (t.header === 'center') return (
+    <div className="text-center border-b-2 pb-1 mb-2" style={{ borderColor: A }}>
+      <div className="flex justify-center"><LogoMark logo={logo} h={28} /></div>
+      <CompanyText form={form} oneLine />
+    </div>
+  );
+  if (t.header === 'band') return (
+    <div className="flex justify-between items-center px-2 py-1 mb-2" style={{ background: A }}>
+      <div className="flex-1"><CompanyText form={form} ink="#fff" /></div>
+      <div className="ml-4 flex-shrink-0 bg-white px-1 rounded"><LogoMark logo={logo} h={40} /></div>
+    </div>
+  );
+  if (t.header === 'box') return (
+    <div className="flex justify-between items-center gap-3 mb-2">
+      <div className="flex-1 border-2 px-2 py-0.5" style={{ borderColor: A, borderLeftWidth: 6 }}><CompanyText form={form} /></div>
+      <div className="flex-shrink-0"><LogoMark logo={logo} /></div>
+    </div>
+  );
+  return (
+    <div className="flex justify-between items-center border-b-2 border-black pb-1 mb-2">
+      <div className="flex-1"><CompanyText form={form} /></div>
+      <div className="ml-4 flex-shrink-0"><LogoMark logo={logo} /></div>
+    </div>
+  );
+}
+
+function SlipTitle({ t, form, A, dash }) {
+  const month = form.slipMonth.toUpperCase();
+  if (t.title === 'bar') return (
+    <div className="text-center mb-2">
+      <p className="text-xs font-bold uppercase py-1 tracking-wider" style={{ background: A, color: '#fff' }}>SLIP GAJI BULAN {month}</p>
+    </div>
+  );
+  if (t.title === 'big') return (
+    <div className="flex justify-between items-end border-b-2 pb-0.5 mb-2" style={{ borderColor: A }}>
+      <p className="font-bold uppercase" style={{ fontSize: 15, lineHeight: '20px', color: A }}>Slip Gaji</p>
+      <p className="text-xs font-bold uppercase tracking-wider">PERIODE {month}</p>
+    </div>
+  );
+  if (t.title === 'pill') return (
+    <div className="text-center mb-2">
+      <span className="inline-block text-xs font-bold uppercase tracking-wider border rounded-full px-4 py-0.5" style={dash ? { borderColor: A } : { background: A, color: '#fff', borderColor: A }}>
+        SLIP GAJI BULAN {month}
+      </span>
+    </div>
+  );
+  return (
+    <div className="text-center mb-2">
+      <p className="text-xs font-bold uppercase border-b border-t border-black py-1 tracking-wider">
+        SLIP GAJI BULAN <span>{month}</span>
+      </p>
+    </div>
+  );
+}
+
+function SlipInfo({ t, form, A, soft, dash }) {
+  const left = [['ID', form.slipID], ['NAMA', form.name], ['JABATAN', form.position]];
+  const right = [['NO. REK', form.bankAccountNumber], ['NAMA BANK', form.bankName], ['STS PAJAK', form.status]];
+  if (t.info === 'table') {
+    const cell = { border: `1px solid ${A}`, padding: '0 4px', textAlign: 'left' };
+    const head = { ...cell, background: dash ? undefined : soft, width: '13%' };
+    return (
+      <table className="w-full mb-2 border-collapse">
+        <tbody>
+          {left.map(([l1, v1], i) => (
+            <tr key={l1}>
+              <th className="font-semibold" style={head}>{l1}</th><td style={cell}>{v1}</td>
+              <th className="font-semibold" style={head}>{right[i][0]}</th><td style={cell}>{right[i][1]}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+  if (t.info === 'pills') {
+    const pill = dash ? { border: '1px solid #000', lineHeight: '13px' } : { border: `1px solid ${A}`, background: A, color: '#fff', lineHeight: '13px' };
+    return (
+      <div className="grid grid-cols-2 gap-4 mb-2">
+        {[left, right].map((col, ci) => (
+          <div key={ci} className="space-y-0.5">
+            {col.map(([l, v]) => (
+              <div key={l} className="flex items-center">
+                <span className="w-24 mr-2 font-semibold text-[8.5px] text-center rounded-full" style={pill}>{l}</span>
+                <span>{v}</span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div className="grid grid-cols-2 gap-4 mb-2">
+      <div className="space-y-0.5">
+        <InfoRow label="ID" value={form.slipID} highlight={!dash} />
+        <InfoRow label="NAMA" value={form.name} />
+        <InfoRow label="JABATAN" value={form.position} />
+      </div>
+      <div className="space-y-0.5">
+        <InfoRow label="NO. REK" value={form.bankAccountNumber} />
+        <InfoRow label="NAMA BANK" value={form.bankName} />
+        <InfoRow label="STS PAJAK" value={form.status} />
+      </div>
+    </div>
+  );
+}
+
+function SlipBody({ t, calc, A, soft, dash, colored }) {
+  const groups = [
+    ['PENERIMAAN', [['Gaji Pokok', calc.basicSalary], ['Tunjangan', calc.allowance], ['Lembur', calc.overtime], ['Transport', calc.transport], ['Uang Makan', calc.mealAllowance], ['Bonus', calc.bonus]]],
+    ['POTONGAN', [['Pinjaman Karyawan', calc.loanDeduction], ['BPJS Kes. + JP', calc.bpjsKesAndJP], ['JHT', calc.jht], ['PPh 21', calc.pph21], ['Lain-lain (Manual)', calc.otherDeduction]]],
+  ];
+  if (t.body === 'ruled') return (
+    <div className="grid grid-cols-2 gap-6 mb-1">
+      {groups.map(([h, rows]) => (
+        <div key={h}>
+          <div className="font-bold border-b-2 mb-0.5 tracking-wider" style={{ borderColor: A, color: colored ? A : undefined }}>{h}</div>
+          {rows.map(([l, v]) => (
+            <div key={l} className="flex justify-between border-b border-dotted border-gray-400"><span>{l}</span><span>{formatRupiah(v)}</span></div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+  if (t.body === 'zebra') return (
+    <div className="flex gap-3 mb-1">
+      {groups.map(([h, rows]) => (
+        <div key={h} className="flex-1 border" style={{ borderColor: A }}>
+          <div className="font-bold px-1 py-0.5 tracking-wider" style={{ background: A, color: '#fff' }}>{h}</div>
+          {rows.map(([l, v], i) => (
+            <div key={l} className="flex justify-between px-1" style={i % 2 ? { background: soft } : undefined}><span>{l}</span><span>{formatRupiah(v)}</span></div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+  if (t.body === 'cards') return (
+    <div className="flex gap-3 mb-1">
+      {groups.map(([h, rows]) => (
+        <div key={h} className="flex-1 border rounded-md p-1.5" style={{ borderColor: A }}>
+          <div className="font-bold text-center mb-0.5 pb-0.5 border-b tracking-wider" style={{ borderColor: A, color: A }}>{h}</div>
+          {rows.map(([l, v]) => <SlipLine key={l} label={l} value={formatRupiah(v)} />)}
+        </div>
+      ))}
+    </div>
+  );
+  return (
+    <div className="flex border border-black mb-1">
+      {groups.map(([h, rows], gi) => (
+        <div key={h} className={gi ? 'w-1/2' : 'w-1/2 border-r border-black'}>
+          <div className={`text-center font-bold border-b border-black p-0.5 ${dash ? '' : 'bg-gray-100'}`}>{h}</div>
+          <div className="p-1 space-y-0.5">
+            {rows.map(([l, v]) => <SlipLine key={l} label={l} value={formatRupiah(v)} />)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TotalsLine({ calc, A }) {
+  return (
+    <div className="flex font-bold border-t-2 pt-0.5 mt-1" style={{ borderColor: A }}>
+      <div className="w-1/2 flex justify-between px-1 border-r" style={{ borderColor: A }}><span>TOTAL PENERIMAAN</span><span>{formatRupiah(calc.totalEarnings)}</span></div>
+      <div className="w-1/2 flex justify-between px-1"><span>TOTAL POTONGAN</span><span>{formatRupiah(calc.totalDeductions)}</span></div>
+    </div>
+  );
+}
+
+function SlipTotals({ t, calc, A, dash }) {
+  const thp = formatRupiah(calc.takeHomePay);
+  if (t.total === 'bar') return (
+    <>
+      <TotalsLine calc={calc} A={A} />
+      <div className="flex justify-between items-center px-2 py-1 mt-1 font-extrabold text-lg leading-tight" style={{ background: A, color: '#fff' }}>
+        <span>TAKE HOME PAY (THP)</span><span>{thp}</span>
+      </div>
+    </>
+  );
+  if (t.total === 'box') return (
+    <>
+      <TotalsLine calc={calc} A={A} />
+      <div className="flex justify-between items-center border-2 px-2 py-1 mt-1" style={{ borderColor: A }}>
+        <span className="font-bold text-sm">TAKE HOME PAY (THP)</span>
+        <span className="font-extrabold text-lg leading-tight" style={{ color: A }}>{thp}</span>
+      </div>
+    </>
+  );
+  if (t.total === 'big') return (
+    <>
+      <TotalsLine calc={calc} A={A} />
+      <div className="flex justify-between items-end border-b-2 pb-0.5 mt-1" style={{ borderColor: A }}>
+        <span className="font-bold text-xs tracking-wider">TAKE HOME PAY (THP)</span>
+        <span className="font-extrabold" style={{ fontSize: 22, lineHeight: '26px', color: A }}>{thp}</span>
+      </div>
+    </>
+  );
+  // klasik; versi dash = garis putus-putus tanpa blok abu
+  const rule = (h) => (dash ? { background: 'transparent', height: 0, borderTop: `${h}px dashed #000` } : undefined);
+  const half = dash ? '' : 'bg-gray-200';
+  return (
+    <>
+      <div className="flex font-extrabold text-sm border-t-2 border-black pt-1 mb-0.5">
+        <div className={`w-1/2 border-r border-black ${half} py-0.5 px-1 flex justify-between`}>
+          <span>TOTAL PENERIMAAN</span>
+          <span className="pl-2">{formatRupiah(calc.totalEarnings)}</span>
+        </div>
+        <div className={`w-1/2 ${half} py-0.5 px-1 flex justify-between`}>
+          <span>TOTAL POTONGAN</span>
+          <span className="pl-2">{formatRupiah(calc.totalDeductions)}</span>
+        </div>
+      </div>
+      <div className="relative py-2">
+        <div className="absolute w-[49%] right-0 top-[2px] h-[1px] bg-black" style={rule(1)}></div>
+        <div className="flex justify-between items-center">
+          <span className="font-extrabold text-lg leading-tight">TAKE HOME PAY (THP)</span>
+          <span className="font-extrabold text-lg leading-tight">{thp}</span>
+        </div>
+        <div className="absolute w-full h-[2px] bg-black bottom-[2px]" style={rule(2)}></div>
+      </div>
+    </>
+  );
+}
+
+function SlipPreview({ slipRef, form, calc, logo, signature, managerSignature, t }) {
+  const A = t.accent || '#000';
+  const dash = !!t.dash;
+  const soft = t.soft || '#f3f4f6';
+  const p = { t, A, soft, dash, colored: !!t.accent };
   return (
     <div className="slip-scroll">
-      <div id="slip-container" ref={slipRef} className="slip-box doc-font border border-gray-400 p-3">
+      <div
+        id="slip-container" ref={slipRef}
+        className={`slip-box ${t.font ? '' : 'doc-font'} ${dash ? 'slip-dash' : ''} border border-gray-400`}
+        // Margin tepi kertas ±5mm atas/bawah, ±7mm kiri/kanan
+        style={{ padding: '18px 26px', ...(t.font ? { fontFamily: t.font } : {}) }}
+      >
         <div id="payslip-content" className="text-[10px] px-1">
-          {/* Header perusahaan */}
-          <div className="flex justify-between items-center border-b-2 border-black pb-1 mb-2">
-            <div className="flex-1">
-              <p className="text-sm font-bold text-black slip-pre">{form.companyName}</p>
-              <p className="text-[9px] text-gray-600 leading-tight slip-pre">{form.addressLine1}</p>
-              <p className="text-[9px] text-gray-600 leading-tight slip-pre">{form.addressLine2}</p>
-              <p className="text-[9px] text-gray-600 leading-tight slip-pre">{form.addressLine3}</p>
-            </div>
-            <div className="ml-4 flex-shrink-0">
-              {logo ? (
-                <img src={logo} crossOrigin="anonymous" alt="Logo Perusahaan" className="slip-logo" />
-              ) : (
-                <div className="slip-logo-text font-extrabold text-red-700">LOGO</div>
-              )}
-            </div>
-          </div>
+          <SlipHeader {...p} form={form} logo={logo} />
+          <SlipTitle {...p} form={form} />
+          <SlipInfo {...p} form={form} />
+          <SlipBody {...p} calc={calc} />
+          <SlipTotals {...p} calc={calc} />
 
-          {/* Judul */}
-          <div className="text-center mb-2">
-            <p className="text-xs font-bold uppercase border-b border-t border-black py-1 tracking-wider">
-              SLIP GAJI BULAN <span>{form.slipMonth.toUpperCase()}</span>
-            </p>
-          </div>
-
-          {/* Info karyawan */}
-          <div className="grid grid-cols-2 gap-4 mb-2">
-            <div className="space-y-0.5">
-              <InfoRow label="ID" value={form.slipID} highlight />
-              <InfoRow label="NAMA" value={form.name} />
-              <InfoRow label="JABATAN" value={form.position} />
-            </div>
-            <div className="space-y-0.5">
-              <InfoRow label="NO. REK" value={form.bankAccountNumber} />
-              <InfoRow label="NAMA BANK" value={form.bankName} />
-              <InfoRow label="STS PAJAK" value={form.status} />
-            </div>
-          </div>
-
-          {/* Penerimaan & Potongan */}
-          <div className="flex border border-black mb-1">
-            <div className="w-1/2 border-r border-black">
-              <div className="text-center font-bold border-b border-black p-0.5 bg-gray-100">PENERIMAAN</div>
-              <div className="p-1 space-y-0.5">
-                <SlipLine label="Gaji Pokok" value={formatRupiah(calc.basicSalary)} />
-                <SlipLine label="Tunjangan" value={formatRupiah(calc.allowance)} />
-                <SlipLine label="Lembur" value={formatRupiah(calc.overtime)} />
-                <SlipLine label="Transport" value={formatRupiah(calc.transport)} />
-                <SlipLine label="Uang Makan" value={formatRupiah(calc.mealAllowance)} />
-                <SlipLine label="Bonus" value={formatRupiah(calc.bonus)} />
-              </div>
-            </div>
-            <div className="w-1/2">
-              <div className="text-center font-bold border-b border-black p-0.5 bg-gray-100">POTONGAN</div>
-              <div className="p-1 space-y-0.5">
-                <SlipLine label="Pinjaman Karyawan" value={formatRupiah(calc.loanDeduction)} />
-                <SlipLine label="BPJS Kes. + JP" value={formatRupiah(calc.bpjsKesAndJP)} />
-                <SlipLine label="JHT" value={formatRupiah(calc.jht)} />
-                <SlipLine label="PPh 21" value={formatRupiah(calc.pph21)} />
-                <SlipLine label="Lain-lain (Manual)" value={formatRupiah(calc.otherDeduction)} />
-              </div>
-            </div>
-          </div>
-
-          {/* Total */}
-          <div className="flex font-extrabold text-sm border-t-2 border-black pt-1 mb-0.5">
-            <div className="w-1/2 border-r border-black bg-gray-200 py-0.5 px-1 flex justify-between">
-              <span>TOTAL PENERIMAAN</span>
-              <span className="pl-2">{formatRupiah(calc.totalEarnings)}</span>
-            </div>
-            <div className="w-1/2 bg-gray-200 py-0.5 px-1 flex justify-between">
-              <span>TOTAL POTONGAN</span>
-              <span className="pl-2">{formatRupiah(calc.totalDeductions)}</span>
-            </div>
-          </div>
-
-          {/* THP */}
-          <div className="relative py-2">
-            <div className="absolute w-[49%] right-0 top-[2px] h-[1px] bg-black"></div>
-            <div className="flex justify-between items-center">
-              <span className="font-extrabold text-lg leading-tight">TAKE HOME PAY (THP)</span>
-              <span className="font-extrabold text-lg leading-tight">{formatRupiah(calc.takeHomePay)}</span>
-            </div>
-            <div className="absolute w-full h-[2px] bg-black bottom-[2px]"></div>
-          </div>
-
-          {/* Footer: transfer & tanda tangan */}
+          {/* Footer: transfer & tanda tangan (sama di semua template) */}
           <div className="flex justify-between text-[10px] mt-1">
             <div className="text-left" style={{ width: '36%' }}>
               <p className="text-[9px] leading-tight">Pembayaran gaji Telah Dilakukan Perusahaan Melalui Transfer</p>
@@ -551,6 +767,22 @@ function SlipPreview({ slipRef, form, calc, logo, signature, managerSignature })
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function TemplatePicker({ value, onChange }) {
+  return (
+    <div className="input-group mb-8">
+      <label htmlFor="inputTemplate" className="text-sm font-bold text-gray-700">Template Slip</label>
+      <select
+        id="inputTemplate" name="template" value={value} onChange={onChange}
+        className="p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+      >
+        {SLIP_TEMPLATES.map((x, i) => (
+          <option key={x.id} value={x.id}>{`${i + 1}. ${x.name} — ${x.desc}`}</option>
+        ))}
+      </select>
     </div>
   );
 }
@@ -579,6 +811,8 @@ export default function SlipGaji() {
   const toastId = useRef(0);
 
   const calc = useMemo(() => computeSlip(form), [form]);
+  const tpl = SLIP_TEMPLATES.find((x) => x.id === form.template) || SLIP_TEMPLATES[0];
+  useGoogleFonts([tpl.gf]);
   const statusText = (STATUS_OPTIONS.find((o) => o.value === form.status) || STATUS_OPTIONS[0]).label;
 
   // --- Handler: Toast ---
@@ -631,7 +865,7 @@ export default function SlipGaji() {
   const handleManagerSignatureChange = (e) => handleImage(e, setManagerSignature, SIGNATURE_MAX_WIDTH, SIGNATURE_MAX_HEIGHT, 'Tanda tangan manager', 'tanda-tangan');
 
   const captureSlip = async () => {
-    await document.fonts.ready; // font dokumen wajib termuat agar tata letak sama di semua perangkat
+    await fontsReady(); // font dokumen (termasuk Google Font template) wajib termuat agar tata letak sama di semua perangkat
     const { default: html2canvas } = await import('html2canvas');
     return html2canvas(slipRef.current, {
       scale: 3, // tetap (bukan devicePixelRatio): hasil selalu 2736×1584 px
@@ -695,6 +929,7 @@ export default function SlipGaji() {
           {/* Render — Formulir */}
           <div className="slip-card bg-white p-6 md:p-8 shadow-lg rounded-xl h-fit">
             <h2 className="text-xl font-semibold mb-6 border-b pb-2 text-gray-700">Formulir Input Data Slip Gaji</h2>
+            <TemplatePicker value={tpl.id} onChange={handleChange} />
             <CompanyForm form={form} onChange={handleChange} onLogoChange={handleLogoChange} logoBg={bgProps('logo', logoShown)} />
             <EmployeeForm form={form} onChange={handleChange} statusText={statusText} />
             <EarningsForm form={form} onChange={handleChange} />
@@ -712,7 +947,7 @@ export default function SlipGaji() {
           {/* Render — Preview Slip */}
           <div className="slip-card bg-white p-2 md:p-4 rounded-xl shadow-lg lg:col-span-1 min-w-0">
             <FitPreview>
-              <SlipPreview slipRef={slipRef} form={form} calc={calc} logo={logoShown.src} signature={signatureShown.src} managerSignature={managerShown.src} />
+              <SlipPreview slipRef={slipRef} form={form} calc={calc} logo={logoShown.src} signature={signatureShown.src} managerSignature={managerShown.src} t={tpl} />
             </FitPreview>
           </div>
         </div>
