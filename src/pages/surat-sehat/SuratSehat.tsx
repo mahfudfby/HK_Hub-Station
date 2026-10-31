@@ -130,8 +130,8 @@ function Letter({ f, k }: { f: Form; k: number }) {
       <div style={{ ...grid, marginBottom: 12 * k }}>
         {f.ukur.map((r, i) => <DataRow key={i} g={g} k={k} label={r.label} value={r.value} unit={r.unit} />)}
       </div>
-      {/* Tanggal, keterangan, tanda tangan, nama: rata kanan */}
-      <div style={{ textAlign: 'right' }}>
+      {/* Tanggal, keterangan, tanda tangan, nama: blok mentok margin kanan, berjarak lega dari isi surat */}
+      <div style={{ textAlign: 'right', marginTop: 16 * k, marginLeft: 'auto', width: 'fit-content', maxWidth: '100%' }}>
         <div>{f.kota ? <span style={dataStyle}>{f.kota}</span> : <Dots w="6em" />}, {f.tanggal ? <span style={dataStyle}>{fmtTanggal(f.tanggal)}</span> : <Dots w="8em" />}</div>
         <div>{f.jabatan}</div>
         <div style={{ position: 'relative', height: 76 * k }}>
