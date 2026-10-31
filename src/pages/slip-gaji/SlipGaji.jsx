@@ -63,7 +63,6 @@ const buildInitialForm = () => ({
   position: 'Staf Administrasi',
   bankAccountNumber: '123-456-7890',
   bankName: 'BANK ABC',
-  bankAccountName: '', // kosong = pakai nama karyawan
   status: 'TK/0',
   basicSalary: '8000000',
   allowance: '500000',
@@ -335,15 +334,6 @@ function SlipLine({ label, value }) {
     </div>
   );
 }
-function BankRow({ label, value }) {
-  return (
-    <div className="flex">
-      <span className="w-20 flex-shrink-0">{label}</span>
-      <span className="mr-1">:</span>
-      <span className="font-semibold">{value}</span>
-    </div>
-  );
-}
 function InfoRow({ label, value, highlight = false }) {
   return (
     <div className="flex">
@@ -381,7 +371,6 @@ function EmployeeForm({ form, onChange, statusText }) {
       <TextField id="inputPosition" label="Jabatan" name="position" value={form.position} onChange={onChange} />
       <TextField id="inputBankAccountNumber" label="Nomor Rekening" name="bankAccountNumber" value={form.bankAccountNumber} onChange={onChange} />
       <TextField id="inputBankName" label="Nama Bank" name="bankName" value={form.bankName} onChange={onChange} />
-      <TextField id="inputBankAccountName" label="Nama Penerima (Rekening)" name="bankAccountName" value={form.bankAccountName ?? ''} onChange={onChange} placeholder="Kosong = nama karyawan" />
       <div className="input-group pt-4">
         <label htmlFor="inputStatus" className="text-sm font-medium text-gray-700">Status Pajak (PTKP)</label>
         <select
@@ -472,6 +461,8 @@ function SlipPreview({ slipRef, form, calc, logo, signature }) {
               <InfoRow label="JABATAN" value={form.position} />
             </div>
             <div className="space-y-0.5">
+              <InfoRow label="NO. REK" value={form.bankAccountNumber} />
+              <InfoRow label="NAMA BANK" value={form.bankName} />
               <InfoRow label="STS PAJAK" value={form.status} />
             </div>
           </div>
@@ -527,11 +518,8 @@ function SlipPreview({ slipRef, form, calc, logo, signature }) {
           <div className="flex justify-between text-[10px] mt-1">
             <div className="text-left" style={{ width: '40%' }}>
               <p className="text-[9px] leading-tight">Pembayaran gaji Telah Dilakukan Perusahaan Melalui Transfer</p>
-              <div className="mt-1 text-[9px] leading-tight space-y-0.5">
-                <BankRow label="No. Rekening" value={form.bankAccountNumber} />
-                <BankRow label="Bank" value={form.bankName} />
-                <BankRow label="Nama Penerima" value={form.bankAccountName || form.name} />
-                <BankRow label="Tanggal Transfer" value={formatTransferDate(form.transferDate)} />
+              <div className="relative h-10 mb-1 pt-2">
+                <p className="text-[9px] text-gray-700">Tanggal Transfer: <span>{formatTransferDate(form.transferDate)}</span></p>
               </div>
             </div>
 
