@@ -25,4 +25,10 @@ export const routes = [
     title: 'Surat Keterangan Dokter',
     desc: 'Khusus dokter terdaftar: surat keterangan sakit/sehat, ekspor PDF & PNG.',
   },
+  {
+    path: '/surat-sehat/*',
+    component: lazy(() => import('../pages/surat-sehat')),
+    title: 'Surat Keterangan Sehat',
+    desc: 'Khusus dokter terdaftar: surat sehat dengan BB, TB, tensi & golongan darah, ekspor PDF & PNG.',
+  },
 ];
