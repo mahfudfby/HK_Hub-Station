@@ -145,7 +145,7 @@ function NotaView({ n, c, fs, w, h, pad }: { n: Nota; c: ReturnType<typeof calc>
   const signH = fs * 5;
 
   return (
-    <div style={{ width: w, height: h, overflow: 'hidden', boxSizing: 'border-box', padding: pad, background: '#fff', color: '#111', fontFamily: font, fontSize: fs, lineHeight: 1.35, position: 'relative' }}>
+    <div style={{ width: w, height: h, overflow: 'hidden', boxSizing: 'border-box', padding: pad, background: '#fff', color: '#111', fontFamily: font, fontSize: fs, lineHeight: 1.35, position: 'relative', display: 'flex', flexDirection: 'column' }}>
       {/* Kop */}
       {g.head === 'band' && <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: fs * 0.8, background: accent }} />}
       <div style={{ textAlign: g.head === 'center' ? 'center' : 'left', marginTop: g.head === 'band' ? fs : 0, marginBottom: fs * 0.8 }}>
@@ -234,7 +234,9 @@ function NotaView({ n, c, fs, w, h, pad }: { n: Nota; c: ReturnType<typeof calc>
       </div>
 
       {/* Info toko (kiri) & tanda tangan (kanan, opsional) */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: fs, marginTop: gap }}>
+      {/* Jarak elastis ke tanda tangan: lega bila isi pendek, menyusut (tidak keluar kertas) bila isi panjang */}
+      <div aria-hidden="true" style={{ flex: `0 1 ${fs * 4}px`, minHeight: fs }} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: fs }}>
         <div style={{ maxWidth: '50%' }}>
           {n.infoToko && <div>{n.infoToko}</div>}
           {n.catatan && <div style={{ marginTop: fs * 0.6, fontSize: fs * 0.9 }}>{n.catatan}</div>}

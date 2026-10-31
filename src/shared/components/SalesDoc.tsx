@@ -517,7 +517,7 @@ function DocView(ctx: Ctx & { w: number; h: number }) {
   const T = tplOf(d.template);
   const box: CSSProperties = {
     width: w, height: h, overflow: 'hidden', boxSizing: 'border-box', padding: pad, background: '#fff', color: '#111',
-    fontFamily: T.font, fontSize: fs, lineHeight: 1.4, position: 'relative',
+    fontFamily: T.font, fontSize: fs, lineHeight: 1.4, position: 'relative', display: 'flex', flexDirection: 'column',
     ...(T.stripe === 'left' ? { borderLeft: `${Math.round(fs * 0.9)}px solid ${d.accent}` } : {}),
     ...(T.stripe === 'top' ? { borderTop: `${Math.round(fs * 0.9)}px solid ${d.accent}` } : {}),
   };
@@ -549,6 +549,8 @@ function DocView(ctx: Ctx & { w: number; h: number }) {
         </div>
         <Totals {...ctx} />
       </div>
+      {/* Jarak elastis ke tanda tangan: lega bila isi pendek, menyusut (tidak keluar kertas) bila isi panjang */}
+      <div aria-hidden="true" style={{ flex: `0 1 ${fs * 4 * gapK(ctx.short)}px`, minHeight: fs * 0.6 }} />
       {(d.kota || d.tanggal) && <div style={{ textAlign: 'right', marginBottom: 2 }}>{[d.kota, fmtTanggal(d.tanggal)].filter(Boolean).join(', ')}</div>}
       <div style={{ display: 'flex', justifyContent: kind === 'faktur' ? 'space-between' : 'flex-end' }}>
         {kind === 'faktur' && <SignBox heading="Penerima," name="" title="" fs={fs} short={ctx.short} />}

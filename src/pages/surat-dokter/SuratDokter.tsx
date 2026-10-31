@@ -160,7 +160,7 @@ function Letter({ f, k }: { f: Form; k: number }) {
   const kopLines = [f.alamat1, [f.alamat2, f.telp && `Telp. ${f.telp}`].filter(Boolean).join('  •  ')].filter(Boolean);
 
   return (
-    <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '48px 56px', background: '#fff', color: '#000', fontFamily: g.font, fontSize: g.size * k, lineHeight: 1.4 }}>
+    <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '48px 56px', background: '#fff', color: '#000', fontFamily: g.font, fontSize: g.size * k, lineHeight: 1.4, display: 'flex', flexDirection: 'column' }}>
       {/* KOP 3 baris; garis pemisah & judul mengikuti gaya (klasik: garis tebal + tipis, judul bergaris bawah) */}
       <Kop g={g} k={k} logo={f.logo} logoOffset={getOffset(f.posisi, 'logo')} logoH={58 * k} name={f.nama} nameStyle={{ fontWeight: 700, fontSize: 24 * k, lineHeight: 1.15, letterSpacing: 0.5 }}>
         <div style={{ lineHeight: 1.35, marginTop: 2 * k }}>
@@ -185,8 +185,10 @@ function Letter({ f, k }: { f: Form; k: number }) {
       <p style={{ marginBottom: 4 * k }}>{isi}</p>
       <p style={{ marginBottom: 4 * k }}>{penutup}</p>
       {f.catatan && <p style={{ fontSize: 11 * k, marginBottom: 14 * k }}>{f.catatan}</p>}
-      {/* Tanggal, keterangan, tanda tangan, nama: blok mentok margin kanan, berjarak lega dari isi surat */}
-      <div style={{ textAlign: 'right', marginTop: 24 * k, marginLeft: 'auto', width: 'fit-content', maxWidth: '100%' }}>
+      {/* Jarak elastis ke tanda tangan: lega bila isi pendek, menyusut (tidak keluar kertas) bila isi panjang */}
+      <div aria-hidden="true" style={{ flex: `0 1 ${64 * k}px`, minHeight: 20 * k }} />
+      {/* Tanggal, keterangan, tanda tangan, nama: blok mentok margin kanan */}
+      <div style={{ textAlign: 'right', marginLeft: 'auto', width: 'fit-content', maxWidth: '100%' }}>
         <div>{f.kota && <span style={data}>{f.kota}</span>}, {f.tanggal ? <span style={data}>{fmtTanggal(f.tanggal)}</span> : <Dots w="8em" />}</div>
         <div>{f.jabatan}</div>
         <div style={{ position: 'relative', height: 80 * k }}>
