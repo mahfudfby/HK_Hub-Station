@@ -6,7 +6,7 @@ import FitPreview from '../../shared/components/FitPreview';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import PositionPad, { fxOf, getOffset, type Offset, type Offsets } from '../../shared/components/PositionPad';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
-import { ExportButton, Field, ImageUpload, inputCls, mmToPx, useLetterExport, type Notify, type Paper } from '../../shared/components/LetterKit';
+import { ExportButton, Field, ImageUpload, inputCls, mmToPx, signSpace, useLetterExport, type Notify, type Paper } from '../../shared/components/LetterKit';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { num, rupiah } from '../../shared/lib/money';
 import { cssFamily, useGoogleFonts, type WebFont } from '../../shared/lib/fonts';
@@ -142,7 +142,7 @@ function NotaView({ n, c, fs, w, h, pad }: { n: Nota; c: ReturnType<typeof calc>
   const fx = { ttd: fxOf(getOffset(n.posisi, 'ttd'), 'ttd'), stempel: fxOf(getOffset(n.posisi, 'stempel'), 'stempel') };
   const oT = getOffset(n.posisi, 'ttd');
   const oS = getOffset(n.posisi, 'stempel');
-  const signH = fs * 5;
+  const signH = signSpace(fs * 5);
 
   return (
     <div style={{ width: w, height: h, overflow: 'hidden', boxSizing: 'border-box', padding: pad, background: '#fff', color: '#111', fontFamily: font, fontSize: fs, lineHeight: 1.35, position: 'relative', display: 'flex', flexDirection: 'column' }}>
@@ -242,10 +242,10 @@ function NotaView({ n, c, fs, w, h, pad }: { n: Nota; c: ReturnType<typeof calc>
           {n.catatan && <div style={{ marginTop: fs * 0.6, fontSize: fs * 0.9 }}>{n.catatan}</div>}
         </div>
         {(n.ttd || n.stempel || n.ttdNama) && (
-          <div style={{ textAlign: 'center', minWidth: fs * 12 }}>
+          <div style={{ textAlign: 'right', minWidth: fs * 12, marginLeft: 'auto' }}>
             <div style={{ position: 'relative', height: signH }}>
               {n.stempel && <img src={n.stempel} alt="Stempel" style={{ position: 'absolute', left: oS.x, top: oS.y, height: signH * fx.stempel.z, opacity: fx.stempel.a, mixBlendMode: 'multiply' }} />}
-              {n.ttd && <img src={n.ttd} alt="Tanda tangan" style={{ position: 'absolute', left: '50%', top: oT.y, marginLeft: oT.x, transform: 'translateX(-50%)', height: signH * 0.85 * fx.ttd.z, maxWidth: fs * 14 * fx.ttd.z, opacity: fx.ttd.a, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
+              {n.ttd && <img src={n.ttd} alt="Tanda tangan" style={{ position: 'absolute', right: -oT.x, top: (signH - signH * 0.85 * fx.ttd.z) / 2 + oT.y, height: signH * 0.85 * fx.ttd.z, maxWidth: fs * 14 * fx.ttd.z, opacity: fx.ttd.a, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
             </div>
             {n.ttdNama && <div style={{ fontWeight: 700 }}>{n.ttdNama}</div>}
           </div>

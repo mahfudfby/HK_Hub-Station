@@ -10,7 +10,7 @@ import { useBgRemoved } from '../../shared/lib/removeBg';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import {
   DOTTED, Dots, ExportButton, Field, ImageUpload, PaperPicker, letterPage, dataStyle,
-  fmtTanggal, inputCls, useLetterExport, type Notify,
+  fmtTanggal, inputCls, signSpace, useLetterExport, type Notify,
 } from '../../shared/components/LetterKit';
 import { Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts, type Gaya } from '../../shared/components/LetterStyles';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
@@ -140,9 +140,9 @@ function Letter({ f, k, W, H, pf }: { f: Form; k: number; W: number; H: number; 
       <div style={{ textAlign: 'right', marginLeft: 'auto', width: 'fit-content', maxWidth: '100%' }}>
         <div>{f.kota ? <span style={dataStyle}>{f.kota}</span> : <Dots w="6em" />}, {f.tanggal ? <span style={dataStyle}>{fmtTanggal(f.tanggal)}</span> : <Dots w="8em" />}</div>
         <div>{f.jabatan}</div>
-        <div style={{ position: 'relative', height: 76 * k }}>
+        <div style={{ position: 'relative', height: signSpace(76 * k) }}>
           {f.stempel && <img src={f.stempel} alt="Stempel" style={{ position: 'absolute', right: 70 * k - getOffset(f.posisi, 'stempel').x, top: getOffset(f.posisi, 'stempel').y, height: 76 * k * fxOf(getOffset(f.posisi, 'stempel'), 'stempel').z, opacity: fxOf(getOffset(f.posisi, 'stempel'), 'stempel').a, mixBlendMode: 'multiply' }} />}
-          {f.ttd && <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', right: -getOffset(f.posisi, 'ttd').x, top: 6 * k + getOffset(f.posisi, 'ttd').y, height: 64 * k * fxOf(getOffset(f.posisi, 'ttd'), 'ttd').z, maxWidth: 200 * k * fxOf(getOffset(f.posisi, 'ttd'), 'ttd').z, opacity: fxOf(getOffset(f.posisi, 'ttd'), 'ttd').a, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
+          {f.ttd && <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', right: -getOffset(f.posisi, 'ttd').x, top: (signSpace(76 * k) - 64 * k * fxOf(getOffset(f.posisi, 'ttd'), 'ttd').z) / 2 + getOffset(f.posisi, 'ttd').y, height: 64 * k * fxOf(getOffset(f.posisi, 'ttd'), 'ttd').z, maxWidth: 200 * k * fxOf(getOffset(f.posisi, 'ttd'), 'ttd').z, opacity: fxOf(getOffset(f.posisi, 'ttd'), 'ttd').a, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
         </div>
         <SignName g={g} k={k}>{f.dokter}</SignName>
         {f.idLabel && <div style={{ fontSize: 12 * k }}>{f.idLabel}. {f.idNo || <Dots w="10em" />}</div>}

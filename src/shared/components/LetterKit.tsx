@@ -94,6 +94,9 @@ export function ImageUpload({ label, value, onChange, notify, bg, onBg, shown, b
 export type Paper = { w: number; h: number }; // mm
 export const A5: Paper = { w: 148, h: 210 };
 export const mmToPx = (mm: number) => Math.round((mm * 96) / 25.4); // 96 DPI CSS
+// Ruang tanda tangan cukup untuk meterai tempel (±40×25 mm) + jarak, agar meterai tidak menutupi teks.
+// Ukuran fisik tetap (mm), tidak ikut slider ukuran teks; base = tinggi lama yang ikut skala.
+export const signSpace = (base: number) => Math.max(base, mmToPx(32));
 
 // Pilihan kertas surat. Isi surat dirancang untuk A5; di kertas lain huruf & margin ikut diperbesar (f).
 export const LETTER_PAPERS: Record<string, Paper & { label: string }> = {
