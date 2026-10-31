@@ -4,6 +4,8 @@ import QrisCard from '../../shared/components/QrisCard';
 import { Toast } from '../../shared/components/Feedback';
 import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
+import BgToggle from '../../shared/components/BgToggle';
+import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ADDRESS_TEMPLATES, PRICE_TEMPLATES, PLATE_REGIONS, GENERIC_LOGOS, buildPlate, randomRegionCode, svgToDataUri } from './SPBU.templates';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -195,6 +197,7 @@ const App = () => {
     const [isListLoaded, setIsListLoaded] = useState(false);
     const [feedback, setFeedback] = useState(null); // { message, type }
     const [isProcessing, setIsProcessing] = useState(false);
+    const [logoBg, setLogoBg] = useState(false);
     const [isAiGenerating, setIsAiGenerating] = useState(false);
     const [isLibReady, setIsLibReady] = useState(false);
 
@@ -544,6 +547,9 @@ const App = () => {
 
     // --- RENDER UTILITIES ---
     
+    // Logo yang tampil di nota (opsional tanpa background)
+    const logoShown = useBgRemoved(currentSpbu.logoBase64 || FALLBACK_LOGO_URL, logoBg, (m) => displayFeedback(m, 'error'));
+
     // Fungsi untuk membuat elemen HTML nota yang akan dicetak/di-export
     const ReceiptPreviewComponent = useCallback(() => {
         const trans = transactionData;
@@ -576,7 +582,7 @@ const App = () => {
                 {/* Logo Section */}
                 <div className="flex justify-center mb-1">
                     <img 
-                        src={spbu.logoBase64 || FALLBACK_LOGO_URL} 
+                        src={logoShown.src} 
                         alt="Logo SPBU" 
                         crossOrigin="anonymous"
                         className={`max-w-[${LOGO_MAX_WIDTH}px] h-auto max-w-full filter grayscale`} 
@@ -625,7 +631,7 @@ const App = () => {
                 </div>
             </div>
         );
-    }, [transactionData, currentSpbu, calculatedVolume, finalPrice]);
+    }, [transactionData, currentSpbu, calculatedVolume, finalPrice, logoShown.src]);
 
     // --- EXPORT/PRINT LOGIC ---
 
@@ -837,8 +843,11 @@ const App = () => {
                             <label className="text-sm font-medium text-gray-700 block mb-1 leading-snug">
                                 Upload Logo Pertamina<br/>(Max {LOGO_MAX_WIDTH}px)
                             </label>
-                            <input type="file" id="logo-upload" accept="image/*" onChange={handleImageUpload}
-                                className="w-full p-2 border rounded-lg bg-white" disabled={isProcessing || isAiGenerating} />
+                            <div className="flex items-center gap-2">
+                                <input type="file" id="logo-upload" accept="image/*" onChange={handleImageUpload}
+                                    className="flex-1 min-w-0 p-2 border rounded-lg bg-white" disabled={isProcessing || isAiGenerating} />
+                                <BgToggle checked={logoBg} onChange={setLogoBg} busy={logoShown.busy} />
+                            </div>
                             <div className='flex justify-between items-center'>
                                 <p className="text-xs text-red-500">
                                     Logo akan diubah menjadi *grayscale* (hitam putih).

@@ -5,6 +5,8 @@ import { uploadImage } from '../../shared/lib/cloudinary';
 import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import { printImage } from '../../shared/lib/printImage';
 import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
+import BgToggle from '../../shared/components/BgToggle';
+import { useBgRemoved } from '../../shared/lib/removeBg';
 import './SlipGaji.css';
 
 // ============================================================
@@ -65,7 +67,7 @@ const buildInitialForm = () => ({
   bankName: 'BANK ABC',
   status: 'TK/0',
   managerName: 'Nama Manager',
-  managerTitle: 'Direktur',
+  managerTitle: 'Direktur / Manager',
   basicSalary: '8000000',
   allowance: '500000',
   overtime: '0',
@@ -291,14 +293,17 @@ function TextField({ id, label, name, value, onChange, placeholder, type = 'text
   );
 }
 
-function FileField({ id, label, onChange, wrapClass = '' }) {
+function FileField({ id, label, onChange, wrapClass = '', bg, onBg, bgBusy }) {
   return (
     <div className={`input-group ${wrapClass}`}>
       <label htmlFor={id} className="text-sm font-medium text-gray-700">{label}</label>
-      <input
-        type="file" id={id} accept="image/*" onChange={onChange}
-        className="p-2 border border-gray-300 rounded-lg bg-gray-50"
-      />
+      <div className="flex items-center gap-2">
+        <input
+          type="file" id={id} accept="image/*" onChange={onChange}
+          className="p-2 border border-gray-300 rounded-lg bg-gray-50 flex-1 min-w-0"
+        />
+        <BgToggle checked={bg} onChange={onBg} busy={bgBusy} />
+      </div>
     </div>
   );
 }
@@ -338,7 +343,7 @@ function SlipLine({ label, value }) {
 }
 function SignBlock({ heading, image, alt, name, title }) {
   return (
-    <div className="text-center" style={{ width: '28%' }}>
+    <div className="text-center" style={{ width: 150 }}>
       <p>{heading}</p>
       <div className="relative h-14 mb-0.5">
         {image && <img src={image} crossOrigin="anonymous" alt={alt} className="slip-signature" />}
@@ -363,7 +368,7 @@ function InfoRow({ label, value, highlight = false }) {
 // ============================================================
 // SECTION: Komponen Form (Perusahaan, Karyawan, Penerimaan, Potongan)
 // ============================================================
-function CompanyForm({ form, onChange, onLogoChange }) {
+function CompanyForm({ form, onChange, onLogoChange, logoBg }) {
   return (
     <div className="space-y-4 mb-8">
       <p className="block text-sm font-bold text-gray-700">Detail Perusahaan</p>
@@ -371,7 +376,7 @@ function CompanyForm({ form, onChange, onLogoChange }) {
       <TextField id="inputAddressLine1" label="Alamat Baris 1" name="addressLine1" value={form.addressLine1} onChange={onChange} placeholder="Jalan dan Nomor" />
       <TextField id="inputAddressLine2" label="Alamat Baris 2" name="addressLine2" value={form.addressLine2} onChange={onChange} placeholder="Kecamatan, Kota" />
       <TextField id="inputAddressLine3" label="Alamat Baris 3" name="addressLine3" value={form.addressLine3} onChange={onChange} placeholder="Negara & Kode Pos" />
-      <FileField id="inputCompanyLogoFile" label="Upload Logo (Opsional)" onChange={onLogoChange} wrapClass="pt-4" />
+      <FileField id="inputCompanyLogoFile" label="Upload Logo (Opsional)" onChange={onLogoChange} wrapClass="pt-4" {...logoBg} />
     </div>
   );
 }
@@ -539,8 +544,10 @@ function SlipPreview({ slipRef, form, calc, logo, signature, managerSignature })
               </div>
             </div>
 
-            <SignBlock heading="Mengetahui," image={managerSignature} alt="Tanda Tangan Manager" name={form.managerName} title={form.managerTitle} />
-            <SignBlock heading="Penerima," image={signature} alt="Tanda Tangan Karyawan" name={form.name} title={form.position} />
+            <div className="flex items-end gap-6">
+              <SignBlock heading="Mengetahui," image={managerSignature} alt="Tanda Tangan Manager" name={form.managerName} title={form.managerTitle} />
+              <SignBlock heading="Penerima," image={signature} alt="Tanda Tangan Karyawan" name={form.name} title={form.position} />
+            </div>
           </div>
         </div>
       </div>
@@ -557,6 +564,13 @@ export default function SlipGaji() {
   const [logo, setLogo] = useState('');
   const [signature, setSignature] = useState('');
   const [managerSignature, setManagerSignature] = useState('');
+  const [bg, setBg] = useState({ logo: false, signature: false, manager: false });
+  const bgError = (m) => pushToast('error', m);
+  const logoShown = useBgRemoved(logo, bg.logo, bgError);
+  const signatureShown = useBgRemoved(signature, bg.signature, bgError);
+  const managerShown = useBgRemoved(managerSignature, bg.manager, bgError);
+  const bgBusy = logoShown.busy || signatureShown.busy || managerShown.busy;
+  const bgProps = (key, shown) => ({ bg: bg[key], onBg: (v) => setBg((p) => ({ ...p, [key]: v })), bgBusy: shown.busy });
   const [exporting, setExporting] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -681,14 +695,14 @@ export default function SlipGaji() {
         <div className="mb-8 p-4 bg-white shadow-lg rounded-lg sticky top-0 z-10">
           <div className="flex flex-wrap justify-center gap-3">
             <button
-              type="button" onClick={handleExport} disabled={exporting || printing}
+              type="button" onClick={handleExport} disabled={exporting || printing || bgBusy}
               className="slip-btn bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md inline-flex items-center gap-2"
             >
               {exporting ? <span className="slip-spinner" aria-hidden="true" /> : <IconDownload />}
               {exporting ? 'Memproses... Harap tunggu.' : 'Export Slip Gaji sebagai PNG'}
             </button>
             <button
-              type="button" onClick={handlePrint} disabled={exporting || printing}
+              type="button" onClick={handlePrint} disabled={exporting || printing || bgBusy}
               className="slip-btn bg-slate-700 hover:bg-slate-800 text-white font-semibold py-3 px-6 rounded-lg shadow-md inline-flex items-center gap-2"
             >
               {printing && <span className="slip-spinner" aria-hidden="true" />}
@@ -706,24 +720,24 @@ export default function SlipGaji() {
           {/* Render — Formulir */}
           <div className="slip-card bg-white p-6 md:p-8 shadow-lg rounded-xl h-fit">
             <h2 className="text-xl font-semibold mb-6 border-b pb-2 text-gray-700">Formulir Input Data Slip Gaji</h2>
-            <CompanyForm form={form} onChange={handleChange} onLogoChange={handleLogoChange} />
+            <CompanyForm form={form} onChange={handleChange} onLogoChange={handleLogoChange} logoBg={bgProps('logo', logoShown)} />
             <EmployeeForm form={form} onChange={handleChange} statusText={statusText} />
             <EarningsForm form={form} onChange={handleChange} />
             <DeductionsForm form={form} onChange={handleChange} calc={calc} />
 
             <h3 className="text-lg font-medium mt-8 mb-4 border-t pt-4 text-gray-700">Detail Tanda Tangan</h3>
             <div className="space-y-4">
-              <FileField id="inputReceiverSignatureFile" label="Tanda Tangan Karyawan (Opsional)" onChange={handleSignatureChange} />
-              <TextField id="inputManagerName" label="Nama Manager / Direktur" name="managerName" value={form.managerName ?? ''} onChange={handleChange} />
-              <TextField id="inputManagerTitle" label="Jabatan Penandatangan" name="managerTitle" value={form.managerTitle ?? ''} onChange={handleChange} placeholder="Manager / Direktur" />
-              <FileField id="inputManagerSignatureFile" label="Tanda Tangan Manager / Direktur (Opsional)" onChange={handleManagerSignatureChange} />
+              <FileField id="inputReceiverSignatureFile" label="Tanda Tangan Karyawan (Opsional)" onChange={handleSignatureChange} {...bgProps('signature', signatureShown)} />
+              <TextField id="inputManagerName" label="Nama Direktur / Manager" name="managerName" value={form.managerName ?? ''} onChange={handleChange} />
+              <TextField id="inputManagerTitle" label="Jabatan Penandatangan" name="managerTitle" value={form.managerTitle ?? ''} onChange={handleChange} placeholder="Direktur / Manager" />
+              <FileField id="inputManagerSignatureFile" label="Tanda Tangan Direktur / Manager (Opsional)" onChange={handleManagerSignatureChange} {...bgProps('manager', managerShown)} />
             </div>
           </div>
 
           {/* Render — Preview Slip */}
           <div className="slip-card bg-white p-2 md:p-4 rounded-xl shadow-lg lg:col-span-1 min-w-0">
             <FitPreview>
-              <SlipPreview slipRef={slipRef} form={form} calc={calc} logo={logo} signature={signature} managerSignature={managerSignature} />
+              <SlipPreview slipRef={slipRef} form={form} calc={calc} logo={logoShown.src} signature={signatureShown.src} managerSignature={managerShown.src} />
             </FitPreview>
           </div>
         </div>

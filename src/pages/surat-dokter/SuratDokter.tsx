@@ -5,6 +5,8 @@ import RequireLogin from '../../shared/components/RequireLogin';
 import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import { printImage } from '../../shared/lib/printImage';
 import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
+import BgToggle from '../../shared/components/BgToggle';
+import { useBgRemoved } from '../../shared/lib/removeBg';
 import { Spinner, Toast, type ToastState, type ToastType } from '../../shared/components/Feedback';
 
 type Notify = (type: ToastType, message: string) => void;
@@ -101,7 +103,10 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function ImageUpload({ label, value, onChange, notify }: { label: string; value: string; onChange: (v: string) => void; notify: Notify }) {
+function ImageUpload({ label, value, onChange, notify, bg, onBg, shown, bgBusy }: {
+  label: string; value: string; onChange: (v: string) => void; notify: Notify;
+  bg: boolean; onBg: (v: boolean) => void; shown: string; bgBusy: boolean;
+}) {
   const [busy, setBusy] = useState(false);
   const read = (file?: File) => {
     if (!file) return;
@@ -130,9 +135,10 @@ function ImageUpload({ label, value, onChange, notify }: { label: string; value:
         {busy ? (
           <span className="h-14 w-14 flex items-center justify-center border rounded text-blue-600"><Spinner className="h-6 w-6" /></span>
         ) : (
-          value && <img src={value} alt={label} className="h-14 w-14 object-contain border rounded bg-white" />
+          value && <img src={shown} alt={label} className="h-14 w-14 object-contain border rounded bg-[repeating-conic-gradient(#e5e7eb_0_25%,#fff_0_50%)] bg-[length:12px_12px]" />
         )}
-        <input type="file" accept="image/*" disabled={busy} onChange={(e) => read(e.target.files?.[0])} className="text-sm flex-1" />
+        <input type="file" accept="image/*" disabled={busy} onChange={(e) => read(e.target.files?.[0])} className="text-sm flex-1 min-w-0" />
+        <BgToggle checked={bg} onChange={onBg} busy={bgBusy} />
         {value && (
           <button type="button" onClick={remove} className="text-sm text-red-600">Hapus</button>
         )}
@@ -218,6 +224,10 @@ function Letter({ f }: { f: Form }) {
 function Editor({ user, notify }: { user: User; notify: Notify }) {
   const [f, setF] = useState<Form>(loadForm);
   const [exporting, setExporting] = useState<'' | 'PDF' | 'PNG' | 'Print'>('');
+  const [bg, setBg] = useState({ ttd: false, stempel: false });
+  const bgError = (m: string) => notify('error', m);
+  const ttd = useBgRemoved(f.ttd, bg.ttd, bgError);
+  const stempel = useBgRemoved(f.stempel, bg.stempel, bgError);
   const letterRef = useRef<HTMLDivElement>(null);
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
   const setRow = (i: number, patch: Partial<Row>) => set('rows', f.rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
@@ -275,7 +285,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
     notify('info', 'Semua isian dikembalikan ke bawaan.');
   };
   const exportBtn = (kind: 'PDF' | 'PNG' | 'Print', color: string) => (
-    <button onClick={() => runExport(kind)} disabled={!!exporting}
+    <button onClick={() => runExport(kind)} disabled={!!exporting || ttd.busy || stempel.busy}
       className={`px-5 py-2 rounded-lg text-white font-semibold flex items-center gap-2 disabled:opacity-60 ${color}`}>
       {exporting === kind && <Spinner />} {kind === 'Print' ? 'Print' : `Unduh ${kind}`}
     </button>
@@ -344,9 +354,11 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
                 <Field label="Keterangan"><input className={inputCls} value={f.jabatan} onChange={(e) => set('jabatan', e.target.value)} /></Field>
                 <Field label="Nama penanda tangan"><input className={inputCls} value={f.namaTtd} onChange={(e) => set('namaTtd', e.target.value)} /></Field>
               </div>
-              <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} />
+              <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify}
+                bg={bg.ttd} onBg={(v) => setBg((p) => ({ ...p, ttd: v }))} shown={ttd.src} bgBusy={ttd.busy} />
               <p className="-mt-2 text-xs text-gray-500">PNG transparan disarankan.</p>
-              <ImageUpload label="Stempel" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify} />
+              <ImageUpload label="Stempel" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify}
+                bg={bg.stempel} onBg={(v) => setBg((p) => ({ ...p, stempel: v }))} shown={stempel.src} bgBusy={stempel.busy} />
               <p className="text-xs text-gray-500">Tanda tangan &amp; stempel hanya disimpan di perangkat ini, tidak diunggah ke server.</p>
             </section>
 
@@ -372,7 +384,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
 
           <FitPreview>
             <div ref={letterRef} className="w-max shadow-lg">
-              <Letter f={f} />
+              <Letter f={{ ...f, ttd: ttd.src, stempel: stempel.src }} />
             </div>
           </FitPreview>
         </div>

@@ -63,7 +63,7 @@ export const GENERIC_LOGOS = [
   { id: 'pompa', label: 'SPBU Pompa', svg: wrap(PUMP + txt(60, 42, 30, 'SPBU')) },
   { id: 'energi', label: 'Energi Mandiri', svg: wrap(`<rect x="3" y="3" width="198" height="64" rx="8" fill="none" stroke="#111" stroke-width="3"/>` + txt(102, 36, 20, 'ENERGI MANDIRI', 'text-anchor="middle"') + txt(102, 55, 12, 'BAHAN BAKAR MINYAK', 'text-anchor="middle"')) },
   { id: 'tetes', label: 'BBM Nusantara', svg: wrap(DROP + txt(56, 36, 20, 'BBM') + txt(56, 56, 15, 'NUSANTARA')) },
-  { id: 'umum', label: 'SPBU Umum', svg: wrap(`<rect x="3" y="12" width="198" height="46" fill="#111"/>` + txt(102, 46, 28, 'SPBU UMUM', 'text-anchor="middle" fill="#fff"')) },
+  { id: 'umum', label: 'SPBU Umum', svg: wrap(`<rect x="3" y="12" width="198" height="46" fill="#111"/>` + txt(102, 46, 28, 'SPBU UMUM', 'text-anchor="middle" style="fill:#fff"')) },
   { id: 'station', label: 'Fuel Station', svg: wrap(PUMP + txt(58, 33, 18, 'FUEL') + txt(58, 54, 18, 'STATION')) },
 ];
 
