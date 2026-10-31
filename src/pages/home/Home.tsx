@@ -45,6 +45,42 @@ function Toast({ toast, onClose }: { toast: NonNullable<ToastState>; onClose: ()
 }
 
 // ============================================================
+// SECTION: Hiasan latar (bulatan pastel melayang + parallax mouse)
+// ============================================================
+const ORBS = [
+  { color: '#9FA8DA', size: 420, top: '-8%', left: '-12%', depth: 18, delay: '0s' },
+  { color: '#F8BBD0', size: 340, top: '18%', left: '68%', depth: -24, delay: '-6s' },
+  { color: '#B2DFDB', size: 380, top: '62%', left: '-6%', depth: 14, delay: '-11s' },
+  { color: '#FFE0B2', size: 300, top: '78%', left: '72%', depth: -16, delay: '-3s' },
+];
+
+function BackgroundOrbs() {
+  useEffect(() => {
+    // Hanya untuk mouse & bila pengguna tidak memilih "kurangi animasi"
+    if (!matchMedia('(pointer: fine)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let raf = 0;
+    const move = (e: PointerEvent) => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const r = document.documentElement.style;
+        r.setProperty('--mx', String(e.clientX / innerWidth - 0.5)); // -0.5..0.5
+        r.setProperty('--my', String(e.clientY / innerHeight - 0.5));
+      });
+    };
+    addEventListener('pointermove', move);
+    return () => { removeEventListener('pointermove', move); cancelAnimationFrame(raf); };
+  }, []);
+  return (
+    <div className="bg-orbs" aria-hidden="true">
+      {ORBS.map((o) => (
+        <span key={o.color} className="bg-orb"
+          style={{ background: o.color, width: o.size, height: o.size, top: o.top, left: o.left, animationDelay: o.delay, ['--depth' as string]: `${o.depth}px` }} />
+      ))}
+    </div>
+  );
+}
+
+// ============================================================
 // SECTION: Home (Linktree Hub)
 // ============================================================
 export default function Home() {
@@ -85,8 +121,9 @@ export default function Home() {
   // SECTION: Render
   // ============================================================
   return (
-    <main className="min-h-screen bg-gray-100 px-4 py-12 text-gray-900 sm:py-16">
-      <div className="mx-auto w-full max-w-md">
+    <main className="relative min-h-screen bg-gray-100 px-4 py-12 text-gray-900 sm:py-16">
+      <BackgroundOrbs />
+      <div className="relative z-10 mx-auto w-full max-w-md">
         <header className="mb-10 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-500 text-2xl font-bold text-white shadow-md" aria-hidden="true">HK</div>
           <h1 className="text-2xl font-bold tracking-tight">HK Hub Station</h1>
