@@ -378,6 +378,14 @@ export default function Resi80() {
       <div className="max-w-6xl mx-auto">
         <Link to="/" className="inline-block mb-3 text-sm font-medium text-blue-700">&larr; Kembali ke HK Hub Station</Link>
         <h1 className="text-2xl font-bold text-center mb-4">Resi Pengiriman 80mm</h1>
+        {/* Desktop: tombol unduh di atas; ponsel: di paling bawah */}
+        <p className="hidden lg:block mb-2 text-center text-sm text-gray-600">Cetak ke printer thermal Bluetooth: unduh PNG lalu buka dengan aplikasi RawBT.</p>
+        <div className="hidden lg:flex flex-wrap justify-center gap-3 mb-6">
+          <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={logo.busy} onRun={run} />
+          <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={logo.busy} onRun={run} />
+          <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={logo.busy} onRun={run} />
+          <button onClick={kirimBaru} className="px-5 py-2 rounded-lg bg-white border font-semibold">Pengiriman Baru</button>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
@@ -477,8 +485,8 @@ export default function Resi80() {
         </div>
 
         {/* Tombol unduh di paling bawah */}
-        <p className="mt-6 text-center text-sm text-gray-600">Cetak ke printer thermal Bluetooth: unduh PNG lalu buka dengan aplikasi RawBT.</p>
-        <div className="flex flex-wrap justify-center gap-3 mt-3 mb-20">
+        <p className="lg:hidden mt-6 text-center text-sm text-gray-600">Cetak ke printer thermal Bluetooth: unduh PNG lalu buka dengan aplikasi RawBT.</p>
+        <div className="lg:hidden flex flex-wrap justify-center gap-3 mt-3 mb-20">
           <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={logo.busy} onRun={run} />
           <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={logo.busy} onRun={run} />
           <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={logo.busy} onRun={run} />
