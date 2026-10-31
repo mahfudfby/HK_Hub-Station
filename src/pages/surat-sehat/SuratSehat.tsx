@@ -108,7 +108,7 @@ function Letter({ f, k }: { f: Form; k: number }) {
   useLetterFonts(g);
   const grid = { display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 8 * k, rowGap: g.rowGap * k } as const;
   return (
-    <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '48px 56px', background: '#fff', color: '#000', fontFamily: g.font, fontSize: g.size * k, lineHeight: 1.4 }}>
+    <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '48px 56px', background: '#fff', color: '#000', fontFamily: g.font, fontSize: g.size * k, lineHeight: 1.4, display: 'flex', flexDirection: 'column' }}>
       {/* KOP 3 baris + logo opsional di kiri; garis pemisah & judul mengikuti gaya */}
       <Kop g={g} k={k} logo={f.logo} logoOffset={getOffset(f.posisi, 'logo')} logoH={58 * k} name={f.instansi} nameStyle={{ fontWeight: 700, fontSize: 20 * k, lineHeight: 1.2, letterSpacing: 0.3 }}>
         {f.subKop && <div style={{ fontWeight: 700, fontSize: 13 * k }}>{f.subKop}</div>}
@@ -130,8 +130,10 @@ function Letter({ f, k }: { f: Form; k: number }) {
       <div style={{ ...grid, marginBottom: 12 * k }}>
         {f.ukur.map((r, i) => <DataRow key={i} g={g} k={k} label={r.label} value={r.value} unit={r.unit} />)}
       </div>
-      {/* Tanggal, keterangan, tanda tangan, nama: blok mentok margin kanan, berjarak lega dari isi surat */}
-      <div style={{ textAlign: 'right', marginTop: 16 * k, marginLeft: 'auto', width: 'fit-content', maxWidth: '100%' }}>
+      {/* Jarak elastis ke tanda tangan: lega bila isi pendek, menyusut (tidak keluar kertas) bila isi panjang */}
+      <div aria-hidden="true" style={{ flex: `0 1 ${48 * k}px`, minHeight: 12 * k }} />
+      {/* Tanggal, keterangan, tanda tangan, nama: blok mentok margin kanan */}
+      <div style={{ textAlign: 'right', marginLeft: 'auto', width: 'fit-content', maxWidth: '100%' }}>
         <div>{f.kota ? <span style={dataStyle}>{f.kota}</span> : <Dots w="6em" />}, {f.tanggal ? <span style={dataStyle}>{fmtTanggal(f.tanggal)}</span> : <Dots w="8em" />}</div>
         <div>{f.jabatan}</div>
         <div style={{ position: 'relative', height: 76 * k }}>

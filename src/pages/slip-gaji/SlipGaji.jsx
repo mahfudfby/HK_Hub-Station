@@ -773,7 +773,7 @@ function SlipPreview({ slipRef, form, calc, logo, signature, managerSignature, t
           <SlipTotals {...p} calc={calc} />
 
           {/* Footer: transfer & tanda tangan (sama di semua template) */}
-          <div className="flex justify-between text-[10px] mt-1">
+          <div className="flex justify-between text-[10px] mt-3">
             <div className="text-left" style={{ width: '36%' }}>
               <p className="text-[9px] leading-tight">Pembayaran gaji Telah Dilakukan Perusahaan Melalui Transfer</p>
               <div className="relative h-10 mb-1 pt-2">
