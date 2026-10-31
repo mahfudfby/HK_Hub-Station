@@ -341,11 +341,13 @@ function FileField({ id, label, onChange, wrapClass = '', bg, onBg, bgBusy }) {
   return (
     <div className={`input-group ${wrapClass}`}>
       <label htmlFor={id} className="text-sm font-medium text-gray-700">{label}</label>
-      <div className="upload-box flex flex-wrap items-center gap-2">
-        <input
-          type="file" id={id} accept="image/*" onChange={onChange}
-          className="p-2 border border-gray-300 rounded-lg bg-gray-50 flex-1 min-w-0"
-        />
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="upload-box flex-1 min-w-0">
+          <input
+            type="file" id={id} accept="image/*" onChange={onChange}
+            className="p-2 border border-gray-300 rounded-lg bg-gray-50 w-full"
+          />
+        </div>
         <BgToggle checked={bg} onChange={onBg} busy={bgBusy} />
       </div>
     </div>

@@ -1052,14 +1052,16 @@ const App = () => {
                         </div>
                         
                         {/* Upload Logo */}
-                        <div className="upload-box space-y-2">
+                        <div className="space-y-2">
                             {/* PERUBAHAN KRUSIAL DI SINI: Label dibuat 2 baris */}
                             <label htmlFor="logo-upload" className="text-sm font-medium text-gray-700 block mb-1 leading-snug">
                                 Upload Logo SPBU<br/>(Max {LOGO_MAX_WIDTH}px)
                             </label>
-                            <div className="flex items-center gap-2">
-                                <input type="file" id="logo-upload" accept="image/*" onChange={handleImageUpload}
-                                    className="flex-1 min-w-0 p-2 border rounded-lg bg-white" disabled={isProcessing || isAiGenerating} />
+                            <div className="flex flex-wrap items-center gap-2">
+                                <div className="upload-box flex-1 min-w-0">
+                                    <input type="file" id="logo-upload" accept="image/*" onChange={handleImageUpload}
+                                        className="w-full p-2 border rounded-lg bg-white" disabled={isProcessing || isAiGenerating} />
+                                </div>
                                 <BgToggle checked={logoBg} onChange={setLogoBg} busy={logoShown.busy} />
                             </div>
                             <label htmlFor="logo-link" className="text-sm font-medium text-gray-700 block">Atau tempel link gambar</label>
