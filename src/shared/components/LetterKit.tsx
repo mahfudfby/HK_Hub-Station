@@ -95,6 +95,44 @@ export type Paper = { w: number; h: number }; // mm
 export const A5: Paper = { w: 148, h: 210 };
 export const mmToPx = (mm: number) => Math.round((mm * 96) / 25.4); // 96 DPI CSS
 
+// Pilihan kertas surat. Isi surat dirancang untuk A5; di kertas lain huruf & margin ikut diperbesar (f).
+export const LETTER_PAPERS: Record<string, Paper & { label: string }> = {
+  A5: { w: 148, h: 210, label: 'A5 (148×210 mm)' },
+  A4: { w: 210, h: 297, label: 'A4 (210×297 mm)' },
+  Letter: { w: 215.9, h: 279.4, label: 'Letter (216×279 mm)' },
+  F4: { w: 215, h: 330, label: 'F4 / Folio (215×330 mm)' },
+};
+export function letterPage(paperId: string, landscape: boolean) {
+  const b = LETTER_PAPERS[paperId] ?? LETTER_PAPERS.A5;
+  const paper: Paper = landscape ? { w: b.h, h: b.w } : { w: b.w, h: b.h };
+  const W = mmToPx(paper.w);
+  const H = mmToPx(paper.h);
+  return { paper, W, H, f: Math.min(W, H) / PAGE_W }; // f = 1 untuk A5 vertikal
+}
+console.assert(letterPage('A5', false).W === PAGE_W && letterPage('A5', false).H === PAGE_H && letterPage('A4', true).W > letterPage('A4', true).H, 'letterPage');
+
+export function PaperPicker({ paper, landscape, onPaper, onLandscape }: {
+  paper: string; landscape: boolean; onPaper: (v: string) => void; onLandscape: (v: boolean) => void;
+}) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-end">
+      <Field label="Ukuran kertas">
+        <select className={inputCls} value={paper} onChange={(e) => onPaper(e.target.value)}>
+          {Object.entries(LETTER_PAPERS).map(([id, p]) => <option key={id} value={id}>{p.label}</option>)}
+        </select>
+      </Field>
+      <div className="flex gap-2" role="radiogroup" aria-label="Orientasi kertas">
+        {[false, true].map((ls) => (
+          <button key={String(ls)} type="button" role="radio" aria-checked={landscape === ls} onClick={() => onLandscape(ls)}
+            className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium min-h-[44px] ${landscape === ls ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
+            {ls ? 'Landscape' : 'Vertikal'}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Render halaman (ukuran px tetap) ke PNG/PDF/Print sesuai ukuran kertas; tidak bergantung layar/zoom perangkat.
 // scale 3 ≈ 288 DPI di kertas.
 export async function exportPage(page: HTMLElement, kind: ExportKind, fileName: string, paper: Paper, scale = 3) {

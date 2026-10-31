@@ -9,7 +9,7 @@ import FitPreview from '../../shared/components/FitPreview';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import {
-  DOTTED, Dots, ExportButton, Field, ImageUpload, PAGE_H, PAGE_W, dataStyle as data,
+  DOTTED, Dots, ExportButton, Field, ImageUpload, PaperPicker, letterPage, dataStyle as data,
   fmtTanggal, inputCls, orDots, useLetterExport, type Notify,
 } from '../../shared/components/LetterKit';
 import { FitLine, Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts } from '../../shared/components/LetterStyles';
@@ -51,6 +51,8 @@ type Form = {
   posisi: Offsets; // geseran logo, tanda tangan & stempel (px dokumen)
   logo: string; // opsional, kiri atas kop; data URL, hanya di perangkat ini
   gaya: string; // id gaya surat (LetterStyles)
+  paper: string; // id LETTER_PAPERS
+  landscape: boolean;
   skala: number; // ukuran teks surat (%)
 };
 
@@ -85,6 +87,8 @@ const DEFAULT: Form = {
   logo: '',
   gaya: 'klasik',
   skala: 100,
+  paper: 'A5',
+  landscape: false,
 };
 
 const SATUAN = ['nol', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'];
@@ -121,7 +125,7 @@ function loadForm(): Form {
 }
 
 // ---------------- Letter preview ----------------
-function Letter({ f, k }: { f: Form; k: number }) {
+function Letter({ f, k, W, H, pf }: { f: Form; k: number; W: number; H: number; pf: number }) {
   const g = getGaya(f.gaya);
   useLetterFonts(g);
   const hari = parseInt(f.hari, 10);
@@ -160,7 +164,7 @@ function Letter({ f, k }: { f: Form; k: number }) {
   const kopLines = [f.alamat1, [f.alamat2, f.telp && `Telp. ${f.telp}`].filter(Boolean).join('  •  ')].filter(Boolean);
 
   return (
-    <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '48px 56px', background: '#fff', color: '#000', fontFamily: g.font, fontSize: g.size * k, lineHeight: 1.4, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width: W, height: H, overflow: 'hidden', boxSizing: 'border-box', padding: `${48 * pf}px ${56 * pf}px`, background: '#fff', color: '#000', fontFamily: g.font, fontSize: g.size * k, lineHeight: 1.4, display: 'flex', flexDirection: 'column' }}>
       {/* KOP 3 baris; garis pemisah & judul mengikuti gaya (klasik: garis tebal + tipis, judul bergaris bawah) */}
       <Kop g={g} k={k} logo={f.logo} logoOffset={getOffset(f.posisi, 'logo')} logoH={58 * k} name={f.nama} nameStyle={{ fontWeight: 700, fontSize: 24 * k, lineHeight: 1.15, letterSpacing: 0.5 }}>
         <div style={{ lineHeight: 1.35, marginTop: 2 * k }}>
@@ -216,7 +220,8 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
   const stempel = useBgRemoved(f.stempel, bg.stempel, bgError);
   const logo = useBgRemoved(f.logo, bg.logo, bgError);
   const letterRef = useRef<HTMLDivElement>(null);
-  // Ukuran teks: diperkecil otomatis bila isi tidak muat di kertas A5
+  // Kertas & orientasi pilihan; ukuran teks diperkecil otomatis bila isi tidak muat
+  const pg = letterPage(f.paper, f.landscape);
   const k = useFitScale(f.skala / 100, () => letterRef.current?.firstElementChild as HTMLElement, true, [f, logo.src, ttd.src, stempel.src]);
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
   // Ubah tanggal istirahat: jumlah hari ikut dihitung otomatis
@@ -246,7 +251,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
     setF(DEFAULT);
     notify('info', 'Semua isian dikembalikan ke bawaan.');
   };
-  const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify);
+  const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
   const exportBtn = (kind: 'PDF' | 'PNG' | 'Print', color: string) => (
     <ExportButton kind={kind} color={color} exporting={exporting} disabled={logo.busy || ttd.busy || stempel.busy} onRun={run} />
   );
@@ -283,6 +288,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
             <div className="hidden lg:block">{posPad}</div>
             <div className="hidden lg:block">
             <StylePicker value={f.gaya} onChange={(v) => set('gaya', v)} />
+            <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
             </div>
             <section className="space-y-3">
               <h2 className="font-bold">Data Pasien</h2>
@@ -378,7 +384,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
 
           <FitPreview>
             <div ref={letterRef} className="w-max shadow-lg">
-              <Letter f={{ ...f, logo: logo.src, ttd: ttd.src, stempel: stempel.src }} k={k} />
+              <Letter f={{ ...f, logo: logo.src, ttd: ttd.src, stempel: stempel.src }} k={k * pg.f} W={pg.W} H={pg.H} pf={pg.f} />
             </div>
           </FitPreview>
         </div>
@@ -388,6 +394,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
           <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
           {posPad}
           <StylePicker value={f.gaya} onChange={(v) => set('gaya', v)} />
+            <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
         </div>
 
         {/* Tombol unduh di paling bawah */}
