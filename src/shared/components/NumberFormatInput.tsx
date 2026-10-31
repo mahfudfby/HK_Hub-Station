@@ -14,26 +14,31 @@ console.assert(
   'NumberFormatInput',
 );
 
-export default function NumberFormatInput({ parts, value, onChange, sep = '/' }: {
-  parts: string[]; // label tiap kotak, mis. ['Kode', 'Tahun', 'No. urut']
+export default function NumberFormatInput({ parts, value, onChange, sep = '/', example }: {
+  parts: string[]; // label tiap kotak (pendek), mis. ['Kode', 'Tahun', 'Urut']
   value: string;
   onChange: (v: string) => void;
   sep?: string;
+  example?: string; // contoh nomor lengkap, tampil kecil di bawah kotak
 }) {
   const vals = splitParts(value, parts.length, sep);
   const setPart = (i: number, v: string) => {
     const next = vals.map((p, j) => (j === i ? cleanPart(v, sep) : p));
     onChange(next.every((p) => !p) ? '' : next.join(sep));
   };
+  // Satu baris tanpa turun (rapi di ponsel); kolom ini memakai satu baris form penuh (lihat .nfi di index.css)
   return (
-    <div className="flex flex-wrap items-center gap-1">
-      {parts.map((label, i) => (
-        <span key={label + i} className="flex items-center gap-1 flex-1 min-w-[4.5rem]">
-          {i > 0 && <span aria-hidden="true" className="font-bold text-gray-700 select-none">{sep}</span>}
-          <input value={vals[i]} onChange={(e) => setPart(i, e.target.value)} placeholder={label} aria-label={label}
-            className="w-full min-w-0 p-2 border border-gray-300 rounded-lg text-sm text-center" />
-        </span>
-      ))}
+    <div className="nfi">
+      <div className="flex items-center gap-1">
+        {parts.map((label, i) => (
+          <span key={label + i} className="flex items-center gap-1 flex-1 min-w-0">
+            {i > 0 && <span aria-hidden="true" className="font-bold text-gray-700 select-none">{sep}</span>}
+            <input value={vals[i]} onChange={(e) => setPart(i, e.target.value)} placeholder={label} aria-label={label} title={label}
+              className="w-full min-w-0 px-1 py-2 border border-gray-300 rounded-lg text-sm text-center" />
+          </span>
+        ))}
+      </div>
+      {example && <p className="mt-1 text-xs text-gray-500">Contoh: {example}</p>}
     </div>
   );
 }

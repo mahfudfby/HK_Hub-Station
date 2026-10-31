@@ -1,3 +1,4 @@
+import UserData from './UserData';
 import NumberFormatInput from './NumberFormatInput';
 import AutoTextarea from './AutoTextarea';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
@@ -345,6 +346,7 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
+            <UserData storageKey={`data-user:nota-${mm}`} keys={['toko', 'alamat', 'telp', 'logo', 'kasir', 'pajak', 'footer', 'metode', 'nonTunai']} data={n} onApply={(u) => setN((p) => ({ ...p, ...u }))} />
             <div className="hidden lg:block"><TextSizeSlider value={n.skala} onChange={(v) => set('skala', v)} effective={k} /></div>
             <div className="hidden lg:block">
             <Field label="Template nota">
@@ -365,14 +367,14 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
             <section className="space-y-3">
               <h2 className="font-bold">Transaksi</h2>
               <div className="grid grid-cols-2 gap-2">
-                <Field label="No. nota"><NumberFormatInput sep="-" parts={['Kode', 'No. urut']} value={n.nomor} onChange={(v) => set('nomor', v)} /></Field>
+                <Field label="No. nota"><NumberFormatInput sep="-" parts={['Kode', 'Urut']} value={n.nomor} onChange={(v) => set('nomor', v)} /></Field>
                 <Field label="Tanggal & jam"><input type="datetime-local" className={inputCls} value={n.waktu} onChange={(e) => set('waktu', e.target.value)} /></Field>
                 {txt('kasir', 'Kasir')}
                 {txt('pelanggan', 'Pelanggan (opsional)')}
               </div>
               {n.items.map((it, i) => (
-                <div key={i} className="grid grid-cols-[1fr_4rem_6.5rem_auto] gap-2 items-end">
-                  <Field label={i === 0 ? 'Barang' : ''}><AutoTextarea aria-label={`Barang ${i + 1}`} className={inputCls} value={it.nama} onChange={(e) => setItem(i, { nama: e.target.value })} /></Field>
+                <div key={i} className="grid grid-cols-[4rem_1fr_auto] sm:grid-cols-[1fr_4rem_6.5rem_auto] gap-2 items-end">
+                  <div className="col-span-3 sm:col-span-1"><Field label={i === 0 ? 'Barang' : ''}><AutoTextarea aria-label={`Barang ${i + 1}`} className={inputCls} value={it.nama} onChange={(e) => setItem(i, { nama: e.target.value })} /></Field></div>
                   <Field label={i === 0 ? 'Qty' : ''}><input aria-label={`Qty ${i + 1}`} type="number" min={0} className={inputCls} value={it.qty} onChange={(e) => setItem(i, { qty: e.target.value })} /></Field>
                   <Field label={i === 0 ? 'Harga' : ''}><input aria-label={`Harga ${i + 1}`} type="number" min={0} className={inputCls} value={it.harga} onChange={(e) => setItem(i, { harga: e.target.value })} /></Field>
                   <button type="button" onClick={() => set('items', n.items.filter((_, j) => j !== i))} disabled={n.items.length === 1}
@@ -387,7 +389,7 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
                 <Field label="Diskon">
                   <div className="flex gap-1">
                     <input type="number" min={0} className={inputCls} value={n.diskon} onChange={(e) => set('diskon', e.target.value)} placeholder={n.diskonMode === '%' ? 'persen' : 'nominal'} />
-                    <select aria-label="Jenis diskon" className="rounded-lg border border-gray-300 px-1 text-sm" value={n.diskonMode} onChange={(e) => set('diskonMode', e.target.value as Nota['diskonMode'])}>
+                    <select aria-label="Jenis diskon" className="w-16 shrink-0 rounded-lg border border-gray-300 px-1 text-sm" value={n.diskonMode} onChange={(e) => set('diskonMode', e.target.value as Nota['diskonMode'])}>
                       <option value="%">%</option>
                       <option value="Rp">Rp</option>
                     </select>

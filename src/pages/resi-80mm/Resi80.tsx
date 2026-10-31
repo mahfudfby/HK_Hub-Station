@@ -1,3 +1,4 @@
+import UserData from '../../shared/components/UserData';
 import AutoTextarea from '../../shared/components/AutoTextarea';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
@@ -389,6 +390,7 @@ export default function Resi80() {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
+            <UserData storageKey="data-user:resi" keys={['logo', 'toko', 'ekspedisi', 'layanan', 'pengirim', 'pengirimTelp', 'pengirimAlamat', 'samarkanHp']} data={r} onApply={(u) => setR((p) => ({ ...p, ...u }))} />
             <section className="space-y-3">
               <div className="hidden lg:block"><TextSizeSlider value={r.skala} onChange={(v) => set('skala', v)} effective={k} /></div>
               <div className="hidden lg:block">

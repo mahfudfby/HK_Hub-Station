@@ -1,3 +1,4 @@
+import UserData from '../../shared/components/UserData';
 import NumberFormatInput from '../../shared/components/NumberFormatInput';
 import AutoTextarea from '../../shared/components/AutoTextarea';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -434,7 +435,7 @@ function EmployeeForm({ form, onChange, statusText }) {
       <p className="block text-sm font-bold text-gray-700">Detail Karyawan &amp; Transfer</p>
       <div className="input-group">
         <label className="text-sm font-medium text-gray-700">No. Slip Gaji (ID)</label>
-        <NumberFormatInput sep="-" parts={['Kode', 'No. urut']} value={form.slipID} onChange={(v) => onChange({ target: { name: 'slipID', value: v } })} />
+        <NumberFormatInput sep="-" parts={['Kode', 'Urut']} value={form.slipID} onChange={(v) => onChange({ target: { name: 'slipID', value: v } })} />
       </div>
       <TextField id="inputSlipMonth" label="Bulan Gaji (Periode)" name="slipMonth" value={form.slipMonth} onChange={onChange} placeholder="Bulan Gaji (e.g., November 2025)" />
       <TextField id="inputTransferDate" label="Tanggal Transfer" name="transferDate" type="date" value={form.transferDate} onChange={onChange} />
@@ -988,6 +989,14 @@ export default function SlipGaji() {
             <div className="hidden lg:block">
             <TemplatePicker value={tpl.id} onChange={handleChange} />
             </div>
+            <UserData storageKey="data-user:slip-gaji"
+              keys={['posisi', 'companyName', 'addressLine1', 'addressLine2', 'addressLine3', 'managerName', 'managerTitle', 'logo', 'managerSignature']}
+              data={{ ...form, logo, managerSignature }}
+              onApply={({ logo: l, managerSignature: ms, ...rest }) => {
+                setForm((prev) => ({ ...prev, ...rest }));
+                if (l !== undefined) setLogo(l);
+                if (ms !== undefined) setManagerSignature(ms);
+              }} />
             <CompanyForm form={form} onChange={handleChange} onLogoChange={handleLogoChange} logoBg={bgProps('logo', logoShown)} />
             <EmployeeForm form={form} onChange={handleChange} statusText={statusText} />
             <EarningsForm form={form} onChange={handleChange} />
