@@ -24,8 +24,8 @@ const appId = import.meta.env.VITE_APP_ID || 'spbu-app';
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
 
 const LOGO_MAX_WIDTH = 204;
-// Logo default bila customer belum upload logo
-const FALLBACK_LOGO_URL = 'https://res.cloudinary.com/dl4pyan8v/image/upload/v1791260702/spbu-logo_algwuj.png';
+// Logo bawaan bila stasiun belum punya logo: logo generik bawaan aplikasi (bukan logo merek dagang pihak lain)
+const FALLBACK_LOGO_URL = svgToDataUri(GENERIC_LOGOS.find((l) => l.id === 'pompa')!.svg);
 const LOCKED_FOOTER_TEXT = " TERIMAKASIH ATAS KUNJUNGAN ANDA \n____________________________\n____________________________\n____________________________\n____________________________\n____________________________\n"; 
 
 // --- KONSTANTA DUKUNGAN BARU ---
