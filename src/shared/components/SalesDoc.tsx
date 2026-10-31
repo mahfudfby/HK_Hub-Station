@@ -129,66 +129,82 @@ const FONTS: Record<TemplateId, string> = {
   tegas: 'Carlito, Calibri, Arimo, sans-serif',
 };
 
-function Seller({ d, fs, color, align = 'left' }: { d: Doc; fs: number; color?: string; align?: 'left' | 'right' }) {
+// Nama & detail usaha: 2× ukuran sebelumnya (nama 1,35→2,7; detail 0,9→1,8 × teks isi)
+function Seller({ d, fs, color, sub = '#4b5563', align = 'left' }: { d: Doc; fs: number; color?: string; sub?: string; align?: 'left' | 'right' | 'center' }) {
+  const det: CSSProperties = { fontSize: fs * 1.8, color: sub, lineHeight: 1.25, whiteSpace: 'pre-line' };
   return (
-    <div style={{ textAlign: align, color, lineHeight: 1.35 }}>
-      <div style={{ fontWeight: 700, fontSize: fs * 1.35 }}>{d.penjual}</div>
-      {d.penjualAlamat && <div style={{ fontSize: fs * 0.9, whiteSpace: 'pre-line' }}>{d.penjualAlamat}</div>}
-      {d.penjualKontak && <div style={{ fontSize: fs * 0.9 }}>{d.penjualKontak}</div>}
-      {d.penjualNpwp && <div style={{ fontSize: fs * 0.9 }}>NPWP: {d.penjualNpwp}</div>}
+    <div style={{ textAlign: align, color, minWidth: 0 }}>
+      <div style={{ fontWeight: 700, fontSize: fs * 2.7, lineHeight: 1.15 }}>{d.penjual}</div>
+      {d.penjualAlamat && <div style={det}>{d.penjualAlamat}</div>}
+      {d.penjualKontak && <div style={det}>{d.penjualKontak}</div>}
+      {d.penjualNpwp && <div style={det}>NPWP: {d.penjualNpwp}</div>}
     </div>
   );
 }
-const Logo = ({ src, h, bg }: { src: string; h: number; bg?: string }) =>
-  src ? <img src={src} alt="Logo" style={{ height: h, maxWidth: h * 2, objectFit: 'contain', background: bg, borderRadius: bg ? 6 : 0, padding: bg ? 4 : 0 }} /> : null;
+
+// Logo selalu punya tempat di setiap template; tanpa upload tampil tulisan "LOGO" seperti Slip Gaji
+function Logo({ src, h, color, box }: { src: string; h: number; color: string; box?: boolean }) {
+  const wrap: CSSProperties = box ? { background: '#fff', borderRadius: 8, padding: 6, display: 'inline-flex' } : { display: 'inline-flex' };
+  return (
+    <span style={{ ...wrap, flexShrink: 0 }}>
+      {src
+        ? <img src={src} alt="Logo" style={{ height: h, maxWidth: h * 2.4, objectFit: 'contain' }} />
+        : <span style={{ height: h, display: 'flex', alignItems: 'center', fontFamily: 'Tinos, serif', fontWeight: 800, fontSize: h * 0.42, color }}>LOGO</span>}
+    </span>
+  );
+}
+
+// Judul dokumen di antara dua garis (gaya Slip Gaji)
+function TitleBar({ text, fs, color = '#000', style }: { text: string; fs: number; color?: string; style?: CSSProperties }) {
+  return (
+    <div style={{ textAlign: 'center', fontWeight: 700, fontSize: fs * 1.5, letterSpacing: 3, textTransform: 'uppercase', color,
+      borderTop: `1px solid ${color}`, borderBottom: `1px solid ${color}`, padding: `${fs * 0.3}px 0`, marginBottom: fs * 1.2, ...style }}>{text}</div>
+  );
+}
 
 function Header({ d, kind, fs, pad }: Ctx) {
   const band = d.bingkai ? frameInset(pad) + 2 : 0; // pita Modern berhenti di dalam bingkai
   const title = LABELS[kind].title;
-  const logoH = fs * 4.4;
+  const logoH = fs * 5.5;
   switch (d.template) {
-    case 'modern':
-      return (
-        <div style={{ margin: `-${pad - band}px -${pad - band}px ${fs * 1.4}px`, padding: `${pad * 0.6 - band}px ${pad - band}px`, background: d.accent, color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Logo src={d.logo} h={logoH} bg="#fff" />
-            <Seller d={d} fs={fs} color="#fff" />
-          </div>
-          <div style={{ fontSize: fs * 2.3, fontWeight: 800, letterSpacing: 1, textAlign: 'right' }}>{title}</div>
-        </div>
-      );
-    case 'minimal':
+    case 'modern': // logo kiri dalam kotak putih, pita warna penuh
       return (
         <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: fs * 1.2 }}>
-            <div style={{ fontSize: fs * 2.4, color: d.accent, letterSpacing: 4, lineHeight: 1.1 }}>{title}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-              <Logo src={d.logo} h={logoH * 0.8} />
-              <Seller d={d} fs={fs} align="right" />
-            </div>
+          <div style={{ margin: `-${pad - band}px -${pad - band}px ${fs * 1}px`, padding: `${pad * 0.6 - band}px ${pad - band}px`, background: d.accent, color: '#fff', display: 'flex', alignItems: 'center', gap: fs * 1.4 }}>
+            <Logo src={d.logo} h={logoH} color={d.accent} box />
+            <Seller d={d} fs={fs} color="#fff" sub="#f1f5f9" />
           </div>
-          <div style={{ borderTop: '1px solid #d4d4d4', marginBottom: fs * 1.2 }} />
+          <TitleBar text={title} fs={fs} color={d.accent} />
         </>
       );
-    case 'tegas':
-      return (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'stretch', gap: 16, marginBottom: fs * 1.4 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Logo src={d.logo} h={logoH} />
-            <Seller d={d} fs={fs} />
-          </div>
-          <div style={{ background: '#1f2937', color: '#fff', padding: `0 ${fs * 1.2}px`, display: 'flex', alignItems: 'center', fontSize: fs * 1.7, fontWeight: 700, letterSpacing: 1, textAlign: 'center' }}>{title}</div>
-        </div>
-      );
-    default: // klasik
+    case 'minimal': // logo di tengah atas, semua rata tengah
       return (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Logo src={d.logo} h={logoH} />
-            <div style={{ flex: 1 }}><Seller d={d} fs={fs} /></div>
-            <div style={{ fontSize: fs * 2, fontWeight: 700, letterSpacing: 2, textAlign: 'right' }}>{title}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: fs * 0.5, paddingBottom: fs * 0.8, borderBottom: '1px solid #d4d4d4', marginBottom: fs * 0.8 }}>
+            <Logo src={d.logo} h={logoH * 0.85} color={d.accent} />
+            <Seller d={d} fs={fs} align="center" />
           </div>
-          <div style={{ borderTop: '3px solid #000', borderBottom: '1px solid #000', height: 2, margin: `${fs * 0.5}px 0 ${fs * 1.2}px` }} />
+          <TitleBar text={title} fs={fs} color={d.accent} style={{ borderTop: 0, borderBottom: 0, letterSpacing: 6 }} />
+        </>
+      );
+    case 'tegas': // logo kiri besar, garis aksen tebal, judul dalam pita gelap
+      return (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: fs * 1.4, paddingBottom: fs * 0.6, borderBottom: `4px solid ${d.accent}`, marginBottom: fs * 0.8 }}>
+            <Logo src={d.logo} h={logoH} color={d.accent} />
+            <Seller d={d} fs={fs} />
+          </div>
+          <TitleBar text={title} fs={fs} color="#fff" style={{ background: '#1f2937', borderTop: 0, borderBottom: 0 }} />
+        </>
+      );
+    default: // klasik = Slip Gaji: identitas kiri, logo kanan, garis tebal
+      return (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: fs * 1.4, paddingBottom: fs * 0.4, borderBottom: '2px solid #000', marginBottom: fs * 0.8 }}>
+            <Seller d={d} fs={fs} />
+            <Logo src={d.logo} h={logoH} color="#b91c1c" />
+          </div>
+          <TitleBar text={title} fs={fs} />
         </>
       );
   }
