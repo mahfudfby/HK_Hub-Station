@@ -21,14 +21,16 @@ export const LETTER_FONT = 'Helvetica, Arimo, Arial, sans-serif';
 export const fmtTanggal = (iso: string) =>
   iso ? new Date(`${iso}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
 
-// Isian data: miring + titik-titik di bawahnya
+// Isian data: miring + titik-titik di bawahnya.
+// Jarak 0.22em di bawah teks agar ekor huruf (g/j/p/y) tidak menempel ke titik-titik, juga di hasil html2canvas.
 export const DOTTED = '1.5px dotted #000';
-export const dataStyle = { fontStyle: 'italic', borderBottom: DOTTED } as const;
+const GAP = '0.22em';
+export const dataStyle = { fontStyle: 'italic', borderBottom: DOTTED, paddingBottom: GAP } as const;
 export const Dots = ({ w = '7em' }: { w?: string }) => (
-  <span style={{ display: 'inline-block', width: w, borderBottom: DOTTED, verticalAlign: 'baseline' }} />
+  <span style={{ display: 'inline-block', width: w, borderBottom: DOTTED, verticalAlign: `-${GAP}` }} />
 );
 export const orDots = (v: string, w?: string) =>
-  v ? <span style={{ fontStyle: 'italic', borderBottom: DOTTED, padding: '0 6px' }}>{v}</span> : <Dots w={w} />;
+  v ? <span style={{ fontStyle: 'italic', borderBottom: DOTTED, padding: `0 6px ${GAP}` }}>{v}</span> : <Dots w={w} />;
 
 // ---------------- Form ----------------
 export const inputCls = 'w-full p-2 border border-gray-300 rounded-lg text-sm';
@@ -69,7 +71,7 @@ export function ImageUpload({ label, value, onChange, notify, bg, onBg, shown, b
   };
   return (
     <Field label={label}>
-      <div className="flex items-center gap-3">
+      <div className="upload-box flex flex-wrap items-center gap-3">
         {busy ? (
           <span className="h-14 w-14 flex items-center justify-center border rounded text-blue-600"><Spinner className="h-6 w-6" /></span>
         ) : (

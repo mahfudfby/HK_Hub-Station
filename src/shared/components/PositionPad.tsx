@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 
-// "Analog" (joystick) untuk menggeser posisi tanda tangan / stempel di dokumen.
+// "Analog" (joystick) untuk menggeser posisi logo / tanda tangan / stempel di dokumen.
 // Tarik tombol bulat: makin jauh ditarik, makin cepat bergeser. Tombol panah keyboard: 1px (Shift: 10px).
 // Geseran disimpan per bagian sebagai {x, y} piksel dokumen; halaman menambahkannya ke posisi elemen.
 
-export type Offset = { x: number; y: number };
+// s = ukuran (%), a = opacity (%); kosong = bawaan
+export type Offset = { x: number; y: number; s?: number; a?: number };
 export type Offsets = Record<string, Offset>;
 export const LIMIT = 220; // batas geser (px dokumen) agar tidak hilang dari kertas
 
@@ -12,11 +13,20 @@ export const getOffset = (o: Offsets | undefined, id: string): Offset => o?.[id]
 const clamp = (v: number) => Math.max(-LIMIT, Math.min(LIMIT, Math.round(v * 10) / 10));
 export const moveOffset = (o: Offsets | undefined, id: string, dx: number, dy: number): Offsets => {
   const cur = getOffset(o, id);
-  return { ...(o ?? {}), [id]: { x: clamp(cur.x + dx), y: clamp(cur.y + dy) } };
+  return { ...(o ?? {}), [id]: { ...cur, x: clamp(cur.x + dx), y: clamp(cur.y + dy) } };
 };
+
+// Opacity bawaan per bagian (stempel sedikit transparan seperti sebelumnya)
+const DEFAULT_ALPHA: Record<string, number> = { stempel: 90 };
+/** z = pengali ukuran, a = opacity 0..1 */
+export const fxOf = (c: Offset | undefined, id: string) => ({ z: (c?.s ?? 100) / 100, a: (c?.a ?? DEFAULT_ALPHA[id] ?? 100) / 100 });
 console.assert(
   moveOffset({}, 'ttd', 3, -2).ttd.x === 3 && moveOffset({}, 'ttd', 3, -2).ttd.y === -2 && moveOffset({ a: { x: 219, y: 0 } }, 'a', 10, 0).a.x === LIMIT,
   'moveOffset',
+);
+console.assert(
+  moveOffset({ a: { x: 0, y: 0, s: 150, a: 40 } }, 'a', 1, 1).a.s === 150 && fxOf(undefined, 'stempel').a === 0.9 && fxOf({ x: 0, y: 0, s: 50 }, 'ttd').z === 0.5,
+  'fxOf',
 );
 
 const BASE = 104; // diameter alas joystick
@@ -86,14 +96,18 @@ export default function PositionPad({ targets, active, onActive, value, onChange
     onChange(moveOffset(value, active, d[0], d[1]));
   };
   const cur = getOffset(value, active);
+  const fx = fxOf(cur, active);
+  const label = targets.find((t) => t.id === active)?.label ?? '';
+  const setFx = (key: 's' | 'a', v: number) => onChange({ ...(value ?? {}), [active]: { ...cur, [key]: v } });
+  const changed = cur.x || cur.y || cur.s != null || cur.a != null;
   const seg = (on: boolean) =>
     `px-3 py-2 rounded-lg border text-sm font-medium min-h-[44px] ${on ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`;
 
   return (
     <div className="space-y-2">
-      <div className="text-sm font-medium text-gray-700">Geser posisi tanda tangan &amp; stempel</div>
+      <div className="text-sm font-medium text-gray-700">Posisi, ukuran &amp; opacity: {targets.map((t) => t.label.toLowerCase()).join(', ')}</div>
       <div className="flex items-center gap-4">
-        <div ref={base} role="slider" tabIndex={0} aria-label={`Geser ${targets.find((t) => t.id === active)?.label ?? ''} (panah keyboard)`}
+        <div ref={base} role="slider" tabIndex={0} aria-label={`Geser ${label} (panah keyboard)`}
           aria-valuetext={`x ${cur.x}, y ${cur.y}`} onKeyDown={key}
           onPointerDown={down} onPointerMove={(e) => e.buttons && track(e)} onPointerUp={up} onPointerCancel={up} onLostPointerCapture={up}
           className="relative shrink-0 rounded-full border-2 border-gray-300 bg-gray-100 touch-none select-none cursor-grab focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
@@ -113,10 +127,22 @@ export default function PositionPad({ targets, active, onActive, value, onChange
           </div>
           <div className="flex items-center gap-2 text-xs text-gray-600">
             <span className="tabular-nums">x {Math.round(cur.x)} • y {Math.round(cur.y)}</span>
-            <button type="button" onClick={() => onChange({ ...(value ?? {}), [active]: { x: 0, y: 0 } })} disabled={!cur.x && !cur.y}
+            <button type="button" onClick={() => onChange({ ...(value ?? {}), [active]: { x: 0, y: 0 } })} disabled={!changed}
               className="rounded-lg border border-gray-300 bg-white px-2 py-1 font-medium hover:bg-gray-50 disabled:opacity-50">Reset</button>
           </div>
         </div>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label className="block text-sm text-gray-700">
+          Ukuran {label} <span className="font-semibold tabular-nums">{Math.round(fx.z * 100)}%</span>
+          <input type="range" min={30} max={250} step={5} value={Math.round(fx.z * 100)} onChange={(e) => setFx('s', Number(e.target.value))}
+            className="mt-1 block w-full min-h-[32px]" />
+        </label>
+        <label className="block text-sm text-gray-700">
+          Opacity {label} <span className="font-semibold tabular-nums">{Math.round(fx.a * 100)}%</span>
+          <input type="range" min={10} max={100} step={5} value={Math.round(fx.a * 100)} onChange={(e) => setFx('a', Number(e.target.value))}
+            className="mt-1 block w-full min-h-[32px]" />
+        </label>
       </div>
     </div>
   );

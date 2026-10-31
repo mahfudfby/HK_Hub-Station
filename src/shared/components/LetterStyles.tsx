@@ -70,8 +70,8 @@ export function useLetterFonts(g: Gaya) {
 
 // ---------------- Potongan surat ----------------
 // Kop: logo opsional (kiri), nama/instansi + baris kecil (children). k = skala ukuran teks (slider).
-export function Kop({ g, name, nameStyle, logo, logoH = 58, k = 1, children }: {
-  g: Gaya; name: ReactNode; nameStyle: CSSProperties; logo?: string; logoH?: number; k?: number; children?: ReactNode;
+export function Kop({ g, name, nameStyle, logo, logoH = 58, k = 1, logoOffset = { x: 0, y: 0 }, children }: {
+  g: Gaya; name: ReactNode; nameStyle: CSSProperties; logo?: string; logoH?: number; k?: number; logoOffset?: { x: number; y: number; s?: number; a?: number }; children?: ReactNode;
 }) {
   const left = g.kop === 'left';
   const boxed = g.kop === 'boxed';
@@ -83,7 +83,7 @@ export function Kop({ g, name, nameStyle, logo, logoH = 58, k = 1, children }: {
   };
   return (
     <div style={{ position: 'relative', textAlign: left ? 'left' : 'center', minHeight: logo ? logoH : undefined, ...(boxed && { border: `1.5px solid ${g.accent}`, padding: '8px 10px' }) }}>
-      {logo && <img src={logo} alt="Logo" style={{ position: 'absolute', left: boxed ? 10 : 0, top: boxed ? 8 : 0, height: logoH, maxWidth: 70, objectFit: 'contain' }} />}
+      {logo && <img src={logo} alt="Logo" style={{ position: 'absolute', left: (boxed ? 10 : 0) + logoOffset.x, top: (boxed ? 8 : 0) + logoOffset.y, height: logoH * (logoOffset.s ?? 100) / 100, maxWidth: 70 * (logoOffset.s ?? 100) / 100, opacity: (logoOffset.a ?? 100) / 100, objectFit: 'contain' }} />}
       <div style={{ padding: logo ? (left ? '0 0 0 72px' : '0 72px') : 0 }}>
         <div style={nameCss}>{name}</div>
         {children}
@@ -140,17 +140,23 @@ export function Title({ g, k = 1, children }: { g: Gaya; k?: number; children: R
   const line = `1px solid ${g.accent}`;
   switch (g.title) {
     case 'spaced': return <div style={{ ...base, letterSpacing: 4 }}>{children}</div>;
-    case 'boxed': return <div><span style={{ ...base, display: 'inline-block', border: `1.5px solid ${g.accent}`, padding: '2px 14px' }}>{children}</span></div>;
+    case 'boxed': return <div><span style={{ ...base, display: 'inline-block', border: `1.5px solid ${g.accent}`, padding: '3px 14px 5px' }}>{children}</span></div>;
     case 'lines':
       return (
         <div style={{ ...base, display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ flex: 1, borderTop: line }} />{children}<span style={{ flex: 1, borderTop: line }} />
         </div>
       );
-    case 'bar': return <div style={{ ...base, letterSpacing: 2, borderTop: line, borderBottom: line, padding: '2px 0' }}>{children}</div>;
+    case 'bar': return <div style={{ ...base, letterSpacing: 2, borderTop: line, borderBottom: line, padding: '3px 0 5px' }}>{children}</div>;
     case 'plain': return <div style={{ ...base, fontSize: 16 * k, letterSpacing: 0.5 }}>{children}</div>;
-    default: return <div style={{ ...base, textDecoration: 'underline' }}>{children}</div>;
+    default: return <div style={{ ...base }}><Underlined color={g.accent}>{children}</Underlined></div>;
   }
+}
+
+// Garis bawah berjarak dari huruf (g/j/p/y tidak menempel). Bukan text-decoration: html2canvas
+// menggambarnya terputus di sela huruf renggang dan terlalu rapat ke teks.
+function Underlined({ color = '#000', children }: { color?: string; children: ReactNode }) {
+  return <span style={{ display: 'inline-block', borderBottom: `1.5px solid ${color}`, paddingBottom: '0.12em', lineHeight: 1.15 }}>{children}</span>;
 }
 
 // Nama dokter di bawah tanda tangan
@@ -158,7 +164,7 @@ export function SignName({ g, k = 1, children }: { g: Gaya; k?: number; children
   if (g.sign === 'overline') {
     return <div><span style={{ display: 'inline-block', minWidth: 150 * k, textAlign: 'center', borderTop: '1px solid #000', paddingTop: 2, fontWeight: 700 }}>{children}</span></div>;
   }
-  return <div style={{ fontWeight: 700, textDecoration: g.sign === 'plain' ? undefined : 'underline' }}>{children}</div>;
+  return <div style={{ fontWeight: 700 }}>{g.sign === 'plain' ? children : <Underlined>{children}</Underlined>}</div>;
 }
 
 // ---------------- Pemilih gaya (form) ----------------

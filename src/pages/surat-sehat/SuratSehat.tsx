@@ -11,7 +11,7 @@ import {
 } from '../../shared/components/LetterKit';
 import { Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts, type Gaya } from '../../shared/components/LetterStyles';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import PositionPad, { getOffset, type Offsets } from '../../shared/components/PositionPad';
+import PositionPad, { fxOf, getOffset, type Offsets } from '../../shared/components/PositionPad';
 
 // Surat keterangan sehat (A5): hanya untuk akun admin. Kop diisi sendiri oleh dokter/klinik pemakai.
 
@@ -41,7 +41,7 @@ type Form = {
   idNo: string;
   ttd: string; // data URL, hanya di perangkat ini
   stempel: string;
-  posisi: Offsets; // geseran tanda tangan & stempel (px dokumen)
+  posisi: Offsets; // geseran logo, tanda tangan & stempel (px dokumen)
   gaya: string; // id gaya surat (LetterStyles)
   skala: number; // ukuran teks surat (%)
 };
@@ -107,7 +107,7 @@ function Letter({ f, k }: { f: Form; k: number }) {
   return (
     <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '48px 56px', background: '#fff', color: '#000', fontFamily: g.font, fontSize: g.size * k, lineHeight: 1.4 }}>
       {/* KOP 3 baris + logo opsional di kiri; garis pemisah & judul mengikuti gaya */}
-      <Kop g={g} k={k} logo={f.logo} logoH={58 * k} name={f.instansi} nameStyle={{ fontWeight: 700, fontSize: 20 * k, lineHeight: 1.2, letterSpacing: 0.3 }}>
+      <Kop g={g} k={k} logo={f.logo} logoOffset={getOffset(f.posisi, 'logo')} logoH={58 * k} name={f.instansi} nameStyle={{ fontWeight: 700, fontSize: 20 * k, lineHeight: 1.2, letterSpacing: 0.3 }}>
         {f.subKop && <div style={{ fontWeight: 700, fontSize: 13 * k }}>{f.subKop}</div>}
         {f.alamatKop && <div style={{ fontSize: 11 * k }}>{f.alamatKop}</div>}
       </Kop>
@@ -132,8 +132,8 @@ function Letter({ f, k }: { f: Form; k: number }) {
         <div>{f.kota ? <span style={dataStyle}>{f.kota}</span> : <Dots w="6em" />}, {f.tanggal ? <span style={dataStyle}>{fmtTanggal(f.tanggal)}</span> : <Dots w="8em" />}</div>
         <div>{f.jabatan}</div>
         <div style={{ position: 'relative', height: 76 * k }}>
-          {f.stempel && <img src={f.stempel} alt="Stempel" style={{ position: 'absolute', right: 70 * k - getOffset(f.posisi, 'stempel').x, top: getOffset(f.posisi, 'stempel').y, height: 76 * k, opacity: 0.9, mixBlendMode: 'multiply' }} />}
-          {f.ttd && <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', right: -getOffset(f.posisi, 'ttd').x, top: 6 * k + getOffset(f.posisi, 'ttd').y, height: 64 * k, maxWidth: 200 * k, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
+          {f.stempel && <img src={f.stempel} alt="Stempel" style={{ position: 'absolute', right: 70 * k - getOffset(f.posisi, 'stempel').x, top: getOffset(f.posisi, 'stempel').y, height: 76 * k * fxOf(getOffset(f.posisi, 'stempel'), 'stempel').z, opacity: fxOf(getOffset(f.posisi, 'stempel'), 'stempel').a, mixBlendMode: 'multiply' }} />}
+          {f.ttd && <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', right: -getOffset(f.posisi, 'ttd').x, top: 6 * k + getOffset(f.posisi, 'ttd').y, height: 64 * k * fxOf(getOffset(f.posisi, 'ttd'), 'ttd').z, maxWidth: 200 * k * fxOf(getOffset(f.posisi, 'ttd'), 'ttd').z, opacity: fxOf(getOffset(f.posisi, 'ttd'), 'ttd').a, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
         </div>
         <SignName g={g} k={k}>{f.dokter}</SignName>
         {f.idLabel && <div style={{ fontSize: 12 * k }}>{f.idLabel}. {f.idNo || <Dots w="10em" />}</div>}
@@ -183,7 +183,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
   // Analog geser tanda tangan/stempel: desktop di atas form, ponsel di kotak bawah
   const [geser, setGeser] = useState('ttd');
   const posPad = (
-    <PositionPad targets={[{ id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
+    <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
       active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
   );
   return (

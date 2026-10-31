@@ -125,12 +125,12 @@ export default function Login() {
     }
   };
 
-  const inputCls = 'mt-1 w-full rounded-lg border border-slate-600 bg-slate-900 p-2 text-slate-100';
+  const inputCls = 'mt-1 w-full rounded-lg border bg-white p-2 text-gray-900';
 
   return (
-    <main className="hub min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
-      <form onSubmit={loginEmail} className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-800 p-6 space-y-4 shadow-xl">
-        <Link to="/" className="text-sm text-sky-300 hover:text-sky-200">&larr; Kembali ke HK Hub Station</Link>
+    <main className="min-h-screen bg-gray-100 text-gray-900 flex items-center justify-center p-4">
+      <form onSubmit={loginEmail} className="w-full max-w-sm rounded-2xl border border-gray-300 bg-white p-6 space-y-4 shadow-xl">
+        <Link to="/" className="text-sm font-medium text-primary-700 hover:underline">&larr; Kembali ke HK Hub Station</Link>
         <h1 className="text-xl font-bold">Login Admin</h1>
 
         <label className="block text-sm font-medium">
@@ -145,7 +145,7 @@ export default function Login() {
               value={password} onChange={(e) => setPassword(e.target.value)} className={`${inputCls} pr-11`} />
             <button type="button" onClick={() => setShowPassword((v) => !v)}
               aria-label={showPassword ? 'Sembunyikan password' : 'Lihat password'} aria-pressed={showPassword}
-              className="absolute right-1 top-1/2 mt-0.5 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-300 hover:bg-slate-700">
+              className="absolute right-1 top-1/2 mt-0.5 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md border-0 text-gray-700 shadow-none hover:bg-gray-100">
               {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
             </button>
           </div>
@@ -156,21 +156,21 @@ export default function Login() {
             <input type="checkbox" checked={remember} onChange={(e) => changeRemember(e.target.checked)} className="h-4 w-4" />
             Ingat saya
           </label>
-          <button type="button" onClick={forgotPassword} disabled={!!busy} className="flex items-center gap-1 text-sky-300 hover:text-sky-200 disabled:opacity-60">
+          <button type="button" onClick={forgotPassword} disabled={!!busy} className="flex items-center gap-1 font-medium text-primary-700 disabled:opacity-60">
             {busy === 'reset' && <Spinner />} Lupa password?
           </button>
         </div>
 
-        <button disabled={!!busy} className="flex w-full items-center justify-center gap-2 rounded-lg bg-sky-600 py-2 font-semibold text-white hover:bg-sky-500 disabled:opacity-60">
+        <button disabled={!!busy} className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary-500 py-2 font-semibold text-white hover:bg-primary-700 disabled:opacity-60">
           {busy === 'email' ? <><Spinner /> Memproses…</> : 'Masuk'}
         </button>
 
-        <div className="flex items-center gap-3 text-xs text-slate-400">
-          <span className="h-px flex-1 bg-slate-600" /> atau <span className="h-px flex-1 bg-slate-600" />
+        <div className="flex items-center gap-3 text-xs text-gray-600">
+          <span className="h-px flex-1 bg-gray-300" /> atau <span className="h-px flex-1 bg-gray-300" />
         </div>
 
         <button type="button" onClick={loginGoogle} disabled={!!busy}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2 font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-60">
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-400 bg-white py-2 font-semibold text-gray-800 hover:bg-gray-50 disabled:opacity-60">
           {busy === 'google' ? <Spinner /> : <GoogleIcon />} Masuk dengan Google
         </button>
       </form>
