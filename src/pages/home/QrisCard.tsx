@@ -52,8 +52,8 @@ function QrisModal({ onClose }: { onClose: () => void }) {
 export default function QrisCard() {
   const [open, setOpen] = useState(false);
   return (
-    <section className="mb-8 rounded-2xl bg-white p-6 text-center shadow-lg" aria-label="Traktir">
-      <p className="mb-4 text-base font-bold text-slate-700 [text-shadow:none]">Traktir Saya Dengan Cara Klik Tombol di Bawah Ini:</p>
+    <section className="mb-8 rounded-2xl bg-white p-6 text-center shadow-lg" aria-label="Donasi">
+      <p className="mb-4 text-base font-bold text-slate-700 [text-shadow:none]">Sebagai Ucapan Terima Kasih untuk Developer Aplikasi Ini<br />Donasi Seikhlasnya dengan Klik Link QRIS Ini:</p>
       <button
         onClick={() => setOpen(true)}
         className="min-h-[44px] w-full rounded-xl bg-red-600 px-6 py-4 text-lg font-extrabold uppercase leading-tight tracking-wide text-white shadow-md transition-all duration-200 hover:bg-red-700 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 [text-shadow:none]"
