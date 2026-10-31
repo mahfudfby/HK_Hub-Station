@@ -49,4 +49,16 @@ export const routes = [
     title: 'Nota Pembelian 58mm',
     desc: 'Nota kasir untuk printer thermal 58mm (PNG 384px siap RawBT), PDF & Print.',
   },
+  {
+    path: '/nota-80mm/*',
+    component: lazy(() => import('../pages/nota-80mm')),
+    title: 'Nota Pembelian 80mm',
+    desc: 'Nota kasir untuk printer thermal 80mm (PNG 576px siap RawBT), PDF & Print.',
+  },
+  {
+    path: '/resi-80mm/*',
+    component: lazy(() => import('../pages/resi-80mm')),
+    title: 'Resi Pengiriman 80mm',
+    desc: 'Label pengiriman gaya marketplace dengan barcode otomatis. Label 80×100mm atau continuous.',
+  },
 ];

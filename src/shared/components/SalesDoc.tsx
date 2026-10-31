@@ -10,7 +10,7 @@ import { num, rupiah, terbilangRupiah } from '../lib/money';
 
 export type DocKind = 'invoice' | 'faktur';
 type TemplateId = 'klasik' | 'modern' | 'minimal' | 'tegas';
-type PaperId = 'A4' | 'A5' | 'Letter' | 'F4';
+type PaperId = 'A4' | 'A5' | 'Letter' | 'F4' | 'CF95x11' | 'CF95x55' | 'CF15x11' | 'T80x100';
 
 const TEMPLATES: { id: TemplateId; name: string; desc: string }[] = [
   { id: 'klasik', name: 'Klasik', desc: 'Serif, tabel bergaris penuh' },
@@ -18,12 +18,18 @@ const TEMPLATES: { id: TemplateId; name: string; desc: string }[] = [
   { id: 'minimal', name: 'Minimal', desc: 'Bersih, garis tipis' },
   { id: 'tegas', name: 'Tegas', desc: 'Strip samping, kontras' },
 ];
-const PAPERS: Record<PaperId, Paper & { label: string }> = {
-  A4: { w: 210, h: 297, label: 'A4 (210×297 mm)' },
-  A5: { w: 148, h: 210, label: 'A5 (148×210 mm)' },
-  Letter: { w: 215.9, h: 279.4, label: 'Letter (216×279 mm)' },
-  F4: { w: 215, h: 330, label: 'F4 / Folio (215×330 mm)' },
+// group: label kelompok di dropdown; fixed: orientasi tetap (continuous form & thermal)
+const PAPERS: Record<PaperId, Paper & { label: string; group: string; fixed?: boolean }> = {
+  A4: { w: 210, h: 297, label: 'A4 (210×297 mm)', group: 'Kertas biasa' },
+  A5: { w: 148, h: 210, label: 'A5 (148×210 mm)', group: 'Kertas biasa' },
+  Letter: { w: 215.9, h: 279.4, label: 'Letter (216×279 mm)', group: 'Kertas biasa' },
+  F4: { w: 215, h: 330, label: 'F4 / Folio (215×330 mm)', group: 'Kertas biasa' },
+  CF95x11: { w: 241.3, h: 279.4, label: 'Continuous 9½×11 in (penuh)', group: 'Dot-Matrix continuous form', fixed: true },
+  CF95x55: { w: 241.3, h: 139.7, label: 'Continuous 9½×5½ in (½)', group: 'Dot-Matrix continuous form', fixed: true },
+  CF15x11: { w: 377.8, h: 279.4, label: 'Continuous 14⅞×11 in (lebar)', group: 'Dot-Matrix continuous form', fixed: true },
+  T80x100: { w: 80, h: 100, label: 'Thermal 80×100 mm', group: 'Thermal', fixed: true },
 };
+const PAPER_GROUPS = [...new Set(Object.values(PAPERS).map((p) => p.group))];
 
 // Font tebal untuk nama usaha (Google Fonts, dimuat saat dipilih agar sama di semua perangkat)
 type NameFont = { id: string; label: string; family: string; weight: number; fallback: string };
@@ -452,12 +458,13 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
   const setItem = (i: number, patch: Partial<Item>) => set('items', d.items.map((it, j) => (j === i ? { ...it, ...patch } : it)));
 
   const base = PAPERS[d.paper];
-  const paper: Paper = d.landscape ? { w: base.h, h: base.w } : { w: base.w, h: base.h };
+  const paper: Paper = d.landscape && !base.fixed ? { w: base.h, h: base.w } : { w: base.w, h: base.h };
   const W = mmToPx(paper.w);
   const H = mmToPx(paper.h);
-  const small = Math.min(paper.w, paper.h) < 160; // A5: huruf & margin lebih kecil
-  const fs = small ? 10 : 12;
-  const pad = small ? 28 : 44;
+  // Huruf & margin mengikuti sisi terpendek kertas: thermal 80mm sangat kecil, A5/½ continuous kecil
+  const minSide = Math.min(paper.w, paper.h);
+  const fs = minSide < 100 ? 7 : minSide < 160 ? 10 : 12;
+  const pad = minSide < 100 ? 10 : minSide < 160 ? 28 : 44;
   const c = calc(d);
 
   const fileName = `${L.file}-${(d.nomor || 'dokumen').replace(/[^\w-]+/g, '-').toLowerCase()}`;
@@ -499,12 +506,16 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
                 <Field label="Ukuran kertas">
                   <select className={inputCls} value={d.paper} onChange={(e) => set('paper', e.target.value as PaperId)}>
-                    {(Object.keys(PAPERS) as PaperId[]).map((p) => <option key={p} value={p}>{PAPERS[p].label}</option>)}
+                    {PAPER_GROUPS.map((g) => (
+                      <optgroup key={g} label={g}>
+                        {(Object.keys(PAPERS) as PaperId[]).filter((p) => PAPERS[p].group === g).map((p) => <option key={p} value={p}>{PAPERS[p].label}</option>)}
+                      </optgroup>
+                    ))}
                   </select>
                 </Field>
                 <div className="flex gap-2" role="radiogroup" aria-label="Orientasi">
-                  <button type="button" role="radio" aria-checked={!d.landscape} onClick={() => set('landscape', false)} className={`${seg(!d.landscape)} flex-1`}>Vertikal</button>
-                  <button type="button" role="radio" aria-checked={d.landscape} onClick={() => set('landscape', true)} className={`${seg(d.landscape)} flex-1`}>Landscape</button>
+                  <button type="button" role="radio" aria-checked={!d.landscape} disabled={base.fixed} onClick={() => set('landscape', false)} className={`${seg(!d.landscape || !!base.fixed)} flex-1 disabled:opacity-50`}>Vertikal</button>
+                  <button type="button" role="radio" aria-checked={d.landscape && !base.fixed} disabled={base.fixed} onClick={() => set('landscape', true)} className={`${seg(d.landscape && !base.fixed)} flex-1 disabled:opacity-50`}>Landscape</button>
                 </div>
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 min-h-[44px] sm:col-span-3">
                   <input type="checkbox" className="h-5 w-5" checked={d.bingkai} onChange={(e) => set('bingkai', e.target.checked)} /> Bingkai kotak di tepi kertas
