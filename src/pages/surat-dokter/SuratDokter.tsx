@@ -227,7 +227,9 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6">
             <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
+            <div className="hidden lg:block">
             <StylePicker value={f.gaya} onChange={(v) => set('gaya', v)} />
+            </div>
             <section className="space-y-3">
               <h2 className="font-bold">Data Pasien</h2>
               {f.rows.map((r, i) => (
@@ -304,6 +306,11 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
               <Letter f={{ ...f, ttd: ttd.src, stempel: stempel.src }} k={k} />
             </div>
           </FitPreview>
+        </div>
+
+        {/* Ponsel: pilihan template di paling bawah, dekat tombol unduh */}
+        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow">
+          <StylePicker value={f.gaya} onChange={(v) => set('gaya', v)} />
         </div>
 
         {/* Tombol unduh di paling bawah */}

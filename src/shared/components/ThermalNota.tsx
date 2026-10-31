@@ -338,11 +338,13 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             <TextSizeSlider value={n.skala} onChange={(v) => set('skala', v)} effective={k} />
+            <div className="hidden lg:block">
             <Field label="Template nota">
               <select className={inputCls} value={tpl.id} onChange={(e) => set('template', e.target.value)}>
                 {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
               </select>
             </Field>
+            </div>
             <section className="space-y-3">
               <h2 className="font-bold">Toko</h2>
               <ImageUpload label="Upload logo (tampil di atas nota)" value={n.logo} onChange={(v) => set('logo', v)} notify={notify}
@@ -417,6 +419,15 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
               </div>
             </FitPreview>
           </div>
+        </div>
+
+        {/* Ponsel: pilihan template di paling bawah, dekat tombol unduh */}
+        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow">
+          <Field label="Template nota">
+            <select className={inputCls} value={tpl.id} onChange={(e) => set('template', e.target.value)}>
+              {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
+            </select>
+          </Field>
         </div>
 
         {/* Tombol unduh di paling bawah */}

@@ -775,12 +775,12 @@ function SlipPreview({ slipRef, form, calc, logo, signature, managerSignature, t
   );
 }
 
-function TemplatePicker({ value, onChange }) {
+function TemplatePicker({ value, onChange, id = 'inputTemplate' }) {
   return (
-    <div className="input-group mb-8">
-      <label htmlFor="inputTemplate" className="text-sm font-bold text-gray-700">Template Slip</label>
+    <div className={`input-group ${id === 'inputTemplate' ? 'mb-8' : ''}`}>
+      <label htmlFor={id} className="text-sm font-bold text-gray-700">Template Slip</label>
       <select
-        id="inputTemplate" name="template" value={value} onChange={onChange}
+        id={id} name="template" value={value} onChange={onChange}
         className="p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
       >
         {SLIP_TEMPLATES.map((x, i) => (
@@ -935,7 +935,9 @@ export default function SlipGaji() {
           <div className="slip-card bg-white p-6 md:p-8 shadow-lg rounded-xl h-fit">
             <h2 className="text-xl font-semibold mb-6 border-b pb-2 text-gray-700">Formulir Input Data Slip Gaji</h2>
             <div className="mb-4"><TextSizeSlider value={form.skala} onChange={(v) => setForm((prev) => ({ ...prev, skala: v }))} effective={k} /></div>
+            <div className="hidden lg:block">
             <TemplatePicker value={tpl.id} onChange={handleChange} />
+            </div>
             <CompanyForm form={form} onChange={handleChange} onLogoChange={handleLogoChange} logoBg={bgProps('logo', logoShown)} />
             <EmployeeForm form={form} onChange={handleChange} statusText={statusText} />
             <EarningsForm form={form} onChange={handleChange} />
@@ -956,6 +958,11 @@ export default function SlipGaji() {
               <SlipPreview slipRef={slipRef} form={form} calc={calc} logo={logoShown.src} signature={signatureShown.src} managerSignature={managerShown.src} t={tpl} k={k} />
             </FitPreview>
           </div>
+        </div>
+
+        {/* Ponsel: pilihan template di paling bawah, dekat tombol unduh */}
+        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow">
+          <TemplatePicker id="inputTemplateMobile" value={tpl.id} onChange={handleChange} />
         </div>
 
         {/* Render — Tombol Export (paling bawah) */}

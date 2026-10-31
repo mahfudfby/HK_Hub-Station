@@ -1131,6 +1131,7 @@ const App = () => {
                         <div className="mb-6 p-4 bg-white rounded-xl shadow-2xl border-t-4 border-indigo-600">
                             <h2 className="text-xl font-bold mb-3 text-indigo-700">3. Preview & Aksi</h2>
                             <div className="mb-3"><TextSizeSlider value={skala} onChange={pilihSkala} effective={k} /></div>
+                            <div className="hidden lg:block">
                             <label htmlFor="gaya-nota"className="block text-sm font-semibold text-gray-700 mb-1">Gaya Nota</label>
                             <select id="gaya-nota" aria-label="Gaya nota" value={gaya.id} onChange={(e) => pilihGayaNota(e.target.value)}
                                 className="w-full p-2 border rounded-lg bg-white mb-4">
@@ -1138,9 +1139,21 @@ const App = () => {
                                     <option key={g.id} value={g.id}>{i + 1}. {g.name} — {g.desc}</option>
                                 ))}
                             </select>
+                            </div>
                             <div className="bg-gray-100 border border-dashed p-4">
                                 <FitPreview>{ReceiptPreviewComponent()}</FitPreview>
                             </div>
+                            {/* Ponsel: pilihan template di paling bawah, dekat tombol unduh */}
+                            <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow">
+                              <label htmlFor="gaya-nota-hp"className="block text-sm font-semibold text-gray-700 mb-1">Gaya Nota</label>
+                              <select id="gaya-nota-hp" aria-label="Gaya nota" value={gaya.id} onChange={(e) => pilihGayaNota(e.target.value)}
+                                  className="w-full p-2 border rounded-lg bg-white mb-4">
+                                  {GAYA_NOTA.map((g, i) => (
+                                      <option key={g.id} value={g.id}>{i + 1}. {g.name} — {g.desc}</option>
+                                  ))}
+                              </select>
+                            </div>
+
                             <div className="flex space-x-3 mt-4">
                                 <button onClick={handleExportImage} disabled={!isLibReady || isProcessing || isAiGenerating}
                                     className={`flex-1 p-3 rounded-xl font-bold flex justify-center items-center space-x-1 transition ${!isLibReady || isProcessing || isAiGenerating ? 'bg-green-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white`}>

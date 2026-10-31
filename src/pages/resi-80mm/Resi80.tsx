@@ -369,11 +369,13 @@ export default function Resi80() {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             <section className="space-y-3">
               <TextSizeSlider value={r.skala} onChange={(v) => set('skala', v)} effective={k} />
+              <div className="hidden lg:block">
               <Field label="Template resi">
                 <select className={inputCls} value={tplOf(r.template).id} onChange={(e) => set('template', e.target.value)}>
                   {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
                 </select>
               </Field>
+              </div>
               <h2 className="font-bold">Ukuran kertas</h2>
               <div className="flex gap-2" role="radiogroup" aria-label="Ukuran kertas">
                 {([['label', 'Label 80×100mm'], ['continuous', 'Continuous 80mm']] as [Ukuran, string][]).map(([v, l]) => (
@@ -454,6 +456,15 @@ export default function Resi80() {
               </div>
             </FitPreview>
           </div>
+        </div>
+
+        {/* Ponsel: pilihan template di paling bawah, dekat tombol unduh */}
+        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow">
+          <Field label="Template resi">
+            <select className={inputCls} value={tplOf(r.template).id} onChange={(e) => set('template', e.target.value)}>
+              {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
+            </select>
+          </Field>
         </div>
 
         {/* Tombol unduh di paling bawah */}

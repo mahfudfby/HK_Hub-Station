@@ -625,11 +625,13 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
             <section className="space-y-3">
               <h2 className="font-bold">Gaya &amp; Kertas</h2>
               <TextSizeSlider value={d.skala} onChange={(v) => set('skala', v)} effective={k} />
+              <div className="hidden lg:block">
               <Field label="Template">
                 <select className={inputCls} value={tplOf(d.template).id} onChange={(e) => set('template', e.target.value)}>
                   {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
                 </select>
               </Field>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
                 <Field label="Ukuran kertas">
                   <select className={inputCls} value={d.paper} onChange={(e) => set('paper', e.target.value as PaperId)}>
@@ -753,6 +755,15 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
               <DocView d={{ ...d, logo: logo.src, ttd: ttd.src, stempel: stempel.src }} kind={kind} c={c} fs={fs} pad={pad} w={W} h={H} short={H < 600} />
             </div>
           </FitPreview>
+        </div>
+
+        {/* Ponsel: pilihan template di paling bawah, dekat tombol unduh */}
+        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow">
+          <Field label="Template">
+            <select className={inputCls} value={tplOf(d.template).id} onChange={(e) => set('template', e.target.value)}>
+              {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
+            </select>
+          </Field>
         </div>
 
         {/* Tombol unduh di paling bawah */}
