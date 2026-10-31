@@ -7,6 +7,7 @@ import { useBgRemoved } from '../../shared/lib/removeBg';
 import { num, rupiah } from '../../shared/lib/money';
 import { code128 } from '../../shared/lib/code128';
 import { cssFamily, useGoogleFonts, type WebFont } from '../../shared/lib/fonts';
+import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 
 // Resi / label pengiriman untuk printer thermal 80mm (gaya label marketplace, tanpa merek).
 // Lebar 288px × skala 2 = PNG 576px = lebar titik cetak printer 80mm. Barcode Code 128 dibuat otomatis dari nomor.
@@ -43,6 +44,7 @@ type Resi = {
   samarkanHp: boolean;
   items: Item[];
   catatan: string;
+  skala: number; // ukuran teks (%)
 };
 
 const DEFAULT: Resi = {
@@ -69,6 +71,7 @@ const DEFAULT: Resi = {
   samarkanHp: true,
   items: [{ nama: 'Contoh produk', qty: '1' }],
   catatan: '',
+  skala: 100,
 };
 
 // 081234567890 → ********7890
@@ -143,20 +146,22 @@ const tplOf = (id: string) => TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0]
 
 // ---------------- Tampilan resi ----------------
 // Label 80×100mm memakai tata letak ringkas agar muat; continuous memakai tata letak lega
-function Label({ r }: { r: Resi }) {
+// k = skala ukuran teks (slider); lebar 288px & tinggi label 360px tetap, lebar modul barcode tidak diskalakan
+function Label({ r, k }: { r: Resi; k: number }) {
   const t = tplOf(r.template);
   const c = r.ukuran === 'label';
-  const f = (n: number) => n * (t.k ?? 1);
+  const f = (n: number) => n * (t.k ?? 1) * k;
+  const s = (n: number) => Math.round(n * k * 2) / 2; // jarak terkait teks
   const bw = t.bw ?? 1.5;
   const line = `${bw}px ${t.box === 'putus' ? 'dashed' : 'solid'} #000`;
   const tab = t.box === 'tab';
   const hp = (v: string) => (r.samarkanHp ? samarkan(v) : v);
-  const pad = c ? 6 : 8;
-  const gap = c ? 4 : 6;
+  const pad = c ? 12 : 16;
+  const gap = s(c ? 3 : 6);
   const inner = W - pad * 2;
-  const bpad = c ? '3px 5px' : 6;
+  const bpad = c ? `${s(3)}px ${s(5)}px` : s(6);
   const frame: CSSProperties = { border: line, padding: bpad };
-  const box: CSSProperties = t.box === 'garis' ? { borderBottom: line, padding: c ? '3px 0' : '6px 0', marginBottom: gap } : { ...frame, marginBottom: gap };
+  const box: CSSProperties = t.box === 'garis' ? { borderBottom: line, padding: `${s(c ? 3 : 6)}px 0`, marginBottom: gap } : { ...frame, marginBottom: gap };
   const head: CSSProperties = { fontSize: f(c ? 8 : 9), fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 };
   const inv: CSSProperties = { background: '#000', color: '#fff' };
   const Sec = ({ title, children, st }: { title: string; children: ReactNode; st?: CSSProperties }) => (tab
@@ -212,7 +217,7 @@ function Label({ r }: { r: Resi }) {
     garis: { ...numBase, fontSize: f(c ? 11.5 : 13), letterSpacing: 2, borderTop: '1px solid #000', borderBottom: '1px solid #000', padding: '1px 0', marginTop: 4 },
   }[t.num];
   const kode = <>
-    <Barcode text={r.noResi} height={c ? (kotak ? 40 : 42) : (kotak ? 54 : 58)} maxWidth={kotak ? inner - Math.ceil(bw) * 2 - 12 : inner} />
+    <Barcode text={r.noResi} height={c ? Math.max(36, Math.round((kotak ? 36 : 38) * k)) : Math.round((kotak ? 54 : 58) * Math.min(k, 1.2))} maxWidth={kotak ? inner - Math.ceil(bw) * 2 - 12 : inner} />
     <div style={numStyle}>{r.noResi}</div>
   </>;
 
@@ -253,7 +258,7 @@ function Label({ r }: { r: Resi }) {
       {/* COD / berat / koli */}
       <div style={{ display: 'flex', gap, marginBottom: gap }}>
         {codEl}
-        <div style={{ ...frame, minWidth: c ? 74 : 82 }}>
+        <div style={{ ...frame, minWidth: s(c ? 74 : 82) }}>
           <div>Berat: <b>{r.berat}</b></div>
           <div>Koli: <b>{r.koli}</b></div>
         </div>
@@ -276,7 +281,7 @@ function Label({ r }: { r: Resi }) {
             <span>No. Pesanan: <b>{r.noPesanan}</b></span>
             {r.tanggal && <span style={{ whiteSpace: 'nowrap' }}>{fmtTanggal(r.tanggal)}</span>}
           </div>
-          <Barcode text={r.noPesanan} height={c ? 18 : 28} maxWidth={inner - 12} />
+          <Barcode text={r.noPesanan} height={Math.round((c ? 18 : 28) * Math.min(k, 1.2))} maxWidth={inner - 12} />
         </div>
       )}
 
@@ -321,6 +326,8 @@ export default function Resi80() {
   const logo = useBgRemoved(r.logo, logoBg, (m) => notify('error', m));
   const ref = useRef<HTMLDivElement>(null);
   useGoogleFonts([tplOf(r.template).web]);
+  // Label: tinggi tetap → k diturunkan sampai muat; continuous: hanya lebar dijaga
+  const k = useFitScale(r.skala / 100, () => ref.current?.firstElementChild as HTMLElement, r.ukuran === 'label', [r, logo.src]);
 
   useEffect(() => {
     try {
@@ -361,6 +368,7 @@ export default function Resi80() {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             <section className="space-y-3">
+              <TextSizeSlider value={r.skala} onChange={(v) => set('skala', v)} effective={k} />
               <Field label="Template resi">
                 <select className={inputCls} value={tplOf(r.template).id} onChange={(e) => set('template', e.target.value)}>
                   {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
@@ -442,7 +450,7 @@ export default function Resi80() {
             <p className="mb-2 text-xs text-gray-500 text-center">{r.ukuran === 'label' ? 'Label 80×100mm • PNG 576×720px' : 'Continuous 80mm • PNG lebar 576px'}</p>
             <FitPreview>
               <div ref={ref} className="w-max shadow-md mx-auto">
-                <Label r={{ ...r, logo: logo.src }} />
+                <Label r={{ ...r, logo: logo.src }} k={k} />
               </div>
             </FitPreview>
           </div>

@@ -69,9 +69,9 @@ export function useLetterFonts(g: Gaya) {
 }
 
 // ---------------- Potongan surat ----------------
-// Kop: logo opsional (kiri), nama/instansi + baris kecil (children).
-export function Kop({ g, name, nameStyle, logo, logoH = 58, children }: {
-  g: Gaya; name: ReactNode; nameStyle: CSSProperties; logo?: string; logoH?: number; children?: ReactNode;
+// Kop: logo opsional (kiri), nama/instansi + baris kecil (children). k = skala ukuran teks (slider).
+export function Kop({ g, name, nameStyle, logo, logoH = 58, k = 1, children }: {
+  g: Gaya; name: ReactNode; nameStyle: CSSProperties; logo?: string; logoH?: number; k?: number; children?: ReactNode;
 }) {
   const left = g.kop === 'left';
   const boxed = g.kop === 'boxed';
@@ -79,7 +79,7 @@ export function Kop({ g, name, nameStyle, logo, logoH = 58, children }: {
     ...nameStyle,
     fontFamily: g.head,
     color: g.accent === '#000' ? undefined : g.accent,
-    ...(g.spaced && { letterSpacing: 3, fontSize: Number(nameStyle.fontSize) - 4 }),
+    ...(g.spaced && { letterSpacing: 3 * k, fontSize: Number(nameStyle.fontSize) - 4 * k }),
   };
   return (
     <div style={{ position: 'relative', textAlign: left ? 'left' : 'center', minHeight: logo ? logoH : undefined, ...(boxed && { border: `1.5px solid ${g.accent}`, padding: '8px 10px' }) }}>
@@ -107,8 +107,8 @@ export function Rule({ g, mb }: { g: Gaya; mb: number }) {
 }
 
 // Judul surat (dibungkus div rata tengah oleh halaman)
-export function Title({ g, children }: { g: Gaya; children: ReactNode }) {
-  const base: CSSProperties = { fontWeight: 700, fontSize: 14, letterSpacing: 1, color: g.accent, fontFamily: g.head };
+export function Title({ g, k = 1, children }: { g: Gaya; k?: number; children: ReactNode }) {
+  const base: CSSProperties = { fontWeight: 700, fontSize: 14 * k, letterSpacing: 1, color: g.accent, fontFamily: g.head };
   const line = `1px solid ${g.accent}`;
   switch (g.title) {
     case 'spaced': return <div style={{ ...base, letterSpacing: 4 }}>{children}</div>;
@@ -120,15 +120,15 @@ export function Title({ g, children }: { g: Gaya; children: ReactNode }) {
         </div>
       );
     case 'bar': return <div style={{ ...base, letterSpacing: 2, borderTop: line, borderBottom: line, padding: '2px 0' }}>{children}</div>;
-    case 'plain': return <div style={{ ...base, fontSize: 16, letterSpacing: 0.5 }}>{children}</div>;
+    case 'plain': return <div style={{ ...base, fontSize: 16 * k, letterSpacing: 0.5 }}>{children}</div>;
     default: return <div style={{ ...base, textDecoration: 'underline' }}>{children}</div>;
   }
 }
 
 // Nama dokter di bawah tanda tangan
-export function SignName({ g, children }: { g: Gaya; children: ReactNode }) {
+export function SignName({ g, k = 1, children }: { g: Gaya; k?: number; children: ReactNode }) {
   if (g.sign === 'overline') {
-    return <div><span style={{ display: 'inline-block', minWidth: 150, textAlign: 'center', borderTop: '1px solid #000', paddingTop: 2, fontWeight: 700 }}>{children}</span></div>;
+    return <div><span style={{ display: 'inline-block', minWidth: 150 * k, textAlign: 'center', borderTop: '1px solid #000', paddingTop: 2, fontWeight: 700 }}>{children}</span></div>;
   }
   return <div style={{ fontWeight: 700, textDecoration: g.sign === 'plain' ? undefined : 'underline' }}>{children}</div>;
 }

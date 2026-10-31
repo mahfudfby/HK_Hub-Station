@@ -10,6 +10,7 @@ import {
   fmtTanggal, inputCls, useLetterExport, type Notify,
 } from '../../shared/components/LetterKit';
 import { Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts, type Gaya } from '../../shared/components/LetterStyles';
+import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 
 // Surat keterangan sehat (A5): hanya untuk akun admin. Kop diisi sendiri oleh dokter/klinik pemakai.
 
@@ -40,6 +41,7 @@ type Form = {
   ttd: string; // data URL, hanya di perangkat ini
   stempel: string;
   gaya: string; // id gaya surat (LetterStyles)
+  skala: number; // ukuran teks surat (%)
 };
 
 const DEFAULT: Form = {
@@ -70,6 +72,7 @@ const DEFAULT: Form = {
   ttd: '',
   stempel: '',
   gaya: 'klasik',
+  skala: 100,
 };
 
 function loadForm(): Form {
@@ -82,11 +85,11 @@ function loadForm(): Form {
 }
 
 // ---------------- Letter preview ----------------
-function DataRow({ g, label, value, unit }: { g: Gaya; label: string; value: string; unit?: string }) {
+function DataRow({ g, k, label, value, unit }: { g: Gaya; k: number; label: string; value: string; unit?: string }) {
   return (
     <div style={{ display: 'contents' }}>
-      <span style={{ minWidth: 110 + g.labelExtra }}>{label}</span>
-      <span style={{ display: 'flex', gap: 6 }}>
+      <span style={{ minWidth: (110 + g.labelExtra) * k }}>{label}</span>
+      <span style={{ display: 'flex', gap: 6 * k }}>
         <span>:</span>
         {value ? <span style={{ ...dataStyle, flex: 1, whiteSpace: 'pre-line' }}>{value}{unit && ` ${unit}`}</span> : <span style={{ flex: 1, borderBottom: DOTTED }} />}
       </span>
@@ -94,43 +97,43 @@ function DataRow({ g, label, value, unit }: { g: Gaya; label: string; value: str
   );
 }
 
-function Letter({ f }: { f: Form }) {
+function Letter({ f, k }: { f: Form; k: number }) {
   const g = getGaya(f.gaya);
   useLetterFonts(g);
-  const grid = { display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 8, rowGap: g.rowGap } as const;
+  const grid = { display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 8 * k, rowGap: g.rowGap * k } as const;
   return (
-    <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '48px 56px', background: '#fff', color: '#000', fontFamily: g.font, fontSize: g.size, lineHeight: 1.4 }}>
+    <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '48px 56px', background: '#fff', color: '#000', fontFamily: g.font, fontSize: g.size * k, lineHeight: 1.4 }}>
       {/* KOP 3 baris + logo opsional di kiri; garis pemisah & judul mengikuti gaya */}
-      <Kop g={g} logo={f.logo} name={f.instansi} nameStyle={{ fontWeight: 700, fontSize: 20, lineHeight: 1.2, letterSpacing: 0.3 }}>
-        {f.subKop && <div style={{ fontWeight: 700, fontSize: 13 }}>{f.subKop}</div>}
-        {f.alamatKop && <div style={{ fontSize: 11 }}>{f.alamatKop}</div>}
+      <Kop g={g} k={k} logo={f.logo} logoH={58 * k} name={f.instansi} nameStyle={{ fontWeight: 700, fontSize: 20 * k, lineHeight: 1.2, letterSpacing: 0.3 }}>
+        {f.subKop && <div style={{ fontWeight: 700, fontSize: 13 * k }}>{f.subKop}</div>}
+        {f.alamatKop && <div style={{ fontSize: 11 * k }}>{f.alamatKop}</div>}
       </Kop>
-      <Rule g={g} mb={12} />
-      <div style={{ textAlign: 'center', marginBottom: 10 }}>
-        <Title g={g}>{f.judul}</Title>
-        <div style={{ fontSize: 12 }}>Nomor : {f.nomor ? <span style={dataStyle}>{f.nomor}</span> : <Dots w="12em" />}</div>
+      <Rule g={g} mb={12 * k} />
+      <div style={{ textAlign: 'center', marginBottom: 10 * k }}>
+        <Title g={g} k={k}>{f.judul}</Title>
+        <div style={{ fontSize: 12 * k }}>Nomor : {f.nomor ? <span style={dataStyle}>{f.nomor}</span> : <Dots w="12em" />}</div>
       </div>
-      <p style={{ textAlign: 'justify', marginBottom: 4 }}>{f.pembuka}</p>
-      <div style={{ ...grid, marginBottom: 8 }}>
-        {f.rows.map((r, i) => <DataRow key={i} g={g} label={r.label} value={r.value} />)}
+      <p style={{ textAlign: 'justify', marginBottom: 4 * k }}>{f.pembuka}</p>
+      <div style={{ ...grid, marginBottom: 8 * k }}>
+        {f.rows.map((r, i) => <DataRow key={i} g={g} k={k} label={r.label} value={r.value} />)}
       </div>
-      <p style={{ marginBottom: 2 }}>{f.pengantarHasil}</p>
-      <p style={{ textAlign: 'justify', fontWeight: 700, marginBottom: 8 }}>“{f.hasil}”</p>
-      <p style={{ marginBottom: 2 }}>{f.pengantarKeperluan}</p>
-      <p style={{ marginBottom: 8 }}>{f.keperluan ? <span style={dataStyle}>{f.keperluan}</span> : <Dots w="100%" />}</p>
-      <div style={{ ...grid, marginBottom: 12 }}>
-        {f.ukur.map((r, i) => <DataRow key={i} g={g} label={r.label} value={r.value} unit={r.unit} />)}
+      <p style={{ marginBottom: 2 * k }}>{f.pengantarHasil}</p>
+      <p style={{ textAlign: 'justify', fontWeight: 700, marginBottom: 8 * k }}>“{f.hasil}”</p>
+      <p style={{ marginBottom: 2 * k }}>{f.pengantarKeperluan}</p>
+      <p style={{ marginBottom: 8 * k }}>{f.keperluan ? <span style={dataStyle}>{f.keperluan}</span> : <Dots w="100%" />}</p>
+      <div style={{ ...grid, marginBottom: 12 * k }}>
+        {f.ukur.map((r, i) => <DataRow key={i} g={g} k={k} label={r.label} value={r.value} unit={r.unit} />)}
       </div>
       {/* Tanggal, keterangan, tanda tangan, nama: rata kanan */}
       <div style={{ textAlign: 'right' }}>
         <div>{f.kota ? <span style={dataStyle}>{f.kota}</span> : <Dots w="6em" />}, {f.tanggal ? <span style={dataStyle}>{fmtTanggal(f.tanggal)}</span> : <Dots w="8em" />}</div>
         <div>{f.jabatan}</div>
-        <div style={{ position: 'relative', height: 76 }}>
-          {f.stempel && <img src={f.stempel} alt="Stempel" style={{ position: 'absolute', right: 70, top: 0, height: 76, opacity: 0.9, mixBlendMode: 'multiply' }} />}
-          {f.ttd && <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', right: 0, top: 6, height: 64, maxWidth: 200, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
+        <div style={{ position: 'relative', height: 76 * k }}>
+          {f.stempel && <img src={f.stempel} alt="Stempel" style={{ position: 'absolute', right: 70 * k, top: 0, height: 76 * k, opacity: 0.9, mixBlendMode: 'multiply' }} />}
+          {f.ttd && <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', right: 0, top: 6 * k, height: 64 * k, maxWidth: 200 * k, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
         </div>
-        <SignName g={g}>{f.dokter}</SignName>
-        {f.idLabel && <div style={{ fontSize: 12 }}>{f.idLabel}. {f.idNo || <Dots w="10em" />}</div>}
+        <SignName g={g} k={k}>{f.dokter}</SignName>
+        {f.idLabel && <div style={{ fontSize: 12 * k }}>{f.idLabel}. {f.idNo || <Dots w="10em" />}</div>}
       </div>
     </div>
   );
@@ -145,6 +148,8 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
   const ttd = useBgRemoved(f.ttd, bg.ttd, bgError);
   const stempel = useBgRemoved(f.stempel, bg.stempel, bgError);
   const letterRef = useRef<HTMLDivElement>(null);
+  // Ukuran teks: diperkecil otomatis bila isi tidak muat di kertas A5
+  const k = useFitScale(f.skala / 100, () => letterRef.current?.firstElementChild as HTMLElement, true, [f, logo.src, ttd.src, stempel.src]);
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
   const setRow = (i: number, value: string) => set('rows', f.rows.map((r, j) => (j === i ? { ...r, value } : r)));
   const setUkur = (i: number, value: string) => set('ukur', f.ukur.map((r, j) => (j === i ? { ...r, value } : r)));
@@ -183,6 +188,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6">
+            <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
             <StylePicker value={f.gaya} onChange={(v) => set('gaya', v)} />
             <section className="space-y-3">
               <h2 className="font-bold">Data Pasien</h2>
@@ -239,7 +245,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
 
           <FitPreview>
             <div ref={letterRef} className="w-max shadow-lg">
-              <Letter f={{ ...f, logo: logo.src, ttd: ttd.src, stempel: stempel.src }} />
+              <Letter f={{ ...f, logo: logo.src, ttd: ttd.src, stempel: stempel.src }} k={k} />
             </div>
           </FitPreview>
         </div>

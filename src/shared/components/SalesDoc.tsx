@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import FitPreview from './FitPreview';
+import { TextSizeSlider, useFitScale } from './TextScale';
 import { Toast, type ToastState } from './Feedback';
 import { ExportButton, Field, ImageUpload, inputCls, fmtTanggal, mmToPx, useLetterExport, type Notify, type Paper } from './LetterKit';
 import { useBgRemoved } from '../lib/removeBg';
@@ -106,6 +107,7 @@ type Doc = {
   landscape: boolean;
   accent: string;
   bingkai: boolean; // border kotak di tepi kertas
+  skala: number; // ukuran teks dokumen (%)
   namaFont: string; // id NAME_FONTS, '' = ikut template
   logo: string;
   penjual: string;
@@ -144,6 +146,7 @@ const makeDefault = (kind: DocKind): Doc => ({
   landscape: false,
   accent: kind === 'invoice' ? '#1d4ed8' : '#0f766e',
   bingkai: true,
+  skala: 100,
   namaFont: '',
   logo: '',
   penjual: 'NAMA USAHA ANDA',
@@ -587,9 +590,11 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
   const H = mmToPx(paper.h);
   // Huruf & margin mengikuti sisi terpendek kertas: thermal 80mm sangat kecil, A5/½ continuous kecil
   const minSide = Math.min(paper.w, paper.h);
-  const fs = minSide < 100 ? 7 : minSide < 160 ? 10 : 12;
+  // Ukuran teks: slider pengguna × dasar per kertas; otomatis diperkecil bila isi tidak muat
+  const k = useFitScale(d.skala / 100, () => ref.current?.firstElementChild as HTMLElement, true, [d, W, H]);
+  const fs = (minSide < 100 ? 7 : minSide < 160 ? 10 : 12) * k;
   // Margin tepi kertas: A4/Letter/F4/continuous ±16mm, A5/½ continuous ±10,5mm; thermal tetap rapat
-  const pad = minSide < 100 ? 10 : H < 600 ? 30 : minSide < 160 ? 40 : 60;
+  const pad = minSide < 100 ? 16 : H < 600 ? 30 : minSide < 160 ? 40 : 60; // thermal 80mm: ±4mm
   const c = calc(d);
 
   const fileName = `${L.file}-${(d.nomor || 'dokumen').replace(/[^\w-]+/g, '-').toLowerCase()}`;
@@ -619,6 +624,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             <section className="space-y-3">
               <h2 className="font-bold">Gaya &amp; Kertas</h2>
+              <TextSizeSlider value={d.skala} onChange={(v) => set('skala', v)} effective={k} />
               <Field label="Template">
                 <select className={inputCls} value={tplOf(d.template).id} onChange={(e) => set('template', e.target.value)}>
                   {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}

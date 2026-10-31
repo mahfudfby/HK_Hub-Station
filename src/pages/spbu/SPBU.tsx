@@ -5,6 +5,7 @@ import { Toast } from '../../shared/components/Feedback';
 import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
 import BgToggle from '../../shared/components/BgToggle';
+import { TextSizeSlider, useFitScale, ScaleBox } from '../../shared/components/TextScale';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ADDRESS_TEMPLATES, PRICE_TEMPLATES, PLATE_REGIONS, GENERIC_LOGOS, buildPlate, randomRegionCode, svgToDataUri, GAYA_NOTA, GAYA_NOTA_KEY } from './SPBU.templates';
 import { useGoogleFonts, cssFamily, fontsReady } from '../../shared/lib/fonts';
@@ -179,7 +180,7 @@ const INK = '#000';
 const PAPER = '#fff';
 const SEP_CHAR = { dash: '-', eq: '=', dot: '.', star: '*' };
 
-const GayaNotaReceipt = ({ g, spbu, trans, logoSrc, priceLiter, volume, total }) => {
+const GayaNotaReceipt = ({ g, spbu, trans, logoSrc, priceLiter, volume, total, k }) => {
     const fs = g.size;
     const sep = () => SEP_CHAR[g.sep]
         ? <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', lineHeight: 1.1, margin: '2px 0', letterSpacing: 0 }}>{SEP_CHAR[g.sep].repeat(120)}</div>
@@ -249,7 +250,7 @@ const GayaNotaReceipt = ({ g, spbu, trans, logoSrc, priceLiter, volume, total })
     const footerLines = (spbu.footerNote || '').split('\n');
     return (
         <div id="receipt-preview" className="text-left"
-            style={{ width: `${spbu.receiptWidth || 275}px`, padding: 8, background: PAPER, color: INK, fontFamily: cssFamily(g.font.family, g.font.fallback), fontSize: fs, lineHeight: 1.25, textTransform: g.upper ? 'uppercase' : 'none' }}>
+            style={{ width: `${spbu.receiptWidth || 275}px`, padding: 8, background: PAPER, color: INK, fontFamily: cssFamily(g.font.family, g.font.fallback), fontSize: fs, lineHeight: 1.25, textTransform: g.upper ? 'uppercase' : 'none' }}><ScaleBox k={k}>
             {g.header === 'left' ? (
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
                     <div style={{ width: '36%', flexShrink: 0, marginRight: 6 }}>{logo}</div>
@@ -287,7 +288,7 @@ const GayaNotaReceipt = ({ g, spbu, trans, logoSrc, priceLiter, volume, total })
                     <p key={`footer-${i}`} style={{ whiteSpace: 'pre-wrap', ...(g.footer === 'invert' && i === 0 && { background: INK, color: PAPER, fontWeight: 700, padding: '2px 0' }) }}>{line || ' '}</p>
                 ))}
             </div>
-        </div>
+        </ScaleBox></div>
     );
 };
 
@@ -323,6 +324,9 @@ const App = () => {
     const [gayaNota, setGayaNota] = useState(() => { try { return localStorage.getItem(GAYA_NOTA_KEY) || 'klasik'; } catch { return 'klasik'; } });
     const pilihGayaNota = (id) => { setGayaNota(id); try { localStorage.setItem(GAYA_NOTA_KEY, id); } catch { /* mode privat */ } };
     const gaya = GAYA_NOTA.find(g => g.id === gayaNota) || GAYA_NOTA[0];
+    // Ukuran teks nota (lokal per perangkat, seperti Gaya Nota)
+    const [skala, setSkala] = useState(() => { try { return Number(localStorage.getItem('spbu:skala:v1')) || 100; } catch { return 100; } });
+    const pilihSkala = (v) => { setSkala(v); try { localStorage.setItem('spbu:skala:v1', String(v)); } catch { /* mode privat */ } };
     useGoogleFonts([gaya.font.google ? gaya.font : null]);
 
     // --- EFFECT: FIREBASE INITIALIZATION & AUTH ---
@@ -674,6 +678,8 @@ const App = () => {
     // Logo yang tampil di nota (opsional tanpa background)
     const logoShown = useBgRemoved(currentSpbu.logoBase64 || FALLBACK_LOGO_URL, logoBg, (m) => displayFeedback(m, 'error'));
 
+    const k = useFitScale(skala / 100, () => document.getElementById('receipt-preview'), false, [skala, gayaNota, transactionData, currentSpbu, logoShown.src]);
+
     // Fungsi untuk membuat elemen HTML nota yang akan dicetak/di-export
     const ReceiptPreviewComponent = useCallback(() => {
         const trans = transactionData;
@@ -683,7 +689,7 @@ const App = () => {
         const priceLiter = parseFloat(trans.pricePerLiter) || 0;
 
         if (gaya.id !== 'klasik') {
-            return <GayaNotaReceipt g={gaya} spbu={spbu} trans={trans} logoSrc={logoShown.src} priceLiter={priceLiter} volume={displayVolume} total={displayPrice} />;
+            return <GayaNotaReceipt g={gaya} spbu={spbu} trans={trans} logoSrc={logoShown.src} priceLiter={priceLiter} volume={displayVolume} total={displayPrice} k={k} />;
         }
 
         // Batasi Address hanya 2 baris saat dirender
@@ -706,7 +712,7 @@ const App = () => {
             <div id="receipt-preview" 
                  style={{ width: `${spbu.receiptWidth || 275}px` }}
                  className="doc-font text-left p-2 text-black leading-tight font-sans"
-            >
+            ><ScaleBox k={k}>
                 {/* Logo Section */}
                 <div className="flex justify-center mb-1">
                     <img 
@@ -757,9 +763,9 @@ const App = () => {
                 <div className="text-center mt-2 text-base whitespace-pre-line leading-tight font-bold">
                     {footerLines}
                 </div>
-            </div>
+            </ScaleBox></div>
         );
-    }, [transactionData, currentSpbu, calculatedVolume, finalPrice, logoShown.src, gaya]);
+    }, [transactionData, currentSpbu, calculatedVolume, finalPrice, logoShown.src, gaya, k]);
 
     // --- EXPORT/PRINT LOGIC ---
 
@@ -1124,7 +1130,8 @@ const App = () => {
                         {/* Bagian Preview & Aksi */}
                         <div className="mb-6 p-4 bg-white rounded-xl shadow-2xl border-t-4 border-indigo-600">
                             <h2 className="text-xl font-bold mb-3 text-indigo-700">3. Preview & Aksi</h2>
-                            <label htmlFor="gaya-nota" className="block text-sm font-semibold text-gray-700 mb-1">Gaya Nota</label>
+                            <div className="mb-3"><TextSizeSlider value={skala} onChange={pilihSkala} effective={k} /></div>
+                            <label htmlFor="gaya-nota"className="block text-sm font-semibold text-gray-700 mb-1">Gaya Nota</label>
                             <select id="gaya-nota" aria-label="Gaya nota" value={gaya.id} onChange={(e) => pilihGayaNota(e.target.value)}
                                 className="w-full p-2 border rounded-lg bg-white mb-4">
                                 {GAYA_NOTA.map((g, i) => (

@@ -6,6 +6,7 @@ import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import { printImage } from '../../shared/lib/printImage';
 import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
 import BgToggle from '../../shared/components/BgToggle';
+import { ScaleBox, TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { cssFamily, fontsReady, useGoogleFonts } from '../../shared/lib/fonts';
 import './SlipGaji.css';
@@ -85,6 +86,7 @@ const todayLocal = () => {
 
 const buildInitialForm = () => ({
   template: 'klasik',
+  skala: 100, // ukuran teks dokumen (%)
   companyName: 'PT. Nama Perusahaan Anda',
   addressLine1: 'Jl. Contoh Raya No. 12',
   addressLine2: 'Kec. Sudirman, Jakarta Pusat',
@@ -731,7 +733,7 @@ function SlipTotals({ t, calc, A, dash }) {
   );
 }
 
-function SlipPreview({ slipRef, form, calc, logo, signature, managerSignature, t }) {
+function SlipPreview({ slipRef, form, calc, logo, signature, managerSignature, t, k }) {
   const A = t.accent || '#000';
   const dash = !!t.dash;
   const soft = t.soft || '#f3f4f6';
@@ -744,6 +746,7 @@ function SlipPreview({ slipRef, form, calc, logo, signature, managerSignature, t
         // Margin tepi kertas ±5mm atas/bawah, ±7mm kiri/kanan
         style={{ padding: '18px 26px', ...(t.font ? { fontFamily: t.font } : {}) }}
       >
+        <ScaleBox k={k}>
         <div id="payslip-content" className="text-[10px] px-1">
           <SlipHeader {...p} form={form} logo={logo} />
           <SlipTitle {...p} form={form} />
@@ -766,6 +769,7 @@ function SlipPreview({ slipRef, form, calc, logo, signature, managerSignature, t
             </div>
           </div>
         </div>
+        </ScaleBox>
       </div>
     </div>
   );
@@ -812,6 +816,7 @@ export default function SlipGaji() {
 
   const calc = useMemo(() => computeSlip(form), [form]);
   const tpl = SLIP_TEMPLATES.find((x) => x.id === form.template) || SLIP_TEMPLATES[0];
+  const k = useFitScale(form.skala / 100, () => slipRef.current, true, [form, logoShown.src, signatureShown.src, managerShown.src]);
   useGoogleFonts([tpl.gf]);
   const statusText = (STATUS_OPTIONS.find((o) => o.value === form.status) || STATUS_OPTIONS[0]).label;
 
@@ -929,6 +934,7 @@ export default function SlipGaji() {
           {/* Render — Formulir */}
           <div className="slip-card bg-white p-6 md:p-8 shadow-lg rounded-xl h-fit">
             <h2 className="text-xl font-semibold mb-6 border-b pb-2 text-gray-700">Formulir Input Data Slip Gaji</h2>
+            <div className="mb-4"><TextSizeSlider value={form.skala} onChange={(v) => setForm((prev) => ({ ...prev, skala: v }))} effective={k} /></div>
             <TemplatePicker value={tpl.id} onChange={handleChange} />
             <CompanyForm form={form} onChange={handleChange} onLogoChange={handleLogoChange} logoBg={bgProps('logo', logoShown)} />
             <EmployeeForm form={form} onChange={handleChange} statusText={statusText} />
@@ -947,7 +953,7 @@ export default function SlipGaji() {
           {/* Render — Preview Slip */}
           <div className="slip-card bg-white p-2 md:p-4 rounded-xl shadow-lg lg:col-span-1 min-w-0">
             <FitPreview>
-              <SlipPreview slipRef={slipRef} form={form} calc={calc} logo={logoShown.src} signature={signatureShown.src} managerSignature={managerShown.src} t={tpl} />
+              <SlipPreview slipRef={slipRef} form={form} calc={calc} logo={logoShown.src} signature={signatureShown.src} managerSignature={managerShown.src} t={tpl} k={k} />
             </FitPreview>
           </div>
         </div>

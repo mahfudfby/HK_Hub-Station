@@ -6,14 +6,16 @@ import { ExportButton, Field, ImageUpload, inputCls, useLetterExport, type Notif
 import { useBgRemoved } from '../lib/removeBg';
 import { num, rupiah } from '../lib/money';
 import { cssFamily, useGoogleFonts, type WebFont } from '../lib/fonts';
+import { TextSizeSlider, useFitScale } from './TextScale';
 
 // Nota pembelian untuk printer thermal 58mm / 80mm.
 // Lebar nota × skala 2 = lebar titik cetak printer: 58mm → 192px → PNG 384px (±32 karakter/baris),
 // 80mm → 288px → PNG 576px (±42 karakter/baris). Cocok untuk RawBT dll.
 export type ThermalWidth = 58 | 80;
-export const THERMAL: Record<ThermalWidth, { px: number; font: number; logoW: number }> = {
-  58: { px: 192, font: 10, logoW: 120 },
-  80: { px: 288, font: 13, logoW: 200 }, // 80mm: huruf lebih besar agar nota terlihat penuh
+// pad = [atas, kiri/kanan, bawah] dalam px
+export const THERMAL: Record<ThermalWidth, { px: number; font: number; logoW: number; pad: [number, number, number] }> = {
+  58: { px: 192, font: 10, logoW: 120, pad: [8, 6, 14] },
+  80: { px: 288, font: 13, logoW: 200, pad: [14, 16, 20] }, // 80mm: huruf lebih besar + margin putih lebih lega
 };
 
 type Item = { nama: string; qty: string; harga: string };
@@ -37,6 +39,7 @@ type Nota = {
   bayar: string;
   footer: string;
   template: string; // id di TEMPLATES
+  skala: number; // ukuran teks nota (%)
 };
 
 const nowLocal = () => {
@@ -67,6 +70,7 @@ const DEFAULT: Nota = {
   bayar: '100000',
   footer: 'Terima kasih atas kunjungan Anda\nBarang yang sudah dibeli tidak dapat ditukar/dikembalikan',
   template: 'klasik',
+  skala: 100,
 };
 
 // total = jumlah harga produk; pajak % dari total; diskon % dari total atau nominal; bayarTotal = akhir
@@ -154,7 +158,7 @@ const Line = ({ k }: { k: Sep }) =>
     : <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', lineHeight: 1, margin: '3px 0' }}>{(k === 'eq' ? '=' : '*').repeat(90)}</div>;
 const Row = ({ l, r, bold }: { l: string; r: string; bold?: boolean }) => (
   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, fontWeight: bold ? 700 : 400 }}>
-    <span>{l}</span>
+    <span style={{ minWidth: 0 }}>{l}</span>
     <span style={{ whiteSpace: 'nowrap' }}>{r}</span>
   </div>
 );
@@ -171,14 +175,16 @@ const BAR: Record<string, CSSProperties> = {
   double: { borderTop: '3px double #000', borderBottom: '3px double #000', padding: '2px 0' },
 };
 
-function Receipt({ n, mm }: { n: Nota; mm: ThermalWidth }) {
+function Receipt({ n, mm, k }: { n: Nota; mm: ThermalWidth; k: number }) {
   const T = THERMAL[mm];
   const c = calc(n);
   const t = tplOf(n.template);
-  const f = T.font + (t.size ?? 0);
+  const base = T.font + (t.size ?? 0);
+  const f = base * k; // lebar nota tetap, hanya huruf yang ikut skala
+  const logoW = Math.min(T.logoW * k, T.px - 2 * T.pad[1]); // logo tidak boleh lebih lebar dari area isi
   const line = <Line k={t.sep} />;
   const nameStyle: CSSProperties = {
-    fontWeight: 700, fontSize: f + 2, fontFamily: t.headFont,
+    fontWeight: 700, fontSize: (base + 2) * k, fontFamily: t.headFont,
     ...(t.head === 'invert' || t.head === 'box' ? { ...BAR[t.head], marginBottom: 3 } : {}),
     ...(t.head === 'double' ? { display: 'inline-block', borderBottom: '3px double #000', paddingBottom: 1, marginBottom: 3 } : {}),
     ...(t.head === 'spaced' ? { letterSpacing: 2 } : {}),
@@ -195,15 +201,15 @@ function Receipt({ n, mm }: { n: Nota; mm: ThermalWidth }) {
   if (n.pelanggan) meta.push(['Plg', n.pelanggan]);
   const nameCls: CSSProperties = { fontWeight: t.nameBold ? 700 : 400 };
   return (
-    <div style={{ width: T.px, boxSizing: 'border-box', padding: '8px 6px 14px', background: '#fff', color: '#000', fontFamily: t.font, fontSize: f, lineHeight: 1.35, wordBreak: 'break-word' }}>
+    <div style={{ width: T.px, boxSizing: 'border-box', padding: `${T.pad[0]}px ${T.pad[1]}px ${T.pad[2]}px`, background: '#fff', color: '#000', fontFamily: t.font, fontSize: f, lineHeight: 1.35, wordBreak: 'break-word' }}>
       {t.head === 'left' ? (
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          {n.logo && <img src={n.logo} alt="Logo" style={{ flexShrink: 0, maxHeight: T.logoW * 0.4, maxWidth: T.logoW * 0.35, objectFit: 'contain' }} />}
+          {n.logo && <img src={n.logo} alt="Logo" style={{ flexShrink: 0, maxHeight: logoW * 0.4, maxWidth: logoW * 0.35, objectFit: 'contain' }} />}
           <div style={{ minWidth: 0 }}>{name}{info}</div>
         </div>
       ) : (
         <div style={{ textAlign: 'center' }}>
-          {n.logo && <img src={n.logo} alt="Logo" style={{ display: 'block', margin: '0 auto 4px', maxHeight: T.logoW * 0.4, maxWidth: T.logoW, objectFit: 'contain' }} />}
+          {n.logo && <img src={n.logo} alt="Logo" style={{ display: 'block', margin: '0 auto 4px', maxHeight: logoW * 0.4, maxWidth: logoW, objectFit: 'contain' }} />}
           {name}
           {info}
         </div>
@@ -242,10 +248,10 @@ function Receipt({ n, mm }: { n: Nota; mm: ThermalWidth }) {
       {t.total === 'big' ? (
         <div style={{ fontWeight: 700 }}>
           <div>TOTAL PEMBAYARAN</div>
-          <div style={{ fontSize: f + 6, lineHeight: 1.2, textAlign: 'right' }}>{rupiah(c.bayarTotal)}</div>
+          <div style={{ fontSize: (base + 6) * k, lineHeight: 1.2, textAlign: 'right' }}>{rupiah(c.bayarTotal)}</div>
         </div>
       ) : (
-        <div style={{ fontSize: f + 2, ...BAR[t.total] }}><Row l="TOTAL PEMBAYARAN" r={rupiah(c.bayarTotal)} bold /></div>
+        <div style={{ fontSize: (base + 2) * k, ...BAR[t.total] }}><Row l="TOTAL PEMBAYARAN" r={rupiah(c.bayarTotal)} bold /></div>
       )}
       {line}
       <Row l="Metode Bayar" r={n.metode} />
@@ -290,6 +296,8 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
   const ref = useRef<HTMLDivElement>(null);
   const tpl = tplOf(n.template);
   useGoogleFonts([tpl.web, tpl.headWeb]);
+  // Kertas gulung: tinggi bebas, skala hanya diturunkan bila isi lebih lebar dari kertas
+  const k = useFitScale(n.skala / 100, () => ref.current?.firstElementChild as HTMLElement, false, [n, mm, logo.src]);
 
   useEffect(() => {
     try {
@@ -329,6 +337,7 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
+            <TextSizeSlider value={n.skala} onChange={(v) => set('skala', v)} effective={k} />
             <Field label="Template nota">
               <select className={inputCls} value={tpl.id} onChange={(e) => set('template', e.target.value)}>
                 {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
@@ -404,7 +413,7 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
             <p className="mb-2 text-xs text-gray-500 text-center">Lebar asli {mm}mm • PNG {T.px * 2}px untuk printer thermal</p>
             <FitPreview>
               <div ref={ref} className="w-max shadow-md mx-auto">
-                <Receipt n={{ ...n, logo: logo.src }} mm={mm} />
+                <Receipt n={{ ...n, logo: logo.src }} mm={mm} k={k} />
               </div>
             </FitPreview>
           </div>

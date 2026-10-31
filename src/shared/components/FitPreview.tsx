@@ -69,6 +69,8 @@ export default function FitPreview({ children }: { children: ReactNode }) {
 }
 
 // html2canvas onclone: lepas skala preview supaya file export berukuran kertas asli.
+// Bayangan (box-shadow) hanya hiasan preview; html2canvas menggambarnya sebagai blok abu-abu, jadi dibuang.
 export function unfitPreview(doc: Document) {
   doc.querySelectorAll<HTMLElement>('[data-fit-preview]').forEach((el) => (el.style.transform = 'none'));
+  doc.querySelectorAll<HTMLElement>('[data-fit-preview] *').forEach((el) => (el.style.boxShadow = 'none'));
 }

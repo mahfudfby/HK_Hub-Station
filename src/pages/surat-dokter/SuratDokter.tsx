@@ -10,6 +10,7 @@ import {
   fmtTanggal, inputCls, orDots, useLetterExport, type Notify,
 } from '../../shared/components/LetterKit';
 import { Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts } from '../../shared/components/LetterStyles';
+import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 
 // Surat keterangan dokter: hanya untuk akun admin (login lewat tombol mengambang / halaman /login).
 
@@ -39,6 +40,7 @@ type Form = {
   ttd: string; // data URL, hanya di perangkat ini
   stempel: string;
   gaya: string; // id gaya surat (LetterStyles)
+  skala: number; // ukuran teks surat (%)
 };
 
 const DEFAULT: Form = {
@@ -64,6 +66,7 @@ const DEFAULT: Form = {
   ttd: '',
   stempel: '',
   gaya: 'klasik',
+  skala: 100,
 };
 
 const SATUAN = ['nol', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'];
@@ -95,7 +98,7 @@ function loadForm(): Form {
 }
 
 // ---------------- Letter preview ----------------
-function Letter({ f }: { f: Form }) {
+function Letter({ f, k }: { f: Form; k: number }) {
   const g = getGaya(f.gaya);
   useLetterFonts(g);
   const hari = parseInt(f.hari, 10);
@@ -125,43 +128,43 @@ function Letter({ f }: { f: Form }) {
   const alamat = [[f.alamat1, f.alamat2].filter(Boolean).join(', '), f.telp && `Telp. ${f.telp}`].filter(Boolean).join('  •  ');
 
   return (
-    <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '48px 56px', background: '#fff', color: '#000', fontFamily: g.font, fontSize: g.size, lineHeight: 1.4 }}>
+    <div style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', boxSizing: 'border-box', padding: '48px 56px', background: '#fff', color: '#000', fontFamily: g.font, fontSize: g.size * k, lineHeight: 1.4 }}>
       {/* KOP 3 baris; garis pemisah & judul mengikuti gaya (klasik: garis tebal + tipis, judul bergaris bawah) */}
-      <Kop g={g} name={f.nama} nameStyle={{ fontWeight: 700, fontSize: 24, lineHeight: 1.15, letterSpacing: 0.5 }}>
-        <div style={{ fontSize: 11, lineHeight: 1.35, marginTop: 2 }}>
+      <Kop g={g} k={k} name={f.nama} nameStyle={{ fontWeight: 700, fontSize: 24 * k, lineHeight: 1.15, letterSpacing: 0.5 }}>
+        <div style={{ fontSize: 11 * k, lineHeight: 1.35, marginTop: 2 * k }}>
           {[izin, alamat].filter(Boolean).map((line, i) => <div key={i}>{line}</div>)}
         </div>
       </Kop>
-      <Rule g={g} mb={14} />
-      <div style={{ textAlign: 'center', marginBottom: 10 }}><Title g={g}>{f.judul}</Title></div>
-      <p style={{ marginBottom: 4 }}>{f.pembuka}</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 8, rowGap: g.rowGap, marginBottom: 8 }}>
+      <Rule g={g} mb={14 * k} />
+      <div style={{ textAlign: 'center', marginBottom: 10 * k }}><Title g={g} k={k}>{f.judul}</Title></div>
+      <p style={{ marginBottom: 4 * k }}>{f.pembuka}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 8 * k, rowGap: g.rowGap * k, marginBottom: 8 * k }}>
         {f.rows.map((r, i) => (
           <div key={i} style={{ display: 'contents' }}>
-            <span style={{ minWidth: 96 + g.labelExtra }}>{r.label}</span>
-            <span style={{ display: 'flex', gap: 6 }}>
+            <span style={{ minWidth: (96 + g.labelExtra) * k }}>{r.label}</span>
+            <span style={{ display: 'flex', gap: 6 * k }}>
               <span>:</span>
               {r.value ? <span style={{ ...data, flex: 1, whiteSpace: 'pre-line' }}>{r.value}</span> : <span style={{ flex: 1, borderBottom: DOTTED }} />}
             </span>
           </div>
         ))}
       </div>
-      <p style={{ textAlign: 'justify', marginBottom: 4 }}>{isi}</p>
-      <p style={{ textAlign: 'justify', marginBottom: 4 }}>{f.penutup}</p>
-      <p style={{ fontSize: 11, marginBottom: 14 }}>{f.catatan}</p>
+      <p style={{ textAlign: 'justify', marginBottom: 4 * k }}>{isi}</p>
+      <p style={{ textAlign: 'justify', marginBottom: 4 * k }}>{f.penutup}</p>
+      <p style={{ fontSize: 11 * k, marginBottom: 14 * k }}>{f.catatan}</p>
       {/* Tanggal, keterangan, tanda tangan, nama: rata kanan */}
       <div style={{ textAlign: 'right' }}>
         <div>{f.kota && <span style={data}>{f.kota}</span>}, {f.tanggal ? <span style={data}>{fmtTanggal(f.tanggal)}</span> : <Dots w="8em" />}</div>
         <div>{f.jabatan}</div>
-        <div style={{ position: 'relative', height: 80 }}>
+        <div style={{ position: 'relative', height: 80 * k }}>
           {f.stempel && (
-            <img src={f.stempel} alt="Stempel" style={{ position: 'absolute', right: 70, top: 0, height: 80, opacity: 0.9, mixBlendMode: 'multiply' }} />
+            <img src={f.stempel} alt="Stempel" style={{ position: 'absolute', right: 70 * k, top: 0, height: 80 * k, opacity: 0.9, mixBlendMode: 'multiply' }} />
           )}
           {f.ttd && (
-            <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', right: 0, top: 6, height: 68, maxWidth: 200, objectFit: 'contain', mixBlendMode: 'multiply' }} />
+            <img src={f.ttd} alt="Tanda tangan" style={{ position: 'absolute', right: 0, top: 6 * k, height: 68 * k, maxWidth: 200 * k, objectFit: 'contain', mixBlendMode: 'multiply' }} />
           )}
         </div>
-        <SignName g={g}>{f.nama}</SignName>
+        <SignName g={g} k={k}>{f.nama}</SignName>
       </div>
     </div>
   );
@@ -175,6 +178,8 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
   const ttd = useBgRemoved(f.ttd, bg.ttd, bgError);
   const stempel = useBgRemoved(f.stempel, bg.stempel, bgError);
   const letterRef = useRef<HTMLDivElement>(null);
+  // Ukuran teks: diperkecil otomatis bila isi tidak muat di kertas A5
+  const k = useFitScale(f.skala / 100, () => letterRef.current?.firstElementChild as HTMLElement, true, [f, ttd.src, stempel.src]);
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
   // Ubah tanggal istirahat: jumlah hari ikut dihitung otomatis
   const setTanggal = (k: 'mulai' | 'sampai', v: string) =>
@@ -221,6 +226,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6">
+            <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
             <StylePicker value={f.gaya} onChange={(v) => set('gaya', v)} />
             <section className="space-y-3">
               <h2 className="font-bold">Data Pasien</h2>
@@ -295,7 +301,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
 
           <FitPreview>
             <div ref={letterRef} className="w-max shadow-lg">
-              <Letter f={{ ...f, ttd: ttd.src, stempel: stempel.src }} />
+              <Letter f={{ ...f, ttd: ttd.src, stempel: stempel.src }} k={k} />
             </div>
           </FitPreview>
         </div>
