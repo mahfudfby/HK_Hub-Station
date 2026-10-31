@@ -625,6 +625,11 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
       </select>
     </Field>
   );
+  const accentField = (
+    <Field label="Warna aksen">
+      <input type="color" aria-label="Warna aksen" className="h-[42px] w-full rounded-lg border border-gray-300 p-1" value={d.accent} onChange={(e) => set('accent', e.target.value)} />
+    </Field>
+  );
   const orientButtons = (
     <div className="flex gap-2" role="radiogroup" aria-label="Orientasi">
       <button type="button" role="radio" aria-checked={!d.landscape} disabled={base.fixed} onClick={() => set('landscape', false)} className={`${seg(!d.landscape || !!base.fixed)} flex-1 disabled:opacity-50`}>Vertikal</button>
@@ -656,9 +661,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 min-h-[44px] sm:col-span-3">
                   <input type="checkbox" className="h-5 w-5" checked={d.bingkai} onChange={(e) => set('bingkai', e.target.checked)} /> Bingkai kotak di tepi kertas
                 </label>
-                <Field label="Warna aksen">
-                  <input type="color" className="h-[42px] w-full rounded-lg border border-gray-300 p-1" value={d.accent} onChange={(e) => set('accent', e.target.value)} />
-                </Field>
+                <div className="hidden lg:block">{accentField}</div>
               </div>
             </section>
 
@@ -768,6 +771,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
         <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">
           {paperField}
           {orientButtons}
+          {accentField}
           <Field label="Template">
             <select className={inputCls} value={tplOf(d.template).id} onChange={(e) => set('template', e.target.value)}>
               {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
