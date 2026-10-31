@@ -30,14 +30,15 @@ type Form = {
   pembuka: string;
   rows: Row[];
   isi: string; // kalimat hasil bila SAKIT
-  isiSehat: string; // kalimat hasil bila SEHAT
+  isiSehat: string; // kalimat hasil bila SEHAT (terkunci, tidak bisa diedit)
+  hasilSehat: string; // isi hasil, mis. "SEHAT secara jasmani dan rohani"
   diagnosa: string;
   status: 'SAKIT' | 'SEHAT';
   hari: string;
   mulai: string;
   sampai: string;
   penutup: string; // penutup bila SAKIT
-  penutupSehat: string; // penutup bila SEHAT ({tujuan} = tujuan penggunaan)
+  penutupSehat: string; // penutup bila SEHAT (terkunci; {tujuan} diisi dari kolom Tujuan)
   tujuan: string;
   catatan: string;
   kota: string;
@@ -63,6 +64,7 @@ const DEFAULT: Form = {
   rows: ['Nama', 'Jenis Kelamin', 'Umur', 'Pekerjaan', 'Alamat'].map((label) => ({ label, value: '' })),
   isi: 'Setelah dilakukan pemeriksaan, yang bersangkutan didiagnosa menderita penyakit {diagnosa} dan perlu istirahat selama {hari} hari ({terbilang}) sejak tanggal {mulai} s/d {sampai}.',
   isiSehat: 'Setelah dilakukan pemeriksaan, yang bersangkutan dinyatakan {sehat}.',
+  hasilSehat: 'SEHAT secara jasmani dan rohani',
   diagnosa: '',
   status: 'SAKIT',
   hari: '',
@@ -107,7 +109,9 @@ function loadForm(): Form {
     delete saved.namaTtd; // dulu ada isian nama penanda tangan; sekarang selalu nama dokter
     if (saved.isi === 'Setelah dilakukan pemeriksaan dinyatakan {status}*) dan memerlukan istirahat selama {hari} hari ({terbilang}) sejak tanggal {mulai} s/d {sampai}') delete saved.isi; // kalimat bawaan lama → kalimat diagnosa baru
     if (saved.catatan === '*) Coret yang tidak perlu') delete saved.catatan;
-    if (saved.penutupSehat === 'Untuk dipergunakan sebagai kelengkapan administrasi : {tujuan}.') delete saved.penutupSehat;
+    // Narasi SEHAT dikunci (dulu bisa diedit & membingungkan): selalu pakai kalimat baku
+    delete saved.isiSehat;
+    delete saved.penutupSehat;
     return { ...DEFAULT, ...saved };
   } catch {
     return DEFAULT;
@@ -132,7 +136,7 @@ function Letter({ f, k }: { f: Form; k: number }) {
   const tokens: Record<string, ReactNode> = {
     status,
     diagnosa: orDots(f.diagnosa, '12em'),
-    sehat: <strong>SEHAT secara jasmani dan rohani</strong>,
+    sehat: f.hasilSehat ? <strong>{f.hasilSehat}</strong> : <Dots w="12em" />,
     tujuan: (
       <span style={{ display: 'block', textAlign: 'center', marginTop: 4 * k, fontWeight: 700, fontStyle: 'italic', fontSize: '1.45em', lineHeight: 1.3 }}>
         {f.tujuan || <Dots w="14em" />}
@@ -307,15 +311,16 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
               </Field>
               </>)}
               {f.status === 'SEHAT' && (<>
+                <Field label="Hasil pemeriksaan">
+                  <AutoTextarea className={inputCls} value={f.hasilSehat} onChange={(e) => set('hasilSehat', e.target.value)} placeholder="mis. SEHAT secara jasmani dan rohani" />
+                </Field>
                 <Field label="Tujuan penggunaan surat">
                   <AutoTextarea className={inputCls} value={f.tujuan} onChange={(e) => set('tujuan', e.target.value)} placeholder="mis. Melamar pekerjaan, Pendaftaran sekolah" />
                 </Field>
-                <Field label="Kalimat hasil SEHAT (penanda: {sehat})">
-                  <AutoTextarea rows={2} className={inputCls} value={f.isiSehat} onChange={(e) => set('isiSehat', e.target.value)} />
-                </Field>
-                <Field label="Kalimat penutup SEHAT (penanda: {tujuan})">
-                  <AutoTextarea rows={2} className={inputCls} value={f.penutupSehat} onChange={(e) => set('penutupSehat', e.target.value)} />
-                </Field>
+                <p className="rounded-lg bg-gray-100 p-3 text-sm text-gray-700">
+                  Kalimat di surat sudah baku: “Setelah dilakukan pemeriksaan, yang bersangkutan dinyatakan <b>{f.hasilSehat || '…'}</b>.
+                  Untuk dipergunakan sebagai kelengkapan administrasi : <b>{f.tujuan || '…'}</b>”
+                </p>
               </>)}
             </section>
 
