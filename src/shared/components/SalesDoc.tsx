@@ -625,6 +625,14 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
       </select>
     </Field>
   );
+  const fontField = (
+    <Field label="Font nama usaha (tebal)">
+      <select className={inputCls} value={d.namaFont} onChange={(e) => set('namaFont', e.target.value)}>
+        <option value="">Bawaan template</option>
+        {NAME_FONTS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+      </select>
+    </Field>
+  );
   const accentField = (
     <Field label="Warna aksen">
       <input type="color" aria-label="Warna aksen" className="h-[42px] w-full rounded-lg border border-gray-300 p-1" value={d.accent} onChange={(e) => set('accent', e.target.value)} />
@@ -647,7 +655,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             <section className="space-y-3">
               <h2 className="font-bold">Gaya &amp; Kertas</h2>
-              <TextSizeSlider value={d.skala} onChange={(v) => set('skala', v)} effective={k} />
+              <div className="hidden lg:block"><TextSizeSlider value={d.skala} onChange={(v) => set('skala', v)} effective={k} /></div>
               <div className="hidden lg:block">
               <Field label="Template">
                 <select className={inputCls} value={tplOf(d.template).id} onChange={(e) => set('template', e.target.value)}>
@@ -668,12 +676,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
             <section className="space-y-3">
               <h2 className="font-bold">Penjual</h2>
               {txt('penjual', 'Nama usaha')}
-              <Field label="Font nama usaha (tebal)">
-                <select className={inputCls} value={d.namaFont} onChange={(e) => set('namaFont', e.target.value)}>
-                  <option value="">Bawaan template</option>
-                  {NAME_FONTS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
-                </select>
-              </Field>
+              <div className="hidden lg:block">{fontField}</div>
               {txt('penjualAlamat', 'Alamat', 2)}
               <div className="grid sm:grid-cols-2 gap-2">
                 {txt('penjualKontak', 'Telepon / email')}
@@ -767,11 +770,13 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
           </FitPreview>
         </div>
 
-        {/* Ponsel: pilihan template di paling bawah, dekat tombol unduh */}
+        {/* Ponsel: ukuran teks & pilihan di paling bawah, dekat tombol unduh */}
         <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">
+          <TextSizeSlider value={d.skala} onChange={(v) => set('skala', v)} effective={k} />
           {paperField}
           {orientButtons}
           {accentField}
+          {fontField}
           <Field label="Template">
             <select className={inputCls} value={tplOf(d.template).id} onChange={(e) => set('template', e.target.value)}>
               {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}

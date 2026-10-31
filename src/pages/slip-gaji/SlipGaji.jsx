@@ -5,6 +5,7 @@ import { uploadImage } from '../../shared/lib/cloudinary';
 import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import { printImage } from '../../shared/lib/printImage';
 import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
+import { isStaleChunkError, reloadForNewVersion } from '../../shared/lib/staleChunk';
 import BgToggle from '../../shared/components/BgToggle';
 import { ScaleBox, TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import { useBgRemoved } from '../../shared/lib/removeBg';
@@ -894,6 +895,7 @@ export default function SlipGaji() {
       await printImage(canvas.toDataURL('image/png'), slipFileName(), { w: '9.5in', h: '5.5in' });
       pushToast('success', 'Jendela cetak dibuka.');
     } catch (error) {
+      if (isStaleChunkError(error) && reloadForNewVersion()) return pushToast('success', 'Aplikasi baru saja diperbarui. Memuat ulang… lalu coba lagi.');
       pushToast('error', `Gagal mencetak slip gaji: ${error && error.message ? error.message : 'proses render gambar gagal.'}`);
     } finally {
       setPrinting(false);
@@ -910,6 +912,7 @@ export default function SlipGaji() {
       saveFile(await canvasToBlob(canvas), fileName);
       pushToast('success', `Slip gaji diekspor sebagai ${fileName}.`);
     } catch (error) {
+      if (isStaleChunkError(error) && reloadForNewVersion()) return pushToast('success', 'Aplikasi baru saja diperbarui. Memuat ulang… lalu coba lagi.');
       console.error('Error saat ekspor:', error);
       pushToast('error', `Gagal mengekspor slip gaji: ${error && error.message ? error.message : 'proses render gambar gagal.'}`);
     } finally {
@@ -934,7 +937,7 @@ export default function SlipGaji() {
           {/* Render — Formulir */}
           <div className="slip-card bg-white p-6 md:p-8 shadow-lg rounded-xl h-fit">
             <h2 className="text-xl font-semibold mb-6 border-b pb-2 text-gray-700">Formulir Input Data Slip Gaji</h2>
-            <div className="mb-4"><TextSizeSlider value={form.skala} onChange={(v) => setForm((prev) => ({ ...prev, skala: v }))} effective={k} /></div>
+            <div className="hidden lg:block"><div className="mb-4"><TextSizeSlider value={form.skala} onChange={(v) => setForm((prev) => ({ ...prev, skala: v }))} effective={k} /></div></div>
             <div className="hidden lg:block">
             <TemplatePicker value={tpl.id} onChange={handleChange} />
             </div>
@@ -960,8 +963,9 @@ export default function SlipGaji() {
           </div>
         </div>
 
-        {/* Ponsel: pilihan template di paling bawah, dekat tombol unduh */}
-        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow">
+        {/* Ponsel: ukuran teks & pilihan di paling bawah, dekat tombol unduh */}
+        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">
+          <TextSizeSlider value={form.skala} onChange={(v) => setForm((prev) => ({ ...prev, skala: v }))} effective={k} />
           <TemplatePicker id="inputTemplateMobile" value={tpl.id} onChange={handleChange} />
         </div>
 

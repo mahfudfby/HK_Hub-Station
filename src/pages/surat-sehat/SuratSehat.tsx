@@ -188,7 +188,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6">
-            <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
+            <div className="hidden lg:block"><TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} /></div>
             <div className="hidden lg:block">
             <StylePicker value={f.gaya} onChange={(v) => set('gaya', v)} />
             </div>
@@ -252,8 +252,9 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
           </FitPreview>
         </div>
 
-        {/* Ponsel: pilihan template di paling bawah, dekat tombol unduh */}
-        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow">
+        {/* Ponsel: ukuran teks & pilihan di paling bawah, dekat tombol unduh */}
+        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">
+          <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
           <StylePicker value={f.gaya} onChange={(v) => set('gaya', v)} />
         </div>
 

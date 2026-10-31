@@ -1130,7 +1130,7 @@ const App = () => {
                         {/* Bagian Preview & Aksi */}
                         <div className="mb-6 p-4 bg-white rounded-xl shadow-2xl border-t-4 border-indigo-600">
                             <h2 className="text-xl font-bold mb-3 text-indigo-700">3. Preview & Aksi</h2>
-                            <div className="mb-3"><TextSizeSlider value={skala} onChange={pilihSkala} effective={k} /></div>
+                            <div className="hidden lg:block"><div className="mb-3"><TextSizeSlider value={skala} onChange={pilihSkala} effective={k} /></div></div>
                             <div className="hidden lg:block">
                             <label htmlFor="gaya-nota"className="block text-sm font-semibold text-gray-700 mb-1">Gaya Nota</label>
                             <select id="gaya-nota" aria-label="Gaya nota" value={gaya.id} onChange={(e) => pilihGayaNota(e.target.value)}
@@ -1143,8 +1143,9 @@ const App = () => {
                             <div className="bg-gray-100 border border-dashed p-4">
                                 <FitPreview>{ReceiptPreviewComponent()}</FitPreview>
                             </div>
-                            {/* Ponsel: pilihan template di paling bawah, dekat tombol unduh */}
-                            <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow">
+                            {/* Ponsel: ukuran teks & pilihan di paling bawah, dekat tombol unduh */}
+                            <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">
+                              <TextSizeSlider value={skala} onChange={pilihSkala} effective={k} />
                               <label htmlFor="gaya-nota-hp"className="block text-sm font-semibold text-gray-700 mb-1">Gaya Nota</label>
                               <select id="gaya-nota-hp" aria-label="Gaya nota" value={gaya.id} onChange={(e) => pilihGayaNota(e.target.value)}
                                   className="w-full p-2 border rounded-lg bg-white mb-4">

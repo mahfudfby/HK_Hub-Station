@@ -5,6 +5,7 @@ import { unfitPreview } from './FitPreview';
 import { canvasToBlob, saveFile } from '../lib/saveFile';
 import { printImage } from '../lib/printImage';
 import { fontsReady } from '../lib/fonts';
+import { isStaleChunkError, reloadForNewVersion } from '../lib/staleChunk';
 
 // Bahan bersama surat dokter (A5): ukuran halaman, font, isian data, form, dan ekspor PDF/PNG/Print.
 
@@ -117,6 +118,10 @@ export function useLetterExport(getPage: () => HTMLElement, fileName: string, no
       await exportPage(page, kind, fileName, typeof paper === 'function' ? paper(page) : paper, scale);
       notify('success', kind === 'Print' ? 'Jendela cetak dibuka.' : `${fileName}.${kind.toLowerCase()} berhasil diunduh.`);
     } catch (err: any) {
+      if (isStaleChunkError(err) && reloadForNewVersion()) {
+        notify('info', 'Aplikasi baru saja diperbarui. Memuat ulang… lalu tekan Unduh sekali lagi.');
+        return;
+      }
       notify('error', `Gagal ${kind === 'Print' ? 'mencetak' : `membuat ${kind}`}: ${err?.message || 'proses render gagal.'}`);
     } finally {
       setExporting('');

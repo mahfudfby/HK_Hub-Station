@@ -337,7 +337,7 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
-            <TextSizeSlider value={n.skala} onChange={(v) => set('skala', v)} effective={k} />
+            <div className="hidden lg:block"><TextSizeSlider value={n.skala} onChange={(v) => set('skala', v)} effective={k} /></div>
             <div className="hidden lg:block">
             <Field label="Template nota">
               <select className={inputCls} value={tpl.id} onChange={(e) => set('template', e.target.value)}>
@@ -421,8 +421,9 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
           </div>
         </div>
 
-        {/* Ponsel: pilihan template di paling bawah, dekat tombol unduh */}
-        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow">
+        {/* Ponsel: ukuran teks & pilihan di paling bawah, dekat tombol unduh */}
+        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">
+          <TextSizeSlider value={n.skala} onChange={(v) => set('skala', v)} effective={k} />
           <Field label="Template nota">
             <select className={inputCls} value={tpl.id} onChange={(e) => set('template', e.target.value)}>
               {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
