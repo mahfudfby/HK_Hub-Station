@@ -6,6 +6,7 @@ import { lazy } from 'react';
 // title/desc dipakai otomatis oleh halaman Home (kartu Linktree). Tanpa title = tidak tampil di Home.
 export const routes = [
   { path: '/', component: lazy(() => import('../pages/home')) },
+  { path: '/login', component: lazy(() => import('../pages/login')) },
   {
     path: '/spbu/*', // wildcard: menu internal (/spbu/edit, /spbu/baru) ditangani di dalam SPA
     component: lazy(() => import('../pages/spbu')),

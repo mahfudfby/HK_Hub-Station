@@ -1,24 +1,23 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
-import { firebaseConfig } from '../../shared/lib/firebase';
+import type { User } from 'firebase/auth';
+import RequireLogin from '../../shared/components/RequireLogin';
 import { Spinner, Toast, type ToastState, type ToastType } from '../../shared/components/Feedback';
 
 type Notify = (type: ToastType, message: string) => void;
 
-// Surat keterangan dokter: hanya untuk dokter pemilik akun (login email/password dari Firebase Console).
-// Named app agar tidak bentrok dengan initializeApp() default milik halaman SPBU.
-const APP_NAME = 'surat-dokter';
-const app = getApps().find((a) => a.name === APP_NAME) ?? initializeApp(firebaseConfig, APP_NAME);
-const auth = getAuth(app);
+// Surat keterangan dokter: hanya untuk akun admin (login lewat tombol mengambang / halaman /login).
 
 const STORAGE_KEY = 'surat-dokter:v1';
 
 type Row = { label: string; value: string };
 type Form = {
   nama: string;
-  kop: string;
+  sip: string;
+  str: string;
+  alamat1: string;
+  alamat2: string;
+  telp: string;
   judul: string;
   pembuka: string;
   rows: Row[];
@@ -39,7 +38,11 @@ type Form = {
 
 const DEFAULT: Form = {
   nama: 'dr. TENA, DJ',
-  kop: 'SIP : 446.1/0434.1/Pu Kes-3/VI/2011\nSTR : 312/1001060/4226\nBumi Nasio Indah B 10/7 RT.009/0015\nKel. Jati Mekar – Bekasi\nTelp. 021 – 8475534',
+  sip: '446.1/0434.1/Pu Kes-3/VI/2011',
+  str: '312/1001060/4226',
+  alamat1: 'Bumi Nasio Indah B 10/7 RT.009/0015',
+  alamat2: 'Kel. Jati Mekar – Bekasi',
+  telp: '021 – 8475534',
   judul: 'SURAT KETERANGAN',
   pembuka: 'Bersama dengan surat ini saya terangkan bahwa :',
   rows: ['Nama', 'Jenis Kelamin', 'Umur', 'Pekerjaan', 'Alamat'].map((label) => ({ label, value: '' })),
@@ -82,61 +85,6 @@ function loadForm(): Form {
   } catch {
     return DEFAULT;
   }
-}
-
-// ---------------- Login ----------------
-function Login({ notify }: { notify: Notify }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    setError('');
-    notify('loading', 'Sedang masuk…');
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      notify('success', 'Login berhasil.');
-    } catch (err: any) {
-      const code = err?.code || '';
-      const text =
-        code === 'auth/operation-not-allowed' || code === 'auth/admin-restricted-operation'
-          ? 'Login email/password belum diaktifkan di Firebase Console.'
-          : code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found'
-            ? 'Email atau password salah.'
-            : `Login gagal: ${err?.message || code}`;
-      setError(text);
-      notify('error', text);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-      <form onSubmit={submit} className="w-full max-w-sm bg-white rounded-2xl shadow p-6 space-y-4">
-        <Link to="/" className="text-sm text-blue-700">&larr; Kembali ke HK Hub Station</Link>
-        <h1 className="text-xl font-bold">Surat Keterangan Dokter</h1>
-        <p className="text-sm text-gray-600">Khusus dokter terdaftar. Masuk dengan akun yang diberikan admin.</p>
-        <label className="block text-sm font-medium">
-          Email
-          <input type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full p-2 border border-gray-300 rounded-lg" />
-        </label>
-        <label className="block text-sm font-medium">
-          Password
-          <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full p-2 border border-gray-300 rounded-lg" />
-        </label>
-        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-        <button disabled={busy} className="w-full py-2 rounded-lg bg-blue-600 text-white font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
-          {busy ? <><Spinner /> Memproses…</> : 'Masuk'}
-        </button>
-      </form>
-    </div>
-  );
 }
 
 // ---------------- Form helpers ----------------
@@ -219,7 +167,11 @@ function Letter({ f }: { f: Form }) {
     <div style={{ width: 560, padding: '40px 44px', background: '#fff', color: '#000', fontFamily: 'Calibri, Carlito, Arial, sans-serif', fontSize: 16, lineHeight: 1.5 }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontFamily: '"Times New Roman", Times, serif', fontWeight: 700, fontSize: 46, lineHeight: 1.1 }}>{f.nama}</div>
-        <div style={{ whiteSpace: 'pre-line', fontSize: 15 }}>{f.kop}</div>
+        <div style={{ fontSize: 15 }}>
+          {[f.sip && `SIP : ${f.sip}`, f.str && `STR : ${f.str}`, f.alamat1, f.alamat2, f.telp && `Telp. ${f.telp}`]
+            .filter(Boolean)
+            .map((line, i) => <div key={i}>{line}</div>)}
+        </div>
       </div>
       <hr style={{ border: 0, borderTop: '1.5px solid #000', margin: '8px 0 24px' }} />
       <div style={{ textAlign: 'center', fontWeight: 700, textDecoration: 'underline', marginBottom: 16 }}>{f.judul}</div>
@@ -311,15 +263,6 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
     setF(DEFAULT);
     notify('info', 'Semua isian dikembalikan ke bawaan.');
   };
-  const logout = async () => {
-    notify('loading', 'Sedang keluar…');
-    try {
-      await signOut(auth);
-      notify('success', 'Berhasil keluar.');
-    } catch (err: any) {
-      notify('error', `Gagal keluar: ${err?.message}`);
-    }
-  };
   const exportBtn = (kind: 'PDF' | 'PNG', color: string) => (
     <button onClick={() => runExport(kind)} disabled={!!exporting}
       className={`px-5 py-2 rounded-lg text-white font-semibold flex items-center gap-2 disabled:opacity-60 ${color}`}>
@@ -333,7 +276,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <Link to="/" className="text-sm font-medium text-blue-700">&larr; Kembali ke HK Hub Station</Link>
           <div className="text-sm text-gray-600">
-            {user.email} · <button onClick={logout} className="text-red-600 font-medium">Keluar</button>
+            Login sebagai {user.email}
           </div>
         </div>
         <h1 className="text-2xl font-bold text-center mb-4">Surat Keterangan Dokter</h1>
@@ -399,7 +342,14 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
               <summary className="font-bold cursor-pointer">Kop &amp; Teks Surat</summary>
               <div className="space-y-3 pt-3">
                 <Field label="Nama dokter (kop)"><input className={inputCls} value={f.nama} onChange={(e) => set('nama', e.target.value)} /></Field>
-                <Field label="Baris kop (SIP, STR, alamat, telp)"><textarea rows={5} className={inputCls} value={f.kop} onChange={(e) => set('kop', e.target.value)} /></Field>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <Field label="No. SIP"><input className={inputCls} value={f.sip} onChange={(e) => set('sip', e.target.value)} /></Field>
+                  <Field label="No. STR"><input className={inputCls} value={f.str} onChange={(e) => set('str', e.target.value)} /></Field>
+                </div>
+                <Field label="Alamat (baris 1)"><input className={inputCls} value={f.alamat1} onChange={(e) => set('alamat1', e.target.value)} /></Field>
+                <Field label="Alamat (baris 2: kelurahan, kota)"><input className={inputCls} value={f.alamat2} onChange={(e) => set('alamat2', e.target.value)} /></Field>
+                <Field label="No. Telepon"><input className={inputCls} value={f.telp} onChange={(e) => set('telp', e.target.value)} /></Field>
+                <p className="text-xs text-gray-500">Kosongkan isian untuk menyembunyikan barisnya di surat.</p>
                 <Field label="Judul"><input className={inputCls} value={f.judul} onChange={(e) => set('judul', e.target.value)} /></Field>
                 <Field label="Kalimat pembuka"><textarea rows={2} className={inputCls} value={f.pembuka} onChange={(e) => set('pembuka', e.target.value)} /></Field>
                 <Field label="Kalimat penutup"><textarea rows={2} className={inputCls} value={f.penutup} onChange={(e) => set('penutup', e.target.value)} /></Field>
@@ -420,22 +370,12 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
 }
 
 export default function SuratDokter() {
-  const [user, setUser] = useState<User | null | undefined>(undefined);
   const [toast, setToast] = useState<ToastState>(null);
   const notify = useCallback<Notify>((type, message) => setToast({ type, message }), []);
   const closeToast = useCallback(() => setToast(null), []);
-  useEffect(() => onAuthStateChanged(auth, setUser), []);
   return (
     <>
-      {user === undefined ? (
-        <div role="status" className="min-h-screen flex flex-col items-center justify-center gap-3 text-gray-500">
-          <Spinner className="h-10 w-10 text-blue-600" /> Memuat…
-        </div>
-      ) : user ? (
-        <Editor user={user} notify={notify} />
-      ) : (
-        <Login notify={notify} />
-      )}
+      <RequireLogin>{(user) => <Editor user={user} notify={notify} />}</RequireLogin>
       <Toast toast={toast} onClose={closeToast} />
     </>
   );

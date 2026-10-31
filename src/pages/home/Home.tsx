@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { AlertCircle, ArrowUpRight, Check, Copy, LogIn, X } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { AlertCircle, ArrowUpRight, Check, Copy, X } from 'lucide-react';
 import { routes } from '../../router/routes';
 import QrisCard from '../../shared/components/QrisCard';
 
@@ -49,6 +49,16 @@ function Toast({ toast, onClose }: { toast: NonNullable<ToastState>; onClose: ()
 // ============================================================
 export default function Home() {
   const [toast, setToast] = useState<ToastState>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Pesan dari halaman lain (mis. "Login berhasil"), lalu bersihkan state agar tidak muncul lagi saat refresh.
+  useEffect(() => {
+    const msg = (location.state as { toast?: string } | null)?.toast;
+    if (!msg) return;
+    setToast({ type: 'success', message: msg });
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location, navigate]);
   const apps = routes
     .filter((r) => r.path !== '/' && 'title' in r)
     .map((r) => ({ ...r, path: r.path.replace(/\/\*$/, '') })); // '/spbu/*' -> '/spbu'
@@ -105,10 +115,6 @@ export default function Home() {
             </li>
           ))}
         </ul>
-
-        <Link to="/surat-dokter" className={`${cardClass} mt-8 justify-center text-sm font-semibold text-slate-200`}>
-          <LogIn size={18} aria-hidden="true" /> Login Admin
-        </Link>
 
         <footer className="mt-12 text-center text-xs text-slate-400">HK Hub Station</footer>
       </div>

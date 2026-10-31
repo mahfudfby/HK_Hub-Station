@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { routes } from './router/routes';
+import AdminFab from './shared/components/AdminFab';
 
 // ============================================================
 // SECTION: Loading Fallback (dipakai saat pindah halaman / lazy chunk)
@@ -20,13 +21,16 @@ function PageLoader() {
 // ============================================================
 export default function App() {
   return (
-    <Suspense fallback={<PageLoader />}>
-      <Routes>
-        {routes.map(({ path, component: Page }) => (
-          <Route key={path} path={path} element={<Page />} />
-        ))}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
+    <>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {routes.map(({ path, component: Page }) => (
+            <Route key={path} path={path} element={<Page />} />
+          ))}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+      <AdminFab />
+    </>
   );
 }
