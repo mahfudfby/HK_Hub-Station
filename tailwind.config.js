@@ -28,8 +28,9 @@ export default {
         green: success, emerald: success,
         red: danger,
       },
-      // Font mesin ketik yang mudah dibaca untuk UI (dokumen punya font sendiri)
-      fontFamily: { sans: ['"Courier Prime"', '"Courier New"', ...defaultTheme.fontFamily.mono] },
+      // Font UI keluarga Helvetica; Arimo (metrik sama dengan Helvetica/Arial, sudah dimuat) untuk perangkat tanpa Helvetica.
+      // Dokumen punya font sendiri (dipilih pengguna/template).
+      fontFamily: { sans: ['"Helvetica Neue"', 'Helvetica', 'Arimo', 'Arial', ...defaultTheme.fontFamily.sans] },
     },
   },
   plugins: [],

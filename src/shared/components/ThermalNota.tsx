@@ -1,3 +1,4 @@
+import AutoTextarea from './AutoTextarea';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import FitPreview from './FitPreview';
@@ -323,9 +324,7 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
   };
   const txt = (k: keyof Nota, label: string, rows = 1) => (
     <Field label={label}>
-      {rows > 1
-        ? <textarea rows={rows} className={inputCls} value={n[k] as string} onChange={(e) => set(k, e.target.value as never)} />
-        : <input className={inputCls} value={n[k] as string} onChange={(e) => set(k, e.target.value as never)} />}
+      <AutoTextarea rows={rows} className={inputCls} value={n[k] as string} onChange={(e) => set(k, e.target.value as never)} />
     </Field>
   );
 
@@ -364,7 +363,7 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
               </div>
               {n.items.map((it, i) => (
                 <div key={i} className="grid grid-cols-[1fr_4rem_6.5rem_auto] gap-2 items-end">
-                  <Field label={i === 0 ? 'Barang' : ''}><input aria-label={`Barang ${i + 1}`} className={inputCls} value={it.nama} onChange={(e) => setItem(i, { nama: e.target.value })} /></Field>
+                  <Field label={i === 0 ? 'Barang' : ''}><AutoTextarea aria-label={`Barang ${i + 1}`} className={inputCls} value={it.nama} onChange={(e) => setItem(i, { nama: e.target.value })} /></Field>
                   <Field label={i === 0 ? 'Qty' : ''}><input aria-label={`Qty ${i + 1}`} type="number" min={0} className={inputCls} value={it.qty} onChange={(e) => setItem(i, { qty: e.target.value })} /></Field>
                   <Field label={i === 0 ? 'Harga' : ''}><input aria-label={`Harga ${i + 1}`} type="number" min={0} className={inputCls} value={it.harga} onChange={(e) => setItem(i, { harga: e.target.value })} /></Field>
                   <button type="button" onClick={() => set('items', n.items.filter((_, j) => j !== i))} disabled={n.items.length === 1}
@@ -385,7 +384,7 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
                     </select>
                   </div>
                 </Field>
-                <Field label="Biaya lain-lain (nama)"><input className={inputCls} value={n.biayaLabel} onChange={(e) => set('biayaLabel', e.target.value)} placeholder="mis. Kemasan" /></Field>
+                <Field label="Biaya lain-lain (nama)"><AutoTextarea className={inputCls} value={n.biayaLabel} onChange={(e) => set('biayaLabel', e.target.value)} placeholder="mis. Kemasan" /></Field>
                 <Field label="Biaya lain-lain (Rp)"><input type="number" min={0} className={inputCls} value={n.biaya} onChange={(e) => set('biaya', e.target.value)} /></Field>
                 <Field label="Metode bayar">
                   <select className={inputCls} value={n.metode} onChange={(e) => set('metode', e.target.value as Nota['metode'])}>

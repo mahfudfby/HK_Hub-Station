@@ -1,4 +1,5 @@
 // @ts-nocheck
+import AutoTextarea from '../../shared/components/AutoTextarea';
 import { firebaseConfig } from '../../shared/lib/firebase';
 import QrisCard from '../../shared/components/QrisCard';
 import { Toast } from '../../shared/components/Feedback';
@@ -55,7 +56,8 @@ const formatDate = (date) => {
 // Helper untuk generate ID
 const generateId = () => 'spbu-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 
-// Gambar (data URL atau link) -> JPEG Base64 maks maxWidth px, latar putih agar PNG transparan tidak jadi hitam
+// Gambar (data URL atau link) -> JPEG Base64 hitam-putih maks maxWidth px, latar putih agar PNG transparan tidak jadi hitam.
+// Grayscale lewat piksel (bukan CSS filter) supaya ikut tersimpan & tetap abu-abu di hasil Export PNG.
 const resizeToBase64 = (src, maxWidth) => new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -68,11 +70,22 @@ const resizeToBase64 = (src, maxWidth) => new Promise((resolve, reject) => {
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        try { resolve(canvas.toDataURL('image/jpeg', 0.7)); } catch (e) { reject(e); } // link yang menolak CORS
+        try { // gagal bila link menolak CORS
+            const px = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const d = px.data;
+            for (let i = 0; i < d.length; i += 4) d[i] = d[i + 1] = d[i + 2] = Math.round(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
+            ctx.putImageData(px, 0, 0);
+            resolve(canvas.toDataURL('image/jpeg', 0.7));
+        } catch (e) { reject(e); }
     };
     img.onerror = () => reject(new Error('Gambar tidak bisa dimuat.'));
     img.src = src;
 });
+
+// Logo hasil upload disimpan di perangkat agar bisa dipakai ulang (selain logo dari template tersimpan)
+const SAVED_LOGOS_KEY = 'spbu:logo-upload:v1';
+const MAX_SAVED_LOGOS = 12;
+const loadSavedLogos = () => { try { return JSON.parse(localStorage.getItem(SAVED_LOGOS_KEY) || '[]'); } catch { return []; } };
 
 const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -140,19 +153,18 @@ const TransactionInput = React.memo(({ label, name, value, inputType = 'text', d
         displayValue = String(value);
     }
 
+    const fieldCls = `w-full p-2 border rounded-lg transition ${disabled ? 'bg-gray-200 cursor-not-allowed' : 'bg-white'} ${isProcessing || isAiGenerating ? 'opacity-70' : ''}`;
     return (
         <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">{label}</label>
             <div className="flex items-center space-x-1">
-                <input 
-                    type={isTel ? 'text' : inputType} 
-                    name={name} 
-                    value={displayValue}
-                    onChange={onChange}
-                    disabled={disabled || isProcessing || isAiGenerating} 
-                    className={`w-full p-2 border rounded-lg transition ${disabled ? 'bg-gray-200 cursor-not-allowed' : 'bg-white'} ${isProcessing || isAiGenerating ? 'opacity-70' : ''}`} 
-                    inputMode={isTel ? 'numeric' : 'text'}
-                />
+                {isTel /* angka tetap satu baris; teks menghormati Enter */ ? (
+                    <input type="text" inputMode="numeric" name={name} value={displayValue} onChange={onChange}
+                        disabled={disabled || isProcessing || isAiGenerating} className={fieldCls} />
+                ) : (
+                    <AutoTextarea name={name} value={displayValue} onChange={onChange}
+                        disabled={disabled || isProcessing || isAiGenerating} className={fieldCls} />
+                )}
                 {/* Tombol Sync BARU (untuk Jam/Tanggal) */}
                 {showSyncButton && (
                     <button type="button" onClick={updateDateTime} disabled={isProcessing || isAiGenerating}
@@ -203,7 +215,7 @@ const GayaNotaReceipt = ({ g, spbu, trans, logoSrc, priceLiter, volume, total, k
     const nameAddr = (
         <div>
             <p style={titleStyle}>{spbu.name}</p>
-            {(spbu.address || '').split('\n').slice(0, 2).map((line, i) => <p key={`addr-${i}`} style={{ fontSize: fs - 1 }}>{line}</p>)}
+            {(spbu.address || '').split('\n').map((line, i) => <p key={`addr-${i}`} style={{ fontSize: fs - 1 }}>{line}</p>)}
         </div>
     );
 
@@ -532,6 +544,34 @@ const App = () => {
     }, [displayFeedback]);
 
 
+    // ============================================================
+    // SECTION: Logo Upload (pakai ulang)
+    // ============================================================
+    const [savedLogos, setSavedLogos] = useState(loadSavedLogos);
+    // Updater fungsional: aman dipanggil dari handler useCallback tanpa daftar basi
+    const updateLogos = useCallback((fn) => setSavedLogos(prev => {
+        const next = fn(prev);
+        try { localStorage.setItem(SAVED_LOGOS_KEY, JSON.stringify(next)); } catch { /* penuh / mode privat: tetap ada selama sesi */ }
+        return next;
+    }), []);
+    const rememberLogo = useCallback((data) => updateLogos(list => [data, ...list.filter(l => l !== data)].slice(0, MAX_SAVED_LOGOS)), [updateLogos]);
+    const forgetLogo = (data) => updateLogos(list => list.filter(l => l !== data));
+    // Upload = JPEG; logo generik = PNG, jadi tidak ikut terdaftar dua kali
+    const reusableLogos = useMemo(() => [...new Set([
+        ...savedLogos,
+        ...spbuList.map(s => s.logoBase64).filter(l => typeof l === 'string' && l.startsWith('data:image/jpeg')),
+    ])], [savedLogos, spbuList]);
+    const handleReuseLogo = async (src) => {
+        try {
+            // diproses ulang agar logo lama yang masih berwarna ikut jadi hitam-putih
+            const gray = await resizeToBase64(src, LOGO_MAX_WIDTH);
+            setCurrentSpbu(prev => ({ ...prev, logoBase64: gray }));
+            displayFeedback('Logo dipilih. Jangan lupa klik Simpan.', 'success');
+        } catch {
+            displayFeedback('Logo gagal dimuat.', 'error');
+        }
+    };
+
     const handleImageUpload = useCallback(async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -539,12 +579,13 @@ const App = () => {
         try {
             const base64Data = await resizeToBase64(await readFileAsDataUrl(file), LOGO_MAX_WIDTH);
             setCurrentSpbu(prev => ({ ...prev, logoBase64: base64Data }));
-            displayFeedback('Gambar berhasil diupload dan diresize. Jangan lupa klik Simpan.', 'success');
+            rememberLogo(base64Data);
+            displayFeedback('Logo diupload (hitam-putih) & masuk daftar pakai ulang. Jangan lupa klik Simpan.', 'success');
         } catch (err) {
             console.error('Upload logo gagal:', err);
             displayFeedback('Gagal memproses gambar. Pastikan file berupa gambar.', 'error');
         }
-    }, [displayFeedback]);
+    }, [displayFeedback, rememberLogo]);
 
     // Logo dari link (disalin jadi Base64 agar ikut tersimpan & aman saat Export PNG)
     const [logoLink, setLogoLink] = useState('');
@@ -555,13 +596,14 @@ const App = () => {
         try {
             const base64Data = await resizeToBase64(url, LOGO_MAX_WIDTH);
             setCurrentSpbu(prev => ({ ...prev, logoBase64: base64Data }));
+            rememberLogo(base64Data);
             setLogoLink('');
-            displayFeedback('Logo dari link berhasil dipasang. Jangan lupa klik Simpan.', 'success');
+            displayFeedback('Logo dari link dipasang (hitam-putih) & masuk daftar pakai ulang. Jangan lupa klik Simpan.', 'success');
         } catch (err) {
             console.error('Logo dari link gagal:', err);
             displayFeedback('Link tidak bisa dipakai (bukan gambar langsung, atau situsnya menolak akses). Unduh gambarnya lalu pakai Pilih File.', 'error');
         }
-    }, [logoLink, displayFeedback]);
+    }, [logoLink, displayFeedback, rememberLogo]);
     
     // ============================================================
     // SECTION: Handler — Template (Alamat, Harga, Plat, Logo Generik)
@@ -731,7 +773,7 @@ const App = () => {
         }
 
         // Batasi Address hanya 2 baris saat dirender
-        const addressLines = (spbu.address || '').split('\n').slice(0, 2).map((line, i) => (
+        const addressLines = (spbu.address || '').split('\n').map((line, i) => (
             <p key={`addr-${i}`} className="text-base font-normal">{line}</p>
         ));
         
@@ -936,7 +978,7 @@ const App = () => {
                 <header className="text-center mb-6 border-b-4 border-indigo-600 pb-3 bg-white p-4 rounded-xl shadow-lg">
                     <h1 className="text-3xl font-extrabold text-gray-800">Generator Nota SPBU</h1>
                     <p className="text-sm font-medium text-gray-700 mt-1">
-                        Generator Nota BBM oleh Mahfudfebry (React/Firestore)
+                        Generator Nota BBM (React/Firestore)
                     </p>
                     <p className="text-xs text-gray-500">
                          User ID: {userId}
@@ -1000,7 +1042,7 @@ const App = () => {
                         <div className="flex space-x-2 items-end">
                             <div className="flex-grow">
                                 <label className="text-sm font-medium text-gray-700 block mb-1">Nama SPBU</label>
-                                <input type="text" name="name" value={currentSpbu.name} onChange={handleSpbuChange}
+                                <AutoTextarea name="name" value={currentSpbu.name} onChange={handleSpbuChange}
                                     className="w-full p-2 border rounded-lg bg-white" disabled={isProcessing || isAiGenerating} />
                             </div>
                             <button onClick={handleAiGenerateTemplate} disabled={isProcessing || isAiGenerating}
@@ -1051,6 +1093,26 @@ const App = () => {
                                     </button>
                                 ))}
                             </div>
+                            {reusableLogos.length > 0 && (
+                                <>
+                                    <p className="text-sm font-medium text-gray-700 mt-3 mb-1">Logo Upload (pakai ulang, hitam-putih)</p>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {reusableLogos.map((src, i) => (
+                                            <div key={i} className="relative">
+                                                <button type="button" onClick={() => handleReuseLogo(src)} disabled={isProcessing || isAiGenerating}
+                                                    aria-label={`Pakai logo upload ${i + 1}`}
+                                                    className="w-full h-16 border rounded-lg p-1 bg-white flex items-center justify-center hover:border-indigo-500 transition disabled:opacity-50">
+                                                    <img src={src} alt="" className="max-h-full max-w-full object-contain" />
+                                                </button>
+                                                {savedLogos.includes(src) && (
+                                                    <button type="button" onClick={() => forgetLogo(src)} aria-label={`Hapus logo upload ${i + 1} dari daftar`} title="Hapus dari daftar"
+                                                        className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-red-600 text-white text-sm font-bold leading-none flex items-center justify-center">&times;</button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         <div>
@@ -1060,9 +1122,9 @@ const App = () => {
                                 <option value="" disabled>Pilih template alamat...</option>
                                 {ADDRESS_TEMPLATES.map((t, i) => <option key={t.label} value={i}>{t.label}</option>)}
                             </select>
-                            <label className="text-sm block">Alamat (Maksimal 2 Baris)</label>
-                            <textarea name="address" rows="3" value={currentSpbu.address} onChange={handleSpbuChange}
-                                className="w-full p-2 border rounded-lg" disabled={isProcessing || isAiGenerating}></textarea>
+                            <label className="text-sm block">Alamat (Enter = baris baru)</label>
+                            <AutoTextarea name="address" rows={2} value={currentSpbu.address} onChange={handleSpbuChange}
+                                className="w-full p-2 border rounded-lg" disabled={isProcessing || isAiGenerating} />
                         </div>
                         
                         <div>
@@ -1077,7 +1139,7 @@ const App = () => {
                             <div className="space-y-2">
                                 {fuels.map((f, i) => (
                                     <div key={i} className="flex gap-2">
-                                        <input type="text" value={f.name} onChange={(e) => updateFuel(i, 'name', e.target.value)}
+                                        <AutoTextarea value={f.name} onChange={(e) => updateFuel(i, 'name', e.target.value)}
                                             placeholder="Nama BBM" aria-label={`Nama BBM ${i + 1}`}
                                             className="flex-1 min-w-0 p-2 border rounded-lg bg-white" disabled={isProcessing || isAiGenerating} />
                                         <input type="text" inputMode="numeric" value={f.price ? formatRupiah(f.price) : ''} onChange={(e) => updateFuel(i, 'price', e.target.value)}

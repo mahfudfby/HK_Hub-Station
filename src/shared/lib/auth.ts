@@ -11,7 +11,8 @@ export const auth = getAuth(app);
 
 // Login Google hanya untuk email di daftar ini (akun email/password dibuat manual di Firebase Console, jadi selalu boleh).
 // Override di Vercel: VITE_ADMIN_EMAILS="a@gmail.com,b@gmail.com"
-export const ADMIN_EMAILS: string[] = (import.meta.env.VITE_ADMIN_EMAILS || 'mahfudfby@gmail.com')
+// Tanpa VITE_ADMIN_EMAILS: login Google admin nonaktif (akun email/password tetap bisa login).
+export const ADMIN_EMAILS: string[] = (import.meta.env.VITE_ADMIN_EMAILS || '')
   .split(',')
   .map((e: string) => e.trim().toLowerCase())
   .filter(Boolean);

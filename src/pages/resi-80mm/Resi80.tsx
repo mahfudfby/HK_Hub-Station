@@ -1,3 +1,4 @@
+import AutoTextarea from '../../shared/components/AutoTextarea';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import FitPreview from '../../shared/components/FitPreview';
@@ -357,9 +358,9 @@ export default function Resi80() {
   );
   const txt = (k: keyof Resi, label: string, rows = 1) => (
     <Field label={label}>
-      {rows > 1
-        ? <textarea rows={rows} className={inputCls} value={r[k] as string} onChange={(e) => set(k, e.target.value as never)} />
-        : <input className={inputCls} value={r[k] as string} onChange={(e) => set(k, e.target.value as never)} />}
+      {k === 'noResi' || k === 'noPesanan' // dipakai barcode: tetap satu baris
+        ? <input className={inputCls} value={r[k] as string} onChange={(e) => set(k, e.target.value as never)} />
+        : <AutoTextarea rows={rows} className={inputCls} value={r[k] as string} onChange={(e) => set(k, e.target.value as never)} />}
     </Field>
   );
   const check = (k: 'cod' | 'samarkanHp', label: string) => (
@@ -443,7 +444,7 @@ export default function Resi80() {
               {r.cod && <Field label="Nilai COD (Rp)"><input type="number" min={0} className={inputCls} value={r.nilaiCod} onChange={(e) => set('nilaiCod', e.target.value)} /></Field>}
               {r.items.map((it, i) => (
                 <div key={i} className="grid grid-cols-[1fr_4.5rem_auto] gap-2 items-end">
-                  <Field label={i === 0 ? 'Isi paket' : ''}><input aria-label={`Isi paket ${i + 1}`} className={inputCls} value={it.nama} onChange={(e) => setItem(i, { nama: e.target.value })} /></Field>
+                  <Field label={i === 0 ? 'Isi paket' : ''}><AutoTextarea aria-label={`Isi paket ${i + 1}`} className={inputCls} value={it.nama} onChange={(e) => setItem(i, { nama: e.target.value })} /></Field>
                   <Field label={i === 0 ? 'Qty' : ''}><input aria-label={`Qty ${i + 1}`} type="number" min={0} className={inputCls} value={it.qty} onChange={(e) => setItem(i, { qty: e.target.value })} /></Field>
                   <button type="button" onClick={() => set('items', r.items.filter((_, j) => j !== i))} disabled={r.items.length === 1}
                     aria-label={`Hapus isi paket ${i + 1}`} className="h-[38px] px-3 rounded-lg text-red-600 border border-red-200 disabled:opacity-40">✕</button>
