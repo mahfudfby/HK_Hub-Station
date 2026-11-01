@@ -13,15 +13,16 @@ export const ADDRESS_TEMPLATES = [
 ];
 
 // ============================================================
-// SECTION: Template Harga (HARGA CONTOH, sesuaikan manual)
+// SECTION: Template Harga (harga resmi Pertamina wilayah Jabodetabek per 1 November 2026; daerah lain bisa beda karena PBBKB)
 // ============================================================
 export const PRICE_TEMPLATES = [
   { label: 'Pertalite - 10.000', productName: 'Pertalite', pricePerLiter: 10000 },
-  { label: 'Pertamax - 12.500', productName: 'Pertamax', pricePerLiter: 12500 },
-  { label: 'Pertamax Turbo - 13.500', productName: 'Pertamax Turbo', pricePerLiter: 13500 },
+  { label: 'Pertamax - 15.950', productName: 'Pertamax', pricePerLiter: 15950 },
+  { label: 'Pertamax Green 95 - 19.150', productName: 'Pertamax Green 95', pricePerLiter: 19150 },
+  { label: 'Pertamax Turbo - 19.600', productName: 'Pertamax Turbo', pricePerLiter: 19600 },
   { label: 'Biosolar - 6.800', productName: 'Biosolar', pricePerLiter: 6800 },
-  { label: 'Dexlite - 13.000', productName: 'Dexlite', pricePerLiter: 13000 },
-  { label: 'Pertamina Dex - 13.500', productName: 'Pertamina Dex', pricePerLiter: 13500 },
+  { label: 'Dexlite - 23.700', productName: 'Dexlite', pricePerLiter: 23700 },
+  { label: 'Pertamina Dex - 25.200', productName: 'Pertamina Dex', pricePerLiter: 25200 },
 ];
 
 // Daftar BBM bawaan untuk template SPBU yang belum punya pengaturan harga sendiri
