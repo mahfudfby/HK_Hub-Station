@@ -332,7 +332,7 @@ const App = () => {
     const [isListLoaded, setIsListLoaded] = useState(false);
     const [feedback, setFeedback] = useState(null); // { message, type }
     const [isProcessing, setIsProcessing] = useState(false);
-    const [logoBg, setLogoBg] = useState(false);
+    const [logoBg, setLogoBg] = useState(true); // Hapus BG logo aktif dari awal
     const [isAiGenerating, setIsAiGenerating] = useState(false);
     const [isLibReady, setIsLibReady] = useState(false);
     const [canvas, setCanvas] = useCanvasMode();
@@ -563,7 +563,6 @@ const App = () => {
         return next;
     }), []);
     const rememberLogo = useCallback((data) => updateLogos(list => [data, ...list.filter(l => l !== data)].slice(0, MAX_SAVED_LOGOS)), [updateLogos]);
-    const forgetLogo = (data) => updateLogos(list => list.filter(l => l !== data));
     // Upload = JPEG; logo generik = PNG, jadi tidak ikut terdaftar dua kali
     const reusableLogos = useMemo(() => [...new Set([
         ...savedLogos,
@@ -1013,7 +1012,7 @@ const App = () => {
         </>
     );
     // Logo hanya tersimpan lewat Simpan Data User, jadi galeri aktif saat sedang Edit Data User / Buat Baru
-    const galeri = uiState === 'view' ? (
+    const galeriIsi = uiState === 'view' ? (
         <p className="text-xs text-gray-600">Untuk mengganti logo, klik <b>Edit Data User</b> atau <b>Buat Baru</b> di Isi Formulir, lalu pilih logo di sini dan klik Simpan Data User.</p>
     ) : (
         <>
@@ -1040,16 +1039,18 @@ const App = () => {
                                         className="w-full h-16 border rounded-lg p-1 bg-white flex items-center justify-center hover:border-indigo-500 transition disabled:opacity-50">
                                         <img src={src} alt="" className="max-h-full max-w-full object-contain" />
                                     </button>
-                                    {savedLogos.includes(src) && (
-                                        <button type="button" onClick={() => forgetLogo(src)} aria-label={`Hapus logo upload ${i + 1} dari daftar`} title="Hapus dari daftar"
-                                            className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-red-600 text-white text-sm font-bold leading-none flex items-center justify-center">&times;</button>
-                                    )}
                                 </div>
                             ))}
                         </div>
                     </>
                 )}
             </div>
+        </>
+    );
+    const galeri = (
+        <>
+            <BgToggle checked={logoBg} onChange={setLogoBg} busy={logoShown.busy} />
+            {galeriIsi}
         </>
     );
 
