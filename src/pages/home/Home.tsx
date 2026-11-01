@@ -12,13 +12,13 @@ type ToastState = { type: 'success' | 'error'; message: string } | null;
 
 // Urutan kategori di Home; key = field `cat` di router/routes.ts
 const CATEGORIES = [
-  { key: 'nota', title: 'Nota & Resi' },
+  { key: 'gaji', title: 'Gaji & Kepegawaian' },
   { key: 'invoice', title: 'Invoice & Faktur' },
   { key: 'surat', title: 'Surat Perusahaan' },
-  { key: 'gaji', title: 'Gaji & Kepegawaian' },
   { key: 'warga', title: 'Surat Warga, Sekolah & Desa' },
   { key: 'pribadi', title: 'Surat Pribadi & Lamaran' },
   { key: 'kesehatan', title: 'Kesehatan (Khusus Dokter)' },
+  { key: 'nota', title: 'Nota & Resi' },
 ];
 
 const cardClass =
