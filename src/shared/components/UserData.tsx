@@ -141,7 +141,13 @@ export default function UserData({ storageKey, keys, data, onApply }: {
           className="w-full min-w-0 p-2 border border-gray-300 rounded-lg text-sm" />
         <button type="button" onClick={save} disabled={!name.trim() || busy} className="shrink-0 px-3 rounded-lg bg-blue-600 text-sm font-semibold text-white disabled:opacity-50">{busy ? 'Mengunggah…' : 'Simpan'}</button>
       </div>
-      <SharedGallery keys={keys} data={data} onApply={onApply} onPicked={setMsg} />
+      {/* Galeri Foto per kategori (Logo / Tanda tangan / Stempel / Lainnya), selalu tampil */}
+      {keys.some((k) => /logo|foto|ttd|sign|stempel/i.test(k)) && (
+        <div className="space-y-2 rounded-xl border border-gray-200 bg-white p-3">
+          <p className="text-sm font-bold text-gray-800">Galeri Foto</p>
+          <SharedGallery showEmpty keys={keys} data={data} onApply={onApply} onPicked={setMsg} />
+        </div>
+      )}
       {msg && <p className={`text-xs ${msg.includes('terhapus dari Cloudinary') ? 'font-bold text-red-700' : 'text-gray-700'}`} role="status">{msg}</p>}
     </section>
   );

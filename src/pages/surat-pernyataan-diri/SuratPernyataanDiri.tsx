@@ -10,6 +10,7 @@ import UserData from '../../shared/components/UserData';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
+import DocOptions, { nomorTampil } from '../../shared/components/DocOptions';
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSigner } from '../../shared/components/LetterLayouts';
 import { randomDocNo } from '../../shared/lib/docNumber';
 import { useBgRemoved } from '../../shared/lib/removeBg';
@@ -28,6 +29,7 @@ type Form = {
   pembuka: string; butir: string[]; penutup: string;
   ttdHeading: string; ttd: string;
   saksiOn: boolean; saksi1: string; saksi2: string; ttdSaksi1: string; ttdSaksi2: string;
+  pakaiNomor: boolean; kosong: boolean;
 };
 
 const STORAGE_KEY = 'surat-pernyataan-diri:v1';
@@ -69,6 +71,7 @@ const DEFAULT: Form = {
   penutup: 'Demikian surat pernyataan ini saya buat dengan sebenar-benarnya, dalam keadaan sadar dan tanpa paksaan dari pihak mana pun, untuk dapat dipergunakan sebagaimana mestinya. Apabila di kemudian hari pernyataan ini terbukti tidak benar, saya bersedia menerima sanksi sesuai dengan ketentuan hukum yang berlaku.',
   ttdHeading: 'Yang membuat pernyataan,', ttd: '',
   saksiOn: false, saksi1: 'Budi Santoso', saksi2: 'Siti Aminah', ttdSaksi1: '', ttdSaksi2: '',
+  pakaiNomor: true, kosong: false,
 };
 
 // Data User: identitas kop & pembuat pernyataan, tanda tangan (bukan isi pernyataan)
@@ -77,25 +80,28 @@ const USER_KEYS = ['logo', 'posisi', 'kopNama', 'profesi', 'kopAlamat', 'telepon
 // ============================================================
 // SECTION: Isi surat -> LayoutDoc
 // ============================================================
+// Template kosongan: kop, judul, butir pernyataan & kalimat baku tetap; data diri pembuat, saksi, nomor & tanggal jadi titik-titik
 function buildDoc(f: Form): LayoutDoc {
-  const signers: LayoutSigner[] = [{ heading: f.ttdHeading, name: f.nama, ttd: f.ttd, ttdOffset: getOffset(f.posisi, 'ttd'), main: true }];
+  const ko = f.kosong;
+  const v = (x: string) => (ko ? '' : x);
+  const signers: LayoutSigner[] = [{ heading: f.ttdHeading, name: v(f.nama), ttd: v(f.ttd), ttdOffset: getOffset(f.posisi, 'ttd'), main: true }];
   if (f.saksiOn) signers.unshift(
-    { heading: 'Saksi 1,', name: f.saksi1, ttd: f.ttdSaksi1, ttdOffset: getOffset(f.posisi, 'ttdSaksi1') },
-    { heading: 'Saksi 2,', name: f.saksi2, ttd: f.ttdSaksi2, ttdOffset: getOffset(f.posisi, 'ttdSaksi2') },
+    { heading: 'Saksi 1,', name: v(f.saksi1), ttd: v(f.ttdSaksi1), ttdOffset: getOffset(f.posisi, 'ttdSaksi1') },
+    { heading: 'Saksi 2,', name: v(f.saksi2), ttd: v(f.ttdSaksi2), ttdOffset: getOffset(f.posisi, 'ttdSaksi2') },
   );
   return {
     logo: f.logo, logoOffset: getOffset(f.posisi, 'logo'),
     kopName: f.kopNama,
     kopLines: [f.profesi, f.kopAlamat, [f.telepon && `Telp. ${f.telepon}`, f.email, f.web].filter(Boolean).join(' • ')].filter(Boolean),
     title: f.judul,
-    nomor: f.nomor.trim() || undefined,
-    placeDate: [f.kota, fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
+    nomor: nomorTampil(f.nomor.trim(), f.pakaiNomor, ko) || undefined,
+    placeDate: ko ? `${f.kota || '……'}, …………… 20……` : [f.kota, fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
     body: (
       <>
         <P>{f.pembuka}</P>
         <InfoRows rows={[
-          { label: 'Nama', value: f.nama }, { label: 'NIK', value: f.nik }, { label: 'Tempat, tgl. lahir', value: f.ttl },
-          { label: 'Jenis kelamin', value: f.jk }, { label: 'Pekerjaan', value: f.pekerjaan }, { label: 'Alamat', value: f.alamat },
+          { label: 'Nama', value: v(f.nama) }, { label: 'NIK', value: v(f.nik) }, { label: 'Tempat, tgl. lahir', value: v(f.ttl) },
+          { label: 'Jenis kelamin', value: v(f.jk) }, { label: 'Pekerjaan', value: v(f.pekerjaan) }, { label: 'Alamat', value: v(f.alamat) },
         ]} />
         <P>Dengan ini menyatakan dengan sesungguhnya bahwa saya:</P>
         <ol style={{ margin: '0 0 0.6em', paddingLeft: '2.4em', listStyle: 'decimal', textAlign: 'justify' }}>{f.butir.filter(Boolean).map((b, i) => <li key={i}>{b}</li>)}</ol>
@@ -174,6 +180,7 @@ export default function SuratPernyataanDiri() {
   const saksiTargets = f.saksiOn ? [{ id: 'ttdSaksi1', label: 'Ttd saksi 1' }, { id: 'ttdSaksi2', label: 'Ttd saksi 2' }] : [];
   const tampilan = (
     <>
+      <DocOptions nomor={{ value: f.pakaiNomor, onChange: (x) => set('pakaiNomor', x) }} kosong={{ value: f.kosong, onChange: (x) => set('kosong', x) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <PositionPad targets={[{ id: 'logo', label: 'Foto / logo' }, { id: 'ttd', label: 'Tanda tangan' }, ...saksiTargets]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />

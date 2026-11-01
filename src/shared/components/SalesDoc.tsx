@@ -9,7 +9,8 @@ import SharedGallery from './SharedGallery';
 import { TextSizeSlider, useFitScale } from './TextScale';
 import PositionPad, { fxOf, getOffset, type Offset, type Offsets } from './PositionPad';
 import { Toast, type ToastState } from './Feedback';
-import { ExportButton, Field, ImageUpload, inputCls, fmtTanggal, mmToPx, signSpace, PAPERS, PAPER_GROUPS, paperOf, orient, useLetterExport, type Notify, type Paper } from './LetterKit';
+import DocOptions, { nomorTampil } from './DocOptions';
+import { Dots, ExportButton, Field, ImageUpload, inputCls, fmtTanggal, mmToPx, signSpace, PAPERS, PAPER_GROUPS, paperOf, orient, useLetterExport, type Notify, type Paper } from './LetterKit';
 import { useBgRemoved } from '../lib/removeBg';
 import { num, rupiah, terbilangRupiah } from '../lib/money';
 import { orRandomNo, randomDocNo } from '../lib/docNumber';
@@ -130,6 +131,8 @@ type Doc = {
   ttdJabatan: string;
   ttd: string;
   stempel: string;
+  pakaiNomor: boolean; // sakelar tampilan, bukan Data User
+  kosong: boolean; // template kosongan untuk diisi tangan
 };
 
 // Data User: identitas penjual, tata letak gambar (joystick) & pengaturan tetap (bukan gaya/kertas, bukan data transaksi)
@@ -176,6 +179,8 @@ const makeDefault = (kind: DocKind): Doc => ({
   ttdJabatan: kind === 'invoice' ? 'Finance' : 'Bagian Penjualan',
   ttd: '',
   stempel: '',
+  pakaiNomor: true,
+  kosong: false,
 });
 
 function calc(d: Doc) {
@@ -202,6 +207,10 @@ type Ctx = { d: Doc; kind: DocKind; c: ReturnType<typeof calc>; fs: number; pad:
 // Kertas pendek (A5 landscape, ½ continuous, thermal): jarak vertikal dirapatkan agar muat
 const gapK = (short: boolean) => (short ? 0.55 : 1);
 const inkOf = (d: Doc) => (tplOf(d.template).ink ? '#000' : d.accent);
+// Baris kosong bertitik untuk ditulis tangan (template kosongan)
+const Blank = ({ fs, w = '100%' }: { fs: number; w?: string }) => (
+  <div style={{ height: fs * 1.9, display: 'flex', alignItems: 'flex-end' }}><Dots w={w} /></div>
+);
 // Jarak bingkai dari tepi kertas
 const frameInset = (pad: number) => Math.round(pad * 0.35);
 
@@ -346,19 +355,28 @@ function Header({ d, kind, fs, pad, short }: Ctx) {
 function Parties({ d, kind, fs, short }: Ctx) {
   const L = LABELS[kind];
   const label: CSSProperties = { color: tplOf(d.template).ink ? '#000' : '#555', fontSize: fs * 0.85, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 };
+  const no = nomorTampil(d.nomor, d.pakaiNomor, d.kosong);
+  const tgl = (iso: string) => (d.kosong ? '…… / …… / 20……' : fmtTanggal(iso));
   const meta: [string, string][] = [
-    [L.nomor, d.nomor],
-    ['Tanggal', fmtTanggal(d.tanggal)],
-    ...(d.jatuhTempo ? [['Jatuh Tempo', fmtTanggal(d.jatuhTempo)] as [string, string]] : []),
+    ...(no !== undefined ? [[L.nomor, no] as [string, string]] : []),
+    ['Tanggal', tgl(d.tanggal)],
+    ...(d.jatuhTempo ? [['Jatuh Tempo', tgl(d.jatuhTempo)] as [string, string]] : []),
   ];
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24, marginBottom: fs * 1.2 * gapK(short) }}>
+      {d.kosong ? (
+        <div style={{ flex: 1, minWidth: 0, maxWidth: '55%' }}>
+          <div style={label}>{L.kepada}</div>
+          <Blank fs={fs} /><Blank fs={fs} /><Blank fs={fs} />
+        </div>
+      ) : (
       <div style={{ minWidth: 0 }}>
         <div style={label}>{L.kepada}</div>
         <div style={{ fontWeight: 700 }}>{d.pembeli || '—'}</div>
         {d.pembeliAlamat && <div style={{ whiteSpace: 'pre-line' }}>{d.pembeliAlamat}</div>}
         {d.pembeliKontak && <div>{d.pembeliKontak}</div>}
       </div>
+      )}
       <table style={{ borderCollapse: 'collapse', alignSelf: 'flex-start' }}>
         <tbody>
           {meta.map(([k, v]) => (
@@ -400,7 +418,9 @@ function tableStyle(d: Doc, fs: number) {
 
 function Items({ d, c, fs, short }: Ctx) {
   const s = tableStyle(d, fs);
-  const hasDisc = d.items.some((it) => num(it.diskon) > 0);
+  const hasDisc = !d.kosong && d.items.some((it) => num(it.diskon) > 0);
+  // Template kosongan: baris kosong bergaris untuk ditulis tangan
+  const empty = d.kosong ? Array.from({ length: short ? 5 : 8 }, (_, i) => i) : [];
   const R: CSSProperties = { textAlign: 'right', whiteSpace: 'nowrap' };
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: fs * 1.2 * gapK(short) }}>
@@ -415,7 +435,11 @@ function Items({ d, c, fs, short }: Ctx) {
         </tr>
       </thead>
       <tbody>
-        {d.items.map((it, i) => {
+        {empty.map((i) => {
+          const td = { ...s.td, height: fs * 1.9, background: s.zebra && i % 2 ? s.zebra : undefined };
+          return <tr key={i}><td style={td} /><td style={td} /><td style={td} /><td style={td} /><td style={td} /></tr>;
+        })}
+        {!d.kosong && d.items.map((it, i) => {
           const td = { ...s.td, background: s.zebra && i % 2 ? s.zebra : undefined };
           return (
             <tr key={i}>
@@ -436,10 +460,10 @@ function Items({ d, c, fs, short }: Ctx) {
 function Totals({ d, c, fs, short }: Ctx) {
   const rows: [string, number][] = [
     ['Subtotal', c.subtotal],
-    ...(c.potongan ? [['Potongan', -c.potongan] as [string, number]] : []),
-    ...(c.potongan && num(d.ppn) ? [['DPP', c.dpp] as [string, number]] : []),
+    ...(c.potongan && !d.kosong ? [['Potongan', -c.potongan] as [string, number]] : []),
+    ...(c.potongan && num(d.ppn) && !d.kosong ? [['DPP', c.dpp] as [string, number]] : []),
     ...(num(d.ppn) ? [[`PPN ${d.ppn}%`, c.ppn] as [string, number]] : []),
-    ...(c.ongkir ? [['Ongkos Kirim', c.ongkir] as [string, number]] : []),
+    ...(c.ongkir && !d.kosong ? [['Ongkos Kirim', c.ongkir] as [string, number]] : []),
   ];
   const col = inkOf(d);
   const totalStyle: CSSProperties = {
@@ -453,18 +477,21 @@ function Totals({ d, c, fs, short }: Ctx) {
     under: { color: col, fontWeight: 700, fontSize: fs * 1.15, borderTop: `1px solid ${col}`, borderBottom: `3px solid ${col}` },
   }[tplOf(d.template).total];
   const cell: CSSProperties = { padding: `${fs * 0.25}px ${fs * 0.5}px` };
+  // Template kosongan: nominal dikosongkan, ruang tulis selebar ±11 huruf (titik ikut warna teks agar terlihat di baris TOTAL gelap)
+  const rp = (v: number) => (d.kosong ? <>Rp <span style={{ display: 'inline-block', width: fs * 9, borderBottom: '1.5px dotted currentColor' }} /></> : v < 0 ? `-Rp ${rupiah(-v)}` : `Rp ${rupiah(v)}`);
+  const tunai = d.metode === 'Tunai' && num(d.diterima) > 0 && !d.kosong;
   return (
     <table style={{ borderCollapse: 'collapse', minWidth: '45%', marginLeft: 'auto' }}>
       <tbody>
         {rows.map(([k, v]) => (
           <tr key={k}>
             <td style={cell}>{k}</td>
-            <td style={{ ...cell, textAlign: 'right', whiteSpace: 'nowrap' }}>{v < 0 ? `-Rp ${rupiah(-v)}` : `Rp ${rupiah(v)}`}</td>
+            <td style={{ ...cell, textAlign: 'right', whiteSpace: 'nowrap' }}>{rp(v)}</td>
           </tr>
         ))}
         <tr style={totalStyle}>
           <td style={{ ...cell, padding: `${fs * 0.45}px ${fs * 0.5}px` }}>TOTAL</td>
-          <td style={{ ...cell, padding: `${fs * 0.45}px ${fs * 0.5}px`, textAlign: 'right', whiteSpace: 'nowrap' }}>Rp {rupiah(c.total)}</td>
+          <td style={{ ...cell, padding: `${fs * 0.45}px ${fs * 0.5}px`, textAlign: 'right', whiteSpace: 'nowrap' }}>{rp(c.total)}</td>
         </tr>
         {d.metode && (
           <tr>
@@ -472,10 +499,10 @@ function Totals({ d, c, fs, short }: Ctx) {
             <td style={{ ...cell, textAlign: 'right', fontWeight: 700 }}>{d.metode === 'Tunai' ? 'Tunai' : `Non-Tunai (${d.nonTunai})`}</td>
           </tr>
         )}
-        {d.metode === 'Tunai' && num(d.diterima) > 0 && short && (
+        {tunai && short && (
           <tr><td style={cell} colSpan={2}>Diterima Rp {rupiah(num(d.diterima))} • Kembali Rp {rupiah(Math.max(0, num(d.diterima) - c.total))}</td></tr>
         )}
-        {d.metode === 'Tunai' && num(d.diterima) > 0 && !short && (
+        {tunai && !short && (
           <>
             <tr><td style={cell}>Diterima</td><td style={{ ...cell, textAlign: 'right', whiteSpace: 'nowrap' }}>Rp {rupiah(num(d.diterima))}</td></tr>
             <tr><td style={cell}>Kembali</td><td style={{ ...cell, textAlign: 'right', whiteSpace: 'nowrap' }}>Rp {rupiah(Math.max(0, num(d.diterima) - c.total))}</td></tr>
@@ -523,7 +550,7 @@ function DocView(ctx: Ctx & { w: number; h: number }) {
           {d.terbilang && (
             <div style={{ marginBottom: fs * 0.6 }}>
               <div style={{ fontWeight: 700 }}>Terbilang:</div>
-              <div style={{ fontStyle: 'italic' }}>{terbilangRupiah(c.total)}</div>
+              {d.kosong ? <><Blank fs={fs} /><Blank fs={fs} /></> : <div style={{ fontStyle: 'italic' }}>{terbilangRupiah(c.total)}</div>}
             </div>
           )}
           {d.pembayaran && (
@@ -543,7 +570,9 @@ function DocView(ctx: Ctx & { w: number; h: number }) {
       </div>
       {/* Jarak elastis ke tanda tangan: lega bila isi pendek, menyusut (tidak keluar kertas) bila isi panjang */}
       <div aria-hidden="true" style={{ flex: `0 1 ${fs * 4 * gapK(ctx.short)}px`, minHeight: fs * 0.6 }} />
-      {(d.kota || d.tanggal) && <div style={{ textAlign: 'right', marginBottom: 2 }}>{[d.kota, fmtTanggal(d.tanggal)].filter(Boolean).join(', ')}</div>}
+      {d.kosong
+        ? <div style={{ textAlign: 'right', marginBottom: 2 }}>{d.kota || '……………'}, …………… 20……</div>
+        : (d.kota || d.tanggal) && <div style={{ textAlign: 'right', marginBottom: 2 }}>{[d.kota, fmtTanggal(d.tanggal)].filter(Boolean).join(', ')}</div>}
       <div style={{ display: 'flex', justifyContent: kind === 'faktur' ? 'space-between' : 'flex-end' }}>
         {kind === 'faktur' && <SignBox heading="Penerima," name="" title="" fs={fs} short={ctx.short} />}
         <SignBox right heading="Hormat kami," name={d.ttdNama} title={d.ttdJabatan} ttd={d.ttd} stempel={d.stempel} fs={fs} short={ctx.short}
@@ -660,6 +689,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
   const [canvas, setCanvas] = useCanvasMode();
   const tampilan = (
     <>
+      <DocOptions nomor={{ value: d.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: d.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={d.skala} onChange={(v) => set('skala', v)} effective={k} />
       {posPad}
       <Field label="Template">
@@ -793,7 +823,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
 
           <FitPreview>
             <div ref={ref} className="w-max shadow-lg">
-              <DocView d={{ ...d, logo: logo.src, ttd: ttd.src, stempel: stempel.src }} kind={kind} c={c} fs={fs} pad={pad} w={W} h={H} short={H < 600} />
+              <DocView d={{ ...d, logo: logo.src, ttd: d.kosong ? '' : ttd.src, stempel: d.kosong ? '' : stempel.src }} kind={kind} c={c} fs={fs} pad={pad} w={W} h={H} short={H < 600} />
             </div>
           </FitPreview>
         </div>

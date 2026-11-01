@@ -17,6 +17,7 @@ import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import PositionPad, { fxOf, getOffset, type Offsets } from '../../shared/components/PositionPad';
 import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/CanvasMode';
 import SharedGallery from '../../shared/components/SharedGallery';
+import DocOptions from '../../shared/components/DocOptions';
 
 // Surat keterangan dokter: hanya untuk akun admin (login lewat tombol mengambang / halaman /login).
 
@@ -57,6 +58,7 @@ type Form = {
   paper: string; // id LETTER_PAPERS
   landscape: boolean;
   skala: number; // ukuran teks surat (%)
+  kosong: boolean; // template kosongan (isi manual)
 };
 
 const DEFAULT: Form = {
@@ -92,6 +94,7 @@ const DEFAULT: Form = {
   skala: 100,
   paper: 'A5',
   landscape: false,
+  kosong: false,
 };
 
 const SATUAN = ['nol', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'];
@@ -126,6 +129,12 @@ function loadForm(): Form {
     return DEFAULT;
   }
 }
+
+// Template kosongan: data pasien, hasil, tanggal → titik-titik; ttd & stempel disembunyikan (tanda tangan basah).
+// Kop, nama dokter, SIP/STR & kalimat baku tetap. Isian form tidak berubah.
+const tampilKosong = (f: Form): Form => (!f.kosong ? f : {
+  ...f, rows: f.rows.map((r) => ({ ...r, value: '' })), diagnosa: '', hasilSehat: '', tujuan: '', hari: '', mulai: '', sampai: '', tanggal: '', ttd: '', stempel: '',
+});
 
 // ---------------- Letter preview ----------------
 function Letter({ f, k, W, H, pf }: { f: Form; k: number; W: number; H: number; pf: number }) {
@@ -263,6 +272,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
   const [canvas, setCanvas] = useCanvasMode();
   const tampilan = (
     <>
+      <DocOptions kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
@@ -393,7 +403,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
 
           <FitPreview>
             <div ref={letterRef} className="w-max shadow-lg">
-              <Letter f={{ ...f, logo: logo.src, ttd: ttd.src, stempel: stempel.src }} k={k * pg.f} W={pg.W} H={pg.H} pf={pg.f} />
+              <Letter f={tampilKosong({ ...f, logo: logo.src, ttd: ttd.src, stempel: stempel.src })} k={k * pg.f} W={pg.W} H={pg.H} pf={pg.f} />
             </div>
           </FitPreview>
         </div>

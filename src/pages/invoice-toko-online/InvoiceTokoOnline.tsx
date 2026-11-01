@@ -8,7 +8,8 @@ import FitPreview from '../../shared/components/FitPreview';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import PositionPad, { fxOf, getOffset, type Offset, type Offsets } from '../../shared/components/PositionPad';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
-import { ExportButton, Field, ImageUpload, inputCls, mmToPx, signSpace, PAPERS, PAPER_GROUPS, paperOf, orient, useLetterExport, type Notify, type Paper } from '../../shared/components/LetterKit';
+import DocOptions from '../../shared/components/DocOptions';
+import { DOTTED, ExportButton, Field, ImageUpload, inputCls, mmToPx, signSpace, PAPERS, PAPER_GROUPS, paperOf, orient, useLetterExport, type Notify, type Paper } from '../../shared/components/LetterKit';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { num, rupiah } from '../../shared/lib/money';
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
@@ -71,6 +72,7 @@ type Nota = {
   ongkir: string; biayaLayanan: string; proteksi: string; biayaLainLabel: string; biayaLain: string; diskonLabel: string; diskon: string;
   catatanBiaya: string; infoToko: string; catatan: string;
   ttdNama: string; ttd: string; stempel: string;
+  pakaiNomor: boolean; kosong: boolean; // sakelar tampilan (bukan Data User)
 };
 const STORAGE_KEY = 'toko-online:v1';
 const today = () => new Date().toISOString().slice(0, 10);
@@ -90,6 +92,7 @@ const DEFAULT: Nota = {
   infoToko: 'Nama Usaha Anda\nAlamat usaha, Kota\nTelp. 0812-0000-0000',
   catatan: '',
   ttdNama: '', ttd: '', stempel: '',
+  pakaiNomor: true, kosong: false,
 };
 
 function calc(n: Nota) {
@@ -141,6 +144,13 @@ function NotaView({ n, c, fs, w, h, pad }: { n: Nota; c: ReturnType<typeof calc>
   const oT = getOffset(n.posisi, 'ttd');
   const oS = getOffset(n.posisi, 'stempel');
   const signH = signSpace(fs * 5);
+  // Template kosongan: data pesanan jadi garis titik-titik untuk ditulis tangan
+  const ks = n.kosong;
+  const blank = (w = '100%') => <span style={{ display: 'inline-block', width: w, height: fs * 1.6, borderBottom: DOTTED, verticalAlign: 'bottom' }} />;
+  const rp = (v: number, w = `${fs * 8}px`) => (ks ? <>Rp{blank(w)}</> : `${v < 0 ? '-' : ''}Rp${rupiah(Math.abs(v))}`);
+  // No. pesanan tanpa pemisah → kosongan berupa garis selebar kolom
+  const noPesanan = n.pakaiNomor ? (ks ? blank(`${fs * 9}px`) : n.noPesanan) : undefined;
+  const rows = ks ? Array.from({ length: fs < 11 ? 5 : 8 }, () => null) : n.items;
 
   return (
     <div style={{ width: w, height: h, overflow: 'hidden', boxSizing: 'border-box', padding: pad, background: '#fff', color: '#111', fontFamily: font, fontSize: fs, lineHeight: 1.35, position: 'relative', display: 'flex', flexDirection: 'column' }}>
@@ -154,19 +164,19 @@ function NotaView({ n, c, fs, w, h, pad }: { n: Nota; c: ReturnType<typeof calc>
       {/* Pembeli & penjual */}
       <div style={{ ...boxStyle, padding: `${fs * 1.1}px ${fs * 1.4}px`, marginBottom: gap }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: fs, marginBottom: fs * 0.6 }}>
-          <div style={{ flex: 1, minWidth: 0 }}><Label>Nama Pembeli:</Label> {n.pembeli}</div>
+          <div style={{ flex: 1, minWidth: 0 }}><Label>Nama Pembeli:</Label> {ks ? blank('55%') : n.pembeli}</div>
           <div style={{ maxWidth: '45%', textAlign: 'right' }}><Label>Nama Penjual:</Label> {n.penjual}</div>
         </div>
         <div style={{ marginBottom: fs * 0.6 }}>
           <div><Label>Alamat Pembeli:</Label></div>
-          <div>{n.alamat}</div>
+          {ks ? <>{blank()}{blank()}</> : <div>{n.alamat}</div>}
         </div>
-        <div><Label>No. Handphone Pembeli:</Label> {n.hp}</div>
+        <div><Label>No. Handphone Pembeli:</Label> {ks ? blank('40%') : n.hp}</div>
       </div>
 
       {/* Info pesanan */}
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: fs * 1.2, marginBottom: gap, padding: `0 ${fs * 0.4}px` }}>
-        {[['No. Pesanan', n.noPesanan], ['Tanggal Transaksi', n.tanggal ? new Date(`${n.tanggal}T00:00:00`).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''], ['Metode Pembayaran', n.metode], ['Jasa Kirim', n.kurir]].map(([l, v], i, all) => (
+        {[...(noPesanan !== undefined ? [['No. Pesanan', noPesanan] as const] : []), ['Tanggal Transaksi', ks ? '……/……/20……' : n.tanggal ? new Date(`${n.tanggal}T00:00:00`).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''], ['Metode Pembayaran', n.metode], ['Jasa Kirim', n.kurir]].map(([l, v], i, all) => (
           <div key={l} style={{ minWidth: 0, textAlign: i === all.length - 1 ? 'right' : 'left' }}>
             <div style={{ fontWeight: 700, marginBottom: fs * 0.3 }}>{l}</div>
             <div style={{ overflowWrap: 'anywhere' }}>{v}</div>
@@ -186,22 +196,23 @@ function NotaView({ n, c, fs, w, h, pad }: { n: Nota; c: ReturnType<typeof calc>
           </tr>
         </thead>
         <tbody>
-          {n.items.map((it, i) => (
-            <tr key={i} style={{ ...(g.table === 'zebra' && i % 2 === 1 && { background: GRAY_BOX }), ...(i === n.items.length - 1 && !border && { borderBottom: `1px solid ${LINE}` }) }}>
-              <td style={{ ...cell, border }}>{i + 1}</td>
-              <td style={{ ...cell, border, overflowWrap: 'anywhere' }}>{it.produk}</td>
-              <td style={{ ...cell, border, overflowWrap: 'anywhere' }}>{it.variasi}</td>
-              <td style={{ ...cell, border, textAlign: 'right', whiteSpace: 'nowrap' }}>Rp{rupiah(num(it.harga))}</td>
-              <td style={{ ...cell, border, textAlign: 'center' }}>{num(it.qty)}</td>
-              <td style={{ ...cell, border, textAlign: 'right', whiteSpace: 'nowrap' }}>Rp{rupiah(c.lines[i])}</td>
+          {rows.map((it, i) => (
+            // Template kosongan: baris kosong bergaris (garis bawah tiap baris) setinggi tulisan tangan
+            <tr key={i} style={{ ...(g.table === 'zebra' && i % 2 === 1 && { background: GRAY_BOX }), ...((ks || i === rows.length - 1) && !border && { borderBottom: `1px solid ${ks ? '#999' : LINE}` }), ...(ks && { height: fs * 2.2 }) }}>
+              <td style={{ ...cell, border }}>{it && i + 1}</td>
+              <td style={{ ...cell, border, overflowWrap: 'anywhere' }}>{it?.produk}</td>
+              <td style={{ ...cell, border, overflowWrap: 'anywhere' }}>{it?.variasi}</td>
+              <td style={{ ...cell, border, textAlign: 'right', whiteSpace: 'nowrap' }}>{it && `Rp${rupiah(num(it.harga))}`}</td>
+              <td style={{ ...cell, border, textAlign: 'center' }}>{it && num(it.qty)}</td>
+              <td style={{ ...cell, border, textAlign: 'right', whiteSpace: 'nowrap' }}>{it && `Rp${rupiah(c.lines[i])}`}</td>
             </tr>
           ))}
         </tbody>
       </table>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: gap * 1.4, paddingRight: fs * 0.4 }}>
         <div style={{ textAlign: 'left', minWidth: '30%' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: fs * 3, fontWeight: 700, fontSize: fs * 1.1 }}><span>Subtotal</span><span style={{ whiteSpace: 'nowrap' }}>Rp{rupiah(c.subtotal)}</span></div>
-          <div style={{ fontWeight: 700, fontSize: fs * 0.85 }}>Total Kuantitas {c.qty} produk</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: fs * 3, fontWeight: 700, fontSize: fs * 1.1 }}><span>Subtotal</span><span style={{ whiteSpace: 'nowrap' }}>{rp(c.subtotal)}</span></div>
+          <div style={{ fontWeight: 700, fontSize: fs * 0.85 }}>Total Kuantitas {ks ? '……' : c.qty} produk</div>
         </div>
       </div>
 
@@ -215,16 +226,16 @@ function NotaView({ n, c, fs, w, h, pad }: { n: Nota; c: ReturnType<typeof calc>
               ['Ongkos Kirim', num(n.ongkir), true],
               ['Biaya Layanan', num(n.biayaLayanan), true],
               ['Proteksi Produk', num(n.proteksi), true],
-              [n.biayaLainLabel || 'Biaya Lain', num(n.biayaLain), !!n.biayaLain],
+              [n.biayaLainLabel || 'Biaya Lain', num(n.biayaLain), !!n.biayaLain && !ks],
               [n.diskonLabel || 'Diskon Voucher', -num(n.diskon), true],
             ].filter((r) => r[2]).map(([l, v]) => (
               <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: fs * 0.65 }}>
-                <span>{l}</span><span style={{ whiteSpace: 'nowrap' }}>{(v as number) < 0 ? '-' : ''}Rp{rupiah(Math.abs(v as number))}</span>
+                <span>{l}</span><span style={{ whiteSpace: 'nowrap' }}>{rp(v as number)}</span>
               </div>
             ))}
             <div style={{ borderTop: `1.5px solid ${LINE}`, marginTop: fs * 0.35, paddingTop: fs * 0.9, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontWeight: 700 }}>
               <span style={{ fontSize: fs * 1.1 }}>Total Pembayaran</span>
-              <span style={{ fontSize: fs * 1.45, whiteSpace: 'nowrap', color: g.total === 'accent' ? accent : undefined }}>Rp{rupiah(c.total)}</span>
+              <span style={{ fontSize: fs * 1.45, whiteSpace: 'nowrap', color: g.total === 'accent' ? accent : undefined }}>{rp(c.total)}</span>
             </div>
           </div>
           {n.catatanBiaya && <div style={{ marginTop: fs * 0.4 }}>{n.catatanBiaya}</div>}
@@ -324,6 +335,7 @@ export default function InvoiceTokoOnline() {
   const [geser, setGeser] = useState('logo');
   const tampilan = (
     <>
+      <DocOptions nomor={{ value: n.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: n.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={n.skala} onChange={(v) => set('skala', v)} effective={k} />
       <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
         active={geser} onActive={setGeser} value={n.posisi} onChange={(v) => set('posisi', v)} />
@@ -467,7 +479,7 @@ export default function InvoiceTokoOnline() {
 
           <FitPreview>
             <div ref={ref} className="w-max shadow-lg">
-              <NotaView n={{ ...n, logo: logo.src, ttd: ttd.src, stempel: stempel.src }} c={c} fs={fs} w={W} h={H} pad={pad} />
+              <NotaView n={{ ...n, logo: logo.src, ttd: n.kosong ? '' : ttd.src, stempel: n.kosong ? '' : stempel.src }} c={c} fs={fs} w={W} h={H} pad={pad} />
             </div>
           </FitPreview>
         </div>

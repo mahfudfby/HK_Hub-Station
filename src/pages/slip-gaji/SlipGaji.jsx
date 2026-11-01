@@ -18,6 +18,7 @@ import { PaperPicker, PAPERS, paperOf, orient, mmToPx } from '../../shared/compo
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { randomDocNo } from '../../shared/lib/docNumber';
 import { cssFamily, fontsReady, useGoogleFonts } from '../../shared/lib/fonts';
+import DocOptions, { TITIK, TITIK_PENDEK, nomorTampil } from '../../shared/components/DocOptions';
 import './SlipGaji.css';
 
 // ============================================================
@@ -127,6 +128,8 @@ const buildInitialForm = () => ({
   bonus: '0',
   loanDeduction: '500000',
   otherDeduction: '0',
+  pakaiNomor: true, // tampilkan No. Slip (ID)
+  kosong: false, // template kosongan (isi manual)
 });
 
 // ============================================================
@@ -139,6 +142,20 @@ const formatRupiah = (number) => {
     maximumFractionDigits: 0,
   });
   return `Rp. ${formatted}`;
+};
+
+// Nominal untuk slip: null (template kosongan) → "Rp." + garis titik-titik untuk ditulis tangan
+const rp = (v) => (v == null ? <span className="whitespace-nowrap">Rp. <span className="slip-blank" /></span> : formatRupiah(v));
+
+// Tampilan slip: No. Slip mengikuti sakelar nomor; template kosongan mengosongkan data karyawan, periode & semua nominal.
+// Kop perusahaan, label komponen gaji, nama & jabatan manager tetap. Isian form tidak berubah.
+const slipTampil = (form, calc) => {
+  const f = { ...form, slipID: nomorTampil(form.slipID, form.pakaiNomor, form.kosong) };
+  if (!form.kosong) return { form: f, calc };
+  return {
+    form: { ...f, slipMonth: TITIK, name: TITIK, position: TITIK, bankAccountNumber: TITIK, bankName: TITIK, status: TITIK_PENDEK },
+    calc: Object.fromEntries(Object.keys(calc).map((key) => [key, null])),
+  };
 };
 
 const formatPlain = (number) => formatRupiah(number).replace('Rp. ', '');
@@ -595,7 +612,7 @@ function SlipTitle({ t, form, A, dash }) {
 }
 
 function SlipInfo({ t, form, A, soft, dash }) {
-  const left = [['ID', form.slipID], ['NAMA', form.name], ['JABATAN', form.position]];
+  const left = [['ID', form.slipID], ['NAMA', form.name], ['JABATAN', form.position]].filter(([, v]) => v !== undefined);
   const right = [['NO. REK', form.bankAccountNumber], ['NAMA BANK', form.bankName], ['STS PAJAK', form.status]];
   if (t.info === 'table') {
     const cell = { border: `1px solid ${A}`, padding: '0 4px', textAlign: 'left' };
@@ -603,10 +620,10 @@ function SlipInfo({ t, form, A, soft, dash }) {
     return (
       <table className="w-full mb-2 border-collapse">
         <tbody>
-          {left.map(([l1, v1], i) => (
-            <tr key={l1}>
-              <th className="font-semibold" style={head}>{l1}</th><td style={cell}>{v1}</td>
-              <th className="font-semibold" style={head}>{right[i][0]}</th><td style={cell}>{right[i][1]}</td>
+          {right.map(([l2, v2], i) => (
+            <tr key={l2}>
+              <th className="font-semibold" style={head}>{left[i]?.[0]}</th><td style={cell}>{left[i]?.[1]}</td>
+              <th className="font-semibold" style={head}>{l2}</th><td style={cell}>{v2}</td>
             </tr>
           ))}
         </tbody>
@@ -633,7 +650,7 @@ function SlipInfo({ t, form, A, soft, dash }) {
   return (
     <div className="grid grid-cols-2 gap-4 mb-2">
       <div className="space-y-0.5">
-        <InfoRow label="ID" value={form.slipID} highlight={!dash} />
+        {form.slipID !== undefined && <InfoRow label="ID" value={form.slipID} highlight={!dash} />}
         <InfoRow label="NAMA" value={form.name} />
         <InfoRow label="JABATAN" value={form.position} />
       </div>
@@ -657,7 +674,7 @@ function SlipBody({ t, calc, A, soft, dash, colored }) {
         <div key={h}>
           <div className="font-bold border-b-2 mb-0.5 tracking-wider" style={{ borderColor: A, color: colored ? A : undefined }}>{h}</div>
           {rows.map(([l, v]) => (
-            <div key={l} className="flex justify-between border-b border-dotted border-gray-400"><span>{l}</span><span>{formatRupiah(v)}</span></div>
+            <div key={l} className="flex justify-between border-b border-dotted border-gray-400"><span>{l}</span><span>{rp(v)}</span></div>
           ))}
         </div>
       ))}
@@ -669,7 +686,7 @@ function SlipBody({ t, calc, A, soft, dash, colored }) {
         <div key={h} className="flex-1 border" style={{ borderColor: A }}>
           <div className="font-bold px-1 py-0.5 tracking-wider" style={{ background: A, color: '#fff' }}>{h}</div>
           {rows.map(([l, v], i) => (
-            <div key={l} className="flex justify-between px-1" style={i % 2 ? { background: soft } : undefined}><span>{l}</span><span>{formatRupiah(v)}</span></div>
+            <div key={l} className="flex justify-between px-1" style={i % 2 ? { background: soft } : undefined}><span>{l}</span><span>{rp(v)}</span></div>
           ))}
         </div>
       ))}
@@ -680,7 +697,7 @@ function SlipBody({ t, calc, A, soft, dash, colored }) {
       {groups.map(([h, rows]) => (
         <div key={h} className="flex-1 border rounded-md p-1.5" style={{ borderColor: A }}>
           <div className="font-bold text-center mb-0.5 pb-0.5 border-b tracking-wider" style={{ borderColor: A, color: A }}>{h}</div>
-          {rows.map(([l, v]) => <SlipLine key={l} label={l} value={formatRupiah(v)} />)}
+          {rows.map(([l, v]) => <SlipLine key={l} label={l} value={rp(v)} />)}
         </div>
       ))}
     </div>
@@ -691,7 +708,7 @@ function SlipBody({ t, calc, A, soft, dash, colored }) {
         <div key={h} className={gi ? 'w-1/2' : 'w-1/2 border-r border-black'}>
           <div className={`text-center font-bold border-b border-black p-0.5 ${dash ? '' : 'bg-gray-100'}`}>{h}</div>
           <div className="p-1 space-y-0.5">
-            {rows.map(([l, v]) => <SlipLine key={l} label={l} value={formatRupiah(v)} />)}
+            {rows.map(([l, v]) => <SlipLine key={l} label={l} value={rp(v)} />)}
           </div>
         </div>
       ))}
@@ -702,14 +719,14 @@ function SlipBody({ t, calc, A, soft, dash, colored }) {
 function TotalsLine({ calc, A }) {
   return (
     <div className="flex font-bold border-t-2 pt-0.5 mt-1" style={{ borderColor: A }}>
-      <div className="w-1/2 flex justify-between px-1 border-r" style={{ borderColor: A }}><span>TOTAL PENERIMAAN</span><span>{formatRupiah(calc.totalEarnings)}</span></div>
-      <div className="w-1/2 flex justify-between px-1"><span>TOTAL POTONGAN</span><span>{formatRupiah(calc.totalDeductions)}</span></div>
+      <div className="w-1/2 flex justify-between px-1 border-r" style={{ borderColor: A }}><span>TOTAL PENERIMAAN</span><span>{rp(calc.totalEarnings)}</span></div>
+      <div className="w-1/2 flex justify-between px-1"><span>TOTAL POTONGAN</span><span>{rp(calc.totalDeductions)}</span></div>
     </div>
   );
 }
 
 function SlipTotals({ t, calc, A, dash }) {
-  const thp = formatRupiah(calc.takeHomePay);
+  const thp = rp(calc.takeHomePay);
   if (t.total === 'bar') return (
     <>
       <TotalsLine calc={calc} A={A} />
@@ -744,11 +761,11 @@ function SlipTotals({ t, calc, A, dash }) {
       <div className="flex font-extrabold text-sm border-t-2 border-black pt-1 mb-0.5">
         <div className={`w-1/2 border-r border-black ${half} py-0.5 px-1 flex justify-between`}>
           <span>TOTAL PENERIMAAN</span>
-          <span className="pl-2">{formatRupiah(calc.totalEarnings)}</span>
+          <span className="pl-2">{rp(calc.totalEarnings)}</span>
         </div>
         <div className={`w-1/2 ${half} py-0.5 px-1 flex justify-between`}>
           <span>TOTAL POTONGAN</span>
-          <span className="pl-2">{formatRupiah(calc.totalDeductions)}</span>
+          <span className="pl-2">{rp(calc.totalDeductions)}</span>
         </div>
       </div>
       <div className="relative py-2">
@@ -789,7 +806,7 @@ function SlipPreview({ slipRef, form, calc, logo, signature, managerSignature, t
             <div className="text-left" style={{ width: '36%' }}>
               <p className="text-[9px] leading-tight">Pembayaran gaji Telah Dilakukan Perusahaan Melalui Transfer</p>
               <div className="relative h-10 mb-1 pt-2">
-                <p className="text-[9px] text-gray-700">Tanggal Transfer: <span>{formatTransferDate(form.transferDate)}</span></p>
+                <p className="text-[9px] text-gray-700">Tanggal Transfer: <span>{form.kosong ? TITIK : formatTransferDate(form.transferDate)}</span></p>
               </div>
             </div>
 
@@ -845,6 +862,7 @@ export default function SlipGaji() {
   const toastId = useRef(0);
 
   const calc = useMemo(() => computeSlip(form), [form]);
+  const shown = useMemo(() => slipTampil(form, calc), [form, calc]);
   const tpl = SLIP_TEMPLATES.find((x) => x.id === form.template) || SLIP_TEMPLATES[0];
   const [paperSel, setPaperSel] = useState(loadPaper);
   const pilihPaper = (next) => {
@@ -970,6 +988,8 @@ export default function SlipGaji() {
   };
   const tampilan = (
     <>
+      <DocOptions nomor={{ value: form.pakaiNomor, onChange: (v) => setForm((prev) => ({ ...prev, pakaiNomor: v })) }}
+        kosong={{ value: form.kosong, onChange: (v) => setForm((prev) => ({ ...prev, kosong: v })) }} />
       <PaperPicker paper={paperSel.id} landscape={paperSel.landscape}
         onPaper={(id) => pilihPaper({ ...paperSel, id })} onLandscape={(landscape) => pilihPaper({ ...paperSel, landscape })} />
       <TextSizeSlider value={form.skala} onChange={(v) => setForm((prev) => ({ ...prev, skala: v }))} effective={k} />
@@ -1043,7 +1063,9 @@ export default function SlipGaji() {
           {/* Render — Preview Slip */}
           <div className="slip-card bg-white p-2 md:p-4 rounded-xl shadow-lg lg:col-span-1 min-w-0">
             <FitPreview>
-              <SlipPreview slipRef={slipRef} form={form} calc={calc} logo={logoShown.src} signature={signatureShown.src} managerSignature={managerShown.src} t={tpl} k={k} page={page} />
+              <SlipPreview slipRef={slipRef} form={shown.form} calc={shown.calc} logo={logoShown.src} t={tpl} k={k} page={page}
+                // template kosongan: tanpa gambar tanda tangan (ditandatangani basah)
+                signature={form.kosong ? '' : signatureShown.src} managerSignature={form.kosong ? '' : managerShown.src} />
             </FitPreview>
           </div>
         </div>

@@ -9,9 +9,10 @@ import SharedGallery from '../../shared/components/SharedGallery';
 import UserData from '../../shared/components/UserData';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
+import { DOTTED, ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSigner } from '../../shared/components/LetterLayouts';
 import { useBgRemoved } from '../../shared/lib/removeBg';
+import DocOptions, { TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 
 // Surat Penunjukan: menunjuk karyawan sebagai PIC / koordinator / pejabat sementara.
@@ -33,6 +34,7 @@ type Form = {
   ttdDitunjuk: boolean;
   penandaLain: Signer[];
   tembusan: string;
+  pakaiNomor: boolean; kosong: boolean;
 };
 
 const STORAGE_KEY = 'surat-penunjukan:v1';
@@ -57,6 +59,7 @@ const makeDefault = (): Form => ({
   ttdDitunjuk: true,
   penandaLain: [],
   tembusan: 'Kepala Divisi Operasional\nArsip',
+  pakaiNomor: true, kosong: false,
 });
 
 // Data User: identitas kop, penanda tangan & gambar (bukan template/kertas, bukan isi surat)
@@ -66,12 +69,13 @@ const USER_KEYS = ['logo', 'posisi', 'instansi', 'subKop', 'alamat', 'kontak', '
 // SECTION: Potongan isi surat
 // ============================================================
 // Daftar bernomor manual (preflight Tailwind menghapus penanda <ol>; html2canvas tetap akurat)
-function NumList({ text, k }: { text: string; k: number }) {
-  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+// blank: jumlah baris bernomor kosong untuk ditulis tangan (template kosongan)
+function NumList({ text, k, blank = 0 }: { text: string; k: number; blank?: number }) {
+  const lines = blank ? Array<string>(blank).fill('') : text.split('\n').map((l) => l.trim()).filter(Boolean);
   if (!lines.length) return null;
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 6 * k, rowGap: 2 * k, margin: `0 0 ${10 * k}px ${16 * k}px` }}>
-      {lines.map((l, i) => <div key={i} style={{ display: 'contents' }}><span>{i + 1}.</span><span style={{ textAlign: 'justify' }}>{l}</span></div>)}
+    <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 6 * k, rowGap: 2 * k, alignItems: blank ? 'end' : undefined, margin: `0 0 ${10 * k}px ${16 * k}px` }}>
+      {lines.map((l, i) => <div key={i} style={{ display: 'contents' }}><span>{i + 1}.</span><span style={{ textAlign: 'justify' }}>{l || <span style={{ display: 'block', height: '1.6em', borderBottom: DOTTED }} />}</span></div>)}
     </div>
   );
 }
@@ -124,27 +128,29 @@ export default function SuratPenunjukan() {
   const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
 
   // Lampiran/Perihal/Kepada opsional: kosong = gaya SK (nomor di bawah judul)
-  const meta = [{ label: 'Lampiran', value: f.lampiran }, { label: 'Perihal', value: f.perihal }].filter((r) => r.value.trim());
+  const K = f.kosong; // template kosongan: data jadi titik-titik, ttd/stempel basah
+  const meta = [{ label: 'Lampiran', value: f.lampiran }, { label: 'Perihal', value: f.perihal }].filter((r) => r.value.trim())
+    .map((r) => (K && r.label === 'Lampiran' ? { ...r, value: TITIK } : r));
   const signers: LayoutSigner[] = [
-    ...(f.ttdDitunjuk ? [{ heading: 'Yang ditunjuk,', role: f.jabatan, name: f.nama, idLine: f.nik && `NIK. ${f.nik}` }] : []),
+    ...(f.ttdDitunjuk ? [{ heading: 'Yang ditunjuk,', role: isian(f.jabatan, K), name: isian(f.nama, K), idLine: K ? '' : f.nik && `NIK. ${f.nik}` }] : []),
     ...f.penandaLain.map((s) => ({ heading: s.heading, role: s.jabatan, name: s.nama })),
-    { heading: f.ttdHeading, role: f.ttdJabatan, name: f.ttdNama, idLine: f.ttdId, ttd: ttd.src, stempel: stempel.src, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
+    { heading: f.ttdHeading, role: f.ttdJabatan, name: f.ttdNama, idLine: f.ttdId, ttd: K ? '' : ttd.src, stempel: K ? '' : stempel.src, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
   ];
   const doc: LayoutDoc = {
     logo: logo.src, logoOffset: getOffset(f.posisi, 'logo'),
     kopName: f.instansi, kopLines: [f.subKop, f.alamat, f.kontak],
-    title: f.judul, nomor: f.nomor,
+    title: f.judul, nomor: nomorTampil(f.nomor, f.pakaiNomor, K),
     meta: meta.length ? meta : undefined,
-    placeDate: [f.kota, fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
-    recipient: f.kepada.trim() ? ['Kepada Yth.', ...f.kepada.split('\n')] : undefined,
+    placeDate: [f.kota || (K ? '……' : ''), K ? '…………… 20……' : fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
+    recipient: f.kepada.trim() ? (K ? ['Kepada Yth.', TITIK + TITIK, 'di Tempat'] : ['Kepada Yth.', ...f.kepada.split('\n')]) : undefined,
     body: (
       <>
         {f.dasar.trim() && <P style={{ marginBottom: 2 * kk }}>Dasar / menimbang:</P>}
-        <NumList text={f.dasar} k={kk} />
+        <NumList text={f.dasar} k={kk} blank={K && f.dasar.trim() ? 3 : 0} />
         <P>{f.pembuka}</P>
-        <InfoRows rows={[{ label: 'Nama', value: f.nama }, { label: 'NIK karyawan', value: f.nik }, { label: 'Jabatan', value: f.jabatan }, { label: 'Divisi', value: f.divisi }]} />
-        <P>Sebagai <b>{f.sebagai}</b>{f.tugas.trim() ? ', dengan tugas dan tanggung jawab:' : '.'}</P>
-        <NumList text={f.tugas} k={kk} />
+        <InfoRows rows={[{ label: 'Nama', value: f.nama }, { label: 'NIK karyawan', value: f.nik }, { label: 'Jabatan', value: f.jabatan }, { label: 'Divisi', value: f.divisi }].map((r) => ({ ...r, value: isian(r.value, K) }))} />
+        <P>Sebagai <b>{K ? TITIK + TITIK + TITIK : f.sebagai}</b>{f.tugas.trim() ? ', dengan tugas dan tanggung jawab:' : '.'}</P>
+        <NumList text={f.tugas} k={kk} blank={K && f.tugas.trim() ? 4 : 0} />
         <P>{f.masaBerlaku}</P>
         <P>{f.penutup}</P>
       </>
@@ -157,6 +163,7 @@ export default function SuratPenunjukan() {
   const [canvas, setCanvas] = useCanvasMode();
   const tampilan = (
     <>
+      <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />

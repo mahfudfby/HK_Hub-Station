@@ -56,6 +56,10 @@ export function P({ children, style }: { children: ReactNode; style?: CSSPropert
   return <p style={{ margin: `0 0 ${8 * k}px`, textAlign: 'justify', textIndent: t.para === 'indent' ? 28 * k : 0, whiteSpace: 'pre-line', ...style }}>{children}</p>;
 }
 
+// Isian kosong: garis titik-titik selebar kolom untuk ditulis tangan (template kosongan)
+const Blank = () => <span style={{ display: 'inline-block', width: '100%', minWidth: '8em', height: '1.1em', borderBottom: '1.5px dotted #000' }} />;
+const val = (v: string) => (v ? v : <Blank />);
+
 export function InfoRows({ rows }: { rows: LayoutRow[] }) {
   const { k, t } = useContext(Ctx);
   const list = rows.filter((r) => r.label || r.value);
@@ -64,7 +68,7 @@ export function InfoRows({ rows }: { rows: LayoutRow[] }) {
     const cell: CSSProperties = { border: `1px solid ${t.accent}`, padding: `${3 * k}px ${6 * k}px`, verticalAlign: 'top' };
     return (
       <table style={{ width: '100%', borderCollapse: 'collapse', margin: `0 0 ${10 * k}px` }}>
-        <tbody>{list.map((r, i) => <tr key={i}><td style={{ ...cell, width: '34%', fontWeight: 700 }}>{r.label}</td><td style={{ ...cell, whiteSpace: 'pre-line' }}>{r.value}</td></tr>)}</tbody>
+        <tbody>{list.map((r, i) => <tr key={i}><td style={{ ...cell, width: '34%', fontWeight: 700 }}>{r.label}</td><td style={{ ...cell, whiteSpace: 'pre-line' }}>{val(r.value)}</td></tr>)}</tbody>
       </table>
     );
   }
@@ -74,7 +78,7 @@ export function InfoRows({ rows }: { rows: LayoutRow[] }) {
         {list.map((r, i) => (
           <div key={i} style={{ marginBottom: 4 * k }}>
             <div style={{ fontSize: '0.8em', textTransform: 'uppercase', letterSpacing: 1, color: t.accent }}>{r.label}</div>
-            <div style={{ fontWeight: 700, whiteSpace: 'pre-line' }}>{r.value}</div>
+            <div style={{ fontWeight: 700, whiteSpace: 'pre-line' }}>{val(r.value)}</div>
           </div>
         ))}
       </div>
@@ -85,7 +89,7 @@ export function InfoRows({ rows }: { rows: LayoutRow[] }) {
       {list.map((r, i) => (
         <div key={i} style={{ display: 'contents' }}>
           <span style={{ minWidth: 110 * k }}>{r.label}</span>
-          <span style={{ display: 'flex', gap: 6 * k, ...(t.rows === 'dotted' && { borderBottom: '1px dotted #000' }) }}><span>:</span><span style={{ flex: 1, whiteSpace: 'pre-line' }}>{r.value}</span></span>
+          <span style={{ display: 'flex', gap: 6 * k, ...(t.rows === 'dotted' && { borderBottom: '1px dotted #000' }) }}><span>:</span><span style={{ flex: 1, whiteSpace: 'pre-line' }}>{val(r.value)}</span></span>
         </div>
       ))}
     </div>

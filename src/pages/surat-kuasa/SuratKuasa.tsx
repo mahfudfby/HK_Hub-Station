@@ -9,10 +9,11 @@ import SharedGallery from '../../shared/components/SharedGallery';
 import UserData from '../../shared/components/UserData';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
+import { DOTTED, ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { InfoRows, LayoutLetter, LayoutPicker, P, SignBlock, type LayoutDoc, type LayoutSigner } from '../../shared/components/LetterLayouts';
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { useBgRemoved } from '../../shared/lib/removeBg';
+import DocOptions, { TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
 
 // Surat Kuasa: kuasa khusus perorangan atau perusahaan (pengambilan dokumen, administrasi, gaji, kuasa perusahaan).
 // Menu berdiri sendiri; tata letak dari LetterLayouts (20 template), kertas/ekspor dari LetterKit.
@@ -29,6 +30,7 @@ type Form = {
   keperluan: string; rincian: string[]; berlaku: string; penutup: string;
   ttd: string; stempel: string; ttdPenerima: string;
   saksi: string[];
+  pakaiNomor: boolean; kosong: boolean;
 };
 
 const STORAGE_KEY = 'surat-kuasa:v1';
@@ -57,15 +59,16 @@ const makeDefault = (): Form => ({
   penutup: 'Demikian surat kuasa ini dibuat dengan sebenarnya untuk dapat dipergunakan sebagaimana mestinya.',
   ttd: '', stempel: '', ttdPenerima: '',
   saksi: [],
+  pakaiNomor: true, kosong: false,
 });
 
 // Data User: identitas kop, pemberi kuasa & gambar (bukan isi surat)
 const USER_KEYS = ['logo', 'posisi', 'instansi', 'subKop', 'alamat', 'kontak', 'kota', 'pemberi', 'ttd', 'stempel'] as const;
 
-const personRows = (p: Person) => [
+const personRows = (p: Person, kosong = false) => [
   { label: 'Nama', value: p.nama }, { label: 'NIK', value: p.nik }, { label: 'Tempat, tgl. lahir', value: p.ttl },
   { label: 'Alamat', value: p.alamat }, { label: 'Jabatan', value: p.jabatan },
-].filter((r) => r.value);
+].filter((r) => r.value).map((r) => (kosong ? { ...r, value: '' } : r));
 
 // ============================================================
 // SECTION: Editor
@@ -148,29 +151,30 @@ export default function SuratKuasa() {
   const fileName = `surat-kuasa-${(f.nomor || 'surat').replace(/[^\w-]+/g, '-').toLowerCase()}`;
   const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
 
+  const K = f.kosong; // template kosongan: data penerima kuasa/keperluan/saksi jadi titik-titik, ttd/stempel basah
   const signers: LayoutSigner[] = [
-    { heading: 'Penerima Kuasa,', role: f.penerima.jabatan, name: f.penerima.nama, ttd: ttdPenerima.src, ttdOffset: getOffset(f.posisi, 'ttdPenerima') },
-    { heading: 'Pemberi Kuasa,', role: f.pemberi.jabatan, name: f.pemberi.nama, ttd: ttd.src, stempel: stempel.src, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
+    { heading: 'Penerima Kuasa,', role: isian(f.penerima.jabatan, K), name: isian(f.penerima.nama, K), ttd: K ? '' : ttdPenerima.src, ttdOffset: getOffset(f.posisi, 'ttdPenerima') },
+    { heading: 'Pemberi Kuasa,', role: f.pemberi.jabatan, name: f.pemberi.nama, ttd: K ? '' : ttd.src, stempel: K ? '' : stempel.src, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
   ];
   const saksi = f.saksi.filter(Boolean);
   const doc: LayoutDoc = {
     logo: logo.src, logoOffset: getOffset(f.posisi, 'logo'),
     kopName: f.instansi, kopLines: [f.subKop, f.alamat, f.kontak],
-    title: f.judul, nomor: f.nomor,
-    placeDate: [f.kota, fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
+    title: f.judul, nomor: nomorTampil(f.nomor, f.pakaiNomor, K),
+    placeDate: [f.kota || (K ? '……' : ''), K ? '…………… 20……' : fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
     body: (
       <>
         <P>Yang bertanda tangan di bawah ini:</P>
         <InfoRows rows={personRows(f.pemberi)} />
         <P>selanjutnya disebut sebagai <b>PEMBERI KUASA</b>.</P>
         <P>Dengan ini memberikan kuasa kepada:</P>
-        <InfoRows rows={personRows(f.penerima)} />
+        <InfoRows rows={personRows(f.penerima, K)} />
         <P>selanjutnya disebut sebagai <b>PENERIMA KUASA</b>.</P>
         <div style={{ textAlign: 'center', fontWeight: 700, letterSpacing: 4 * kk, margin: `${2 * kk}px 0 ${8 * kk}px` }}>K H U S U S</div>
-        <P>Untuk {f.keperluan}, dengan rincian sebagai berikut:</P>
-        {f.rincian.some(Boolean) && (
+        <P>Untuk {K ? TITIK + TITIK + TITIK : f.keperluan}, dengan rincian sebagai berikut:</P>
+        {(K || f.rincian.some(Boolean)) && (
           <ol style={{ margin: `0 0 ${8 * kk}px`, paddingLeft: 24 * kk, listStyle: 'decimal' }}>
-            {f.rincian.filter(Boolean).map((t, i) => <li key={i} style={{ textAlign: 'justify', whiteSpace: 'pre-line' }}>{t}</li>)}
+            {(K ? Array<string>(4).fill('') : f.rincian.filter(Boolean)).map((t, i) => <li key={i} style={{ textAlign: 'justify', whiteSpace: 'pre-line' }}>{t || <span style={{ display: 'inline-block', width: '100%', height: '1.6em', borderBottom: DOTTED, verticalAlign: 'bottom' }} />}</li>)}
           </ol>
         )}
         <P>{f.berlaku}</P>
@@ -183,7 +187,7 @@ export default function SuratKuasa() {
       <div style={{ fontSize: 13 * kk }}>
         <div style={{ textAlign: 'center', marginBottom: 4 * kk }}>Saksi-saksi:</div>
         <div style={{ display: 'flex', justifyContent: 'space-around', gap: 12 * kk }}>
-          {saksi.map((n, i) => <SignBlock key={i} s={{ heading: `Saksi ${i + 1},`, name: n }} k={kk} width={140} />)}
+          {saksi.map((n, i) => <SignBlock key={i} s={{ heading: `Saksi ${i + 1},`, name: isian(n, K) }} k={kk} width={140} />)}
         </div>
       </div>
     ) : undefined,
@@ -193,6 +197,7 @@ export default function SuratKuasa() {
   const [canvas, setCanvas] = useCanvasMode();
   const tampilan = (
     <>
+      <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Ttd pemberi' }, { id: 'stempel', label: 'Stempel' }, { id: 'ttdPenerima', label: 'Ttd penerima' }]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />

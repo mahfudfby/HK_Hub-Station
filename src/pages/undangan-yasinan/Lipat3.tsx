@@ -14,6 +14,7 @@ export type Isi = {
   doaArab: string; doaArti: string; turut: string; alamat: string;
   salam: string; pembuka: string; pengantar: string; tanggal: string; waktu: string; tempat: string; acara: string;
   penutup: string; wassalam: string; ttdHeading: string; keluarga: string; anggota: string;
+  kosong?: boolean; // template kosongan: tanggal jadi titik-titik (teks lain sudah dikosongkan pemanggil)
 };
 
 export const BASMALAH = 'بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ';
@@ -21,6 +22,8 @@ export const ISTIRJA = 'إِنَّا لِلّٰهِ وَإِنَّا إِلَي�
 
 export const fmtHari = (iso: string) =>
   iso ? new Date(`${iso}T00:00:00`).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '';
+// Tanggal tampil; template kosongan = titik-titik untuk ditulis tangan
+const tglOf = (d: Isi, iso: string) => (d.kosong ? '…………, …………… 20……' : fmtHari(iso));
 export const almLabel = (jk: 'L' | 'P') => (jk === 'P' ? 'Almarhumah' : 'Almarhum');
 export const peringatanText = (hari: string) => (/^haul/i.test(hari.trim()) ? `Memperingati ${hari}` : `Memperingati ${hari} Wafatnya`);
 
@@ -111,7 +114,7 @@ function Sampul({ t, d, c, k, wide, kotak }: { t: Tpl; d: Isi; c: Tone; k: numbe
       <div style={{ fontSize: 11 * k }}>{almLabel(d.jk)}</div>
       <div style={{ fontSize: 15 * k, fontWeight: 700, lineHeight: 1.25, ...pre }}>{d.nama}</div>
       {d.nasab && <div style={{ fontSize: 11.5 * k }}>{d.jk === 'P' ? 'binti' : 'bin'} {d.nasab}</div>}
-      {d.wafat && <div style={{ fontSize: 10.5 * k, marginTop: 4 * k }}>Wafat: {fmtHari(d.wafat)}</div>}
+      {(d.kosong || d.wafat) && <div style={{ fontSize: 10.5 * k, marginTop: 4 * k }}>Wafat: {tglOf(d, d.wafat)}</div>}
     </div>
   );
   const foto = (size: number) => <Photo t={t} src={d.foto} off={d.fotoOff} c={c} k={k} size={size} />;
@@ -177,7 +180,7 @@ function Sampul({ t, d, c, k, wide, kotak }: { t: Tpl; d: Isi; c: Tone; k: numbe
 }
 
 function Waktu({ t, d, c, k }: { t: Tpl; d: Isi; c: Tone; k: number }) {
-  const rows = ([['Hari / Tanggal', fmtHari(d.tanggal)], ['Waktu', d.waktu], ['Tempat', d.tempat], ['Acara', d.acara]] as const).filter((r) => r[1]);
+  const rows = ([['Hari / Tanggal', tglOf(d, d.tanggal)], ['Waktu', d.waktu], ['Tempat', d.tempat], ['Acara', d.acara]] as const).filter((r) => r[1]);
   const lbl: CSSProperties = { fontSize: 10 * k, letterSpacing: 1.5 * k, textTransform: 'uppercase', color: c.accent, fontWeight: 700 };
   const val: CSSProperties = { fontWeight: 700, ...pre };
   switch (t.time) {

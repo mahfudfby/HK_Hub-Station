@@ -9,6 +9,7 @@ import UserData from '../../shared/components/UserData';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import { ExportButton, Field, ImageUpload, PaperPicker, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
+import DocOptions, { TITIK } from '../../shared/components/DocOptions';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { Lembar, useTplFonts, type Isi } from './Lipat3';
 import { TEMPLATES, getTpl } from './templates';
@@ -22,6 +23,7 @@ import { TEMPLATES, getTpl } from './templates';
 type Form = Omit<Isi, 'foto' | 'fotoOff' | 'ttd' | 'ttdOff'> & {
   gaya: string; paper: string; landscape: boolean; skala: number; posisi: Offsets;
   logo: string; ttd: string; // logo = foto almarhum/ah (slot gambar bersama Galeri/Data User)
+  kosong: boolean;
 };
 
 const STORAGE_KEY = 'undangan-yasinan:v1';
@@ -60,6 +62,13 @@ const TUJUAN = [
 ] as const;
 const DEF_TUJUAN = TUJUAN[0];
 
+// Template kosongan: data almarhum/ah, acara & keluarga jadi titik-titik (ditulis tangan); narasi, teks Arab, judul & kotak penerima tetap
+const baris = (n: number) => Array(n).fill(TITIK).join('\n');
+const KOSONG: Partial<Isi> = {
+  nama: TITIK, nasab: TITIK, hari: '…… Hari', waktu: TITIK, tempat: baris(2), kepada: '',
+  keluarga: `Keluarga Besar ${TITIK}`, anggota: baris(4), turut: baris(3), foto: '', ttd: '', kosong: true,
+};
+
 const makeDefault = (): Form => ({
   gaya: TEMPLATES[0].id, paper: 'A4', landscape: true, skala: 100, posisi: {},
   logo: '', ttd: '',
@@ -78,6 +87,7 @@ const makeDefault = (): Form => ({
   wassalam: "Wassalamu'alaikum Wr. Wb.",
   ttdHeading: 'Kami yang berduka,', keluarga: 'Keluarga Besar Alm. H. Ahmad Sudirman',
   anggota: 'Ibu Hj. Siti Aminah (istri)\nBudi Santoso & keluarga\nDewi Lestari & keluarga\nAndi Prasetyo & keluarga',
+  kosong: false,
 });
 const DEFAULT = makeDefault();
 
@@ -131,7 +141,7 @@ export default function UndanganYasinan() {
   const pg = letterPage(f.paper, f.landscape);
   const k = useFitScale(f.skala / 100, () => pageRef.current?.firstElementChild as HTMLElement, true, [f, foto.src, ttd.src]);
   const pad = 16 * pg.f * 0.86; // margin fisik tetap, tidak ikut slider teks
-  const isi: Isi = { ...f, foto: foto.src, fotoOff: getOffset(f.posisi, 'logo'), ttd: ttd.src, ttdOff: getOffset(f.posisi, 'ttd') };
+  const isi: Isi = { ...f, foto: foto.src, fotoOff: getOffset(f.posisi, 'logo'), ttd: ttd.src, ttdOff: getOffset(f.posisi, 'ttd'), ...(f.kosong ? KOSONG : {}) };
   const fileName = `undangan-yasinan-${(f.nama || 'undangan').replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase()}`;
   const { exporting, run } = useLetterExport(() => pageRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
 
@@ -139,6 +149,7 @@ export default function UndanganYasinan() {
   const [canvas, setCanvas] = useCanvasMode();
   const tampilan = (
     <>
+      <DocOptions kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <PositionPad targets={[{ id: 'logo', label: 'Foto almarhum/ah' }, { id: 'ttd', label: 'Tanda tangan' }]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />

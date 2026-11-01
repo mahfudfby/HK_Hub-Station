@@ -11,6 +11,7 @@ import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc } from '../../shared/components/LetterLayouts';
+import DocOptions, { TITIK, TITIK_PENDEK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { terbilangRupiah } from '../../shared/lib/money';
 import { useBgRemoved } from '../../shared/lib/removeBg';
@@ -36,6 +37,7 @@ type Form = {
   rtNama: string; ttdRt: string; stempelRt: string;
   rwNama: string; ttdRw: string; stempelRw: string;
   pakaiRt: boolean; pakaiRw: boolean; pakaiOrtu: boolean; // tanda tangan yang ditampilkan (bebas: 1, 2 atau 3)
+  pakaiNomor: boolean; kosong: boolean; // opsi dokumen (DocOptions)
 };
 
 const STORAGE_KEY = 'surat-izin-sekolah:v1';
@@ -60,6 +62,7 @@ const makeDefault = (): Form => ({
   rtNama: 'H. Asep Suryana', ttdRt: '', stempelRt: '',
   rwNama: 'Drs. Dedi Kurniawan', ttdRw: '', stempelRw: '',
   pakaiRt: true, pakaiRw: false, pakaiOrtu: false, // bawaan: satu tanda tangan, Ketua RT
+  pakaiNomor: true, kosong: false,
 });
 
 // Data User: identitas kop RT/RW, orang tua & pengurus RT/RW beserta gambar (bukan isi surat)
@@ -85,32 +88,35 @@ console.assert(jumlahHari('2026-11-02', '2026-11-04') === 3 && jumlahHari('2026-
 // ============================================================
 function buildDoc(f: Form): LayoutDoc {
   const n = jumlahHari(f.mulai, f.selesai || f.mulai);
+  const ko = f.kosong; // template kosongan: data siswa/orang tua, tanggal & alasan jadi titik-titik; RT/RW tetap
+  const v = (x: string) => isian(x, ko);
+  const img = (x: string) => (ko ? '' : x); // tanda tangan & stempel basah
   return {
     logo: f.logo, logoOffset: getOffset(f.posisi, 'logo'),
     kopName: `RUKUN TETANGGA ${f.rt} / RUKUN WARGA ${f.rw}`,
     kopLines: [[f.kelurahan && `Kelurahan ${f.kelurahan}`, f.kecamatan && `Kecamatan ${f.kecamatan}`, f.kabKota].filter(Boolean).join(' • '), f.alamatKop, f.kontak],
-    title: f.judul, nomor: f.nomor,
-    placeDate: [f.kota, fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
-    recipient: ['Kepada Yth.', `Bapak/Ibu ${f.waliKelas} ${f.kelas}`.trim(), f.sekolah, 'di Tempat'].filter(Boolean),
+    title: f.judul, nomor: nomorTampil(f.nomor, f.pakaiNomor, ko),
+    placeDate: ko ? `${f.kota || TITIK_PENDEK}, …………… 20……` : [f.kota, fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
+    recipient: ['Kepada Yth.', `Bapak/Ibu ${f.waliKelas} ${ko ? TITIK_PENDEK : f.kelas}`.trim(), ko ? TITIK : f.sekolah, 'di Tempat'].filter(Boolean),
     body: (
       <>
         <P>{f.salam}</P>
         <P>Yang bertanda tangan di bawah ini, orang tua/wali siswa:</P>
         <InfoRows rows={[
-          { label: 'Nama', value: f.ortuNama }, { label: 'Hubungan dengan siswa', value: f.ortuHubungan },
-          { label: 'Pekerjaan', value: f.ortuPekerjaan }, { label: 'Alamat', value: f.ortuAlamat }, { label: 'No. telepon/HP', value: f.ortuHp },
+          { label: 'Nama', value: v(f.ortuNama) }, { label: 'Hubungan dengan siswa', value: v(f.ortuHubungan) },
+          { label: 'Pekerjaan', value: v(f.ortuPekerjaan) }, { label: 'Alamat', value: v(f.ortuAlamat) }, { label: 'No. telepon/HP', value: v(f.ortuHp) },
         ]} />
         <P>dengan ini memberitahukan bahwa anak kami:</P>
-        <InfoRows rows={[{ label: 'Nama', value: f.siswaNama }, { label: 'Kelas', value: f.kelas }, { label: 'NIS / NISN', value: f.siswaNis }]} />
-        <P>tidak dapat mengikuti kegiatan belajar mengajar selama {n} ({angkaKata(n)}) hari, pada {rentang(f.mulai, f.selesai)}, dikarenakan {alasanText(f)}. Oleh karena itu, kami mohon Bapak/Ibu berkenan memberikan izin.</P>
+        <InfoRows rows={[{ label: 'Nama', value: v(f.siswaNama) }, { label: 'Kelas', value: v(f.kelas) }, { label: 'NIS / NISN', value: v(f.siswaNis) }]} />
+        <P>tidak dapat mengikuti kegiatan belajar mengajar selama {ko ? `${TITIK_PENDEK} (${TITIK_PENDEK})` : `${n} (${angkaKata(n)})`} hari, pada {ko ? `${TITIK} s.d. ${TITIK}` : rentang(f.mulai, f.selesai)}, dikarenakan {ko ? `${TITIK}${TITIK}${TITIK}` : alasanText(f)}. Oleh karena itu, kami mohon Bapak/Ibu berkenan memberikan izin.</P>
         <P>{f.penutup}</P>
       </>
     ),
     // "Mengetahui," ditulis di heading agar tampil di semua tata letak
     signers: [
-      f.pakaiRt && { heading: `Mengetahui,\nKetua RT ${f.rt}`, name: f.rtNama, ttd: f.ttdRt, stempel: f.stempelRt, ttdOffset: getOffset(f.posisi, 'ttdRt'), stempelOffset: getOffset(f.posisi, 'stempelRt') },
-      f.pakaiRw && { heading: `Mengetahui,\nKetua RW ${f.rw}`, name: f.rwNama, ttd: f.ttdRw, stempel: f.stempelRw, ttdOffset: getOffset(f.posisi, 'ttdRw'), stempelOffset: getOffset(f.posisi, 'stempelRw') },
-      f.pakaiOrtu && { heading: f.ttdHeading, role: 'Orang Tua/Wali Siswa', name: f.ortuNama, ttd: f.ttd, ttdOffset: getOffset(f.posisi, 'ttd'), main: true },
+      f.pakaiRt && { heading: `Mengetahui,\nKetua RT ${f.rt}`, name: f.rtNama, ttd: img(f.ttdRt), stempel: img(f.stempelRt), ttdOffset: getOffset(f.posisi, 'ttdRt'), stempelOffset: getOffset(f.posisi, 'stempelRt') },
+      f.pakaiRw && { heading: `Mengetahui,\nKetua RW ${f.rw}`, name: f.rwNama, ttd: img(f.ttdRw), stempel: img(f.stempelRw), ttdOffset: getOffset(f.posisi, 'ttdRw'), stempelOffset: getOffset(f.posisi, 'stempelRw') },
+      f.pakaiOrtu && { heading: f.ttdHeading, role: 'Orang Tua/Wali Siswa', name: v(f.ortuNama), ttd: img(f.ttd), ttdOffset: getOffset(f.posisi, 'ttd'), main: true },
     ].filter((x): x is Exclude<typeof x, false> => !!x),
   };
 }
@@ -170,6 +176,7 @@ export default function SuratIzinSekolah() {
   const [canvas, setCanvas] = useCanvasMode();
   const tampilan = (
     <>
+      <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <PositionPad targets={[
         { id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'TTD orang tua' },

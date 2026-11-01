@@ -7,11 +7,15 @@ import { Toast } from '../../shared/components/Feedback';
 import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
 import BgToggle from '../../shared/components/BgToggle';
+import SharedGallery from '../../shared/components/SharedGallery';
 import { TextSizeSlider, useFitScale, ScaleBox } from '../../shared/components/TextScale';
 import { PaperPicker, PAPERS, paperOf, orient, mmToPx } from '../../shared/components/LetterKit';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ADDRESS_TEMPLATES, DEFAULT_FUELS, PLATE_REGIONS, GENERIC_LOGOS, buildPlate, randomRegionCode, svgToDataUri, GAYA_NOTA, GAYA_NOTA_KEY, DEFAULT_FOOTER_TEXT, FOOTER_PRESETS } from './SPBU.templates';
 import { useGoogleFonts, cssFamily, fontsReady } from '../../shared/lib/fonts';
+import DocOptions, { TITIK_PENDEK } from '../../shared/components/DocOptions';
+// Titik-titik isian nota SPBU: lebih pendek dari TITIK agar muat 58 mm di semua gaya
+const ISI = '………………';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
@@ -195,7 +199,7 @@ const PAPER = '#fff';
 const SEP_CHAR = { dash: '-', eq: '=', dot: '.', star: '*' };
 const B = `1px solid ${INK}`;
 
-const GayaNotaReceipt = ({ g, spbu, trans, logoSrc, priceLiter, volume, total, k }) => {
+const GayaNotaReceipt = ({ g, spbu, trans, logoSrc, priceLiter, volume, total, k, kosong }) => {
     const fs = g.size;
     const sep = () => g.sep === 'none' ? <div style={{ height: 8 }} />
         : SEP_CHAR[g.sep]
@@ -281,7 +285,8 @@ const GayaNotaReceipt = ({ g, spbu, trans, logoSrc, priceLiter, volume, total, k
         <div style={g.rows === 'table' ? { border: B } : g.rows === 'grid2' ? { display: 'flex', flexWrap: 'wrap', border: B } : undefined}>{rows.map(row)}</div>
     );
 
-    const meta = [['Shift', trans.shift], ['No.Trans', trans.noTrans], ['Tanggal', trans.date], ['Jam', trans.time]];
+    // noTrans undefined = nomor transaksi disembunyikan
+    const meta = [['Shift', trans.shift], ['No.Trans', trans.noTrans], ['Tanggal', trans.date], ['Jam', trans.time]].filter(([, v]) => v !== undefined);
     const metaBlock = g.meta === 'grid' ? (
         <div style={{ display: 'flex', flexWrap: 'wrap' }}>
             {meta.map(([label, value], i) => (
@@ -302,25 +307,26 @@ const GayaNotaReceipt = ({ g, spbu, trans, logoSrc, priceLiter, volume, total, k
         </div>
     ) : g.meta === 'line' ? (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>No. {trans.noTrans}</span><span>Shift {trans.shift}</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>{trans.noTrans !== undefined && `No. ${trans.noTrans}`}</span><span>Shift {trans.shift}</span></div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}><span>{trans.date}</span><span>{trans.time}</span></div>
         </div>
     ) : group(meta);
 
-    const volumeText = `(L) ${volume.toFixed(2)}`;
-    const totalValue = `Rp. ${formatRupiah(total)}`;
+    const volumeText = `(L) ${kosong ? TITIK_PENDEK : volume.toFixed(2)}`;
+    const totalValue = `Rp. ${kosong ? ISI : formatRupiah(total)}`;
+    const heroFs = kosong ? fs + 2 : fs + 8; // titik-titik raksasa meluber; isi tangan di ukuran biasa
     const heroBox = (label, value) => (
         <div style={{ border: `2px solid ${INK}`, padding: '2px 4px', margin: '4px 0', textAlign: 'center' }}>
             <p style={{ fontSize: fs - 2, letterSpacing: 2, textTransform: 'uppercase' }}>{label}</p>
-            <p style={{ fontSize: fs + 8, fontWeight: 700, lineHeight: 1.1, overflowWrap: 'anywhere' }}>{value}</p>
+            <p style={{ fontSize: heroFs, fontWeight: 700, lineHeight: kosong ? 2 : 1.1, overflowWrap: 'anywhere' }}>{value}</p>
         </div>
     );
     const totalBlock = g.total === 'hero' ? (
-        <>{heroBox('Volume (Liter)', volume.toFixed(2))}{heroBox('Total Harga', totalValue)}</>
+        <>{heroBox('Volume (Liter)', kosong ? TITIK_PENDEK : volume.toFixed(2))}{heroBox('Total Harga', totalValue)}</>
     ) : g.total === 'big' ? (
         <div style={{ textAlign: 'center', margin: '4px 0' }}>
             <p style={{ fontSize: fs - 2, letterSpacing: 2, textTransform: 'uppercase' }}>Total Harga</p>
-            <p style={{ fontSize: fs + 10, fontWeight: 700, lineHeight: 1.1, overflowWrap: 'anywhere' }}>{totalValue}</p>
+            <p style={{ fontSize: kosong ? fs + 2 : fs + 10, fontWeight: 700, lineHeight: kosong ? 2 : 1.1, overflowWrap: 'anywhere' }}>{totalValue}</p>
         </div>
     ) : (
         <div style={{
@@ -336,7 +342,7 @@ const GayaNotaReceipt = ({ g, spbu, trans, logoSrc, priceLiter, volume, total, k
     const footerLines = footer.split('\n');
     return (
         <div id="receipt-preview" className="text-left"
-            style={{ width: `${spbu.receiptWidth || 275}px`, height: spbu.receiptHeight, padding: 8, background: PAPER, color: INK, fontFamily: cssFamily(g.font.family, g.font.fallback), fontSize: fs, lineHeight: 1.25, textTransform: g.upper ? 'uppercase' : 'none' }}><ScaleBox k={k}>
+            style={{ width: `${spbu.receiptWidth || 275}px`, height: spbu.receiptHeight, padding: 8, background: PAPER, color: INK, fontFamily: cssFamily(g.font.family, g.font.fallback), fontSize: fs, lineHeight: kosong ? 1.9 : 1.25, textTransform: g.upper ? 'uppercase' : 'none' }}><ScaleBox k={k}>
             {header}
             {sep()}
             {metaBlock}
@@ -344,7 +350,7 @@ const GayaNotaReceipt = ({ g, spbu, trans, logoSrc, priceLiter, volume, total, k
             {group([
                 ['Pulau/Pompa', trans.islandPump],
                 ['Nama Produk', trans.productName],
-                ['Harga/Liter', `Rp. ${formatRupiah(priceLiter)}`],
+                ['Harga/Liter', `Rp. ${kosong ? ISI : formatRupiah(priceLiter)}`],
                 ...(g.total === 'hero' ? [] : [['Volume', volumeText]]),
             ])}
             {totalBlock}
@@ -401,6 +407,9 @@ const App = () => {
     const [skala, setSkala] = useState(() => { try { return Number(localStorage.getItem('spbu:skala:v1')) || 100; } catch { return 100; } });
     const pilihSkala = (v) => { setSkala(v); try { localStorage.setItem('spbu:skala:v1', String(v)); } catch { /* mode privat */ } };
     useGoogleFonts([gaya.font.google ? gaya.font : null]);
+    // Opsi dokumen (lokal per perangkat, seperti Gaya Nota): pakai No.Trans & template kosongan untuk diisi tangan
+    const [opsi, setOpsi] = useState(() => { try { return { pakaiNomor: true, kosong: false, ...JSON.parse(localStorage.getItem('spbu:docopt:v1') || '{}') }; } catch { return { pakaiNomor: true, kosong: false }; } });
+    const pilihOpsi = (patch) => setOpsi((p) => { const v = { ...p, ...patch }; try { localStorage.setItem('spbu:docopt:v1', JSON.stringify(v)); } catch { /* mode privat */ } return v; });
     // Ukuran kertas (lokal per perangkat). T58 = perilaku lama: lebar dari "Lebar Nota (px)" + cetak 58mm.
     const [paperId, setPaperId] = useState(() => { try { return PAPERS[localStorage.getItem('spbu:paper:v1')] ? localStorage.getItem('spbu:paper:v1') : 'T58'; } catch { return 'T58'; } });
     const [landscape, setLandscape] = useState(() => { try { return localStorage.getItem('spbu:landscape:v1') === '1'; } catch { return false; } });
@@ -828,18 +837,24 @@ const App = () => {
     const receiptH = paperDef.roll ? undefined : mmToPx(paperMm.h);
     const fPaper = native ? 1 : Math.min(2, receiptW / 275); // maks 2x: teks tidak raksasa di kertas lebar
     const spbuView = { ...currentSpbu, receiptWidth: receiptW, receiptHeight: receiptH };
-    const k = useFitScale(skala / 100 * fPaper, () => document.getElementById('receipt-preview'), !paperDef.roll, [skala, gayaNota, transactionData, currentSpbu, logoShown.src, paperId, landscape]);
+    const k = useFitScale(skala / 100 * fPaper, () => document.getElementById('receipt-preview'), !paperDef.roll, [skala, gayaNota, transactionData, currentSpbu, logoShown.src, paperId, landscape, opsi]);
 
     // Fungsi untuk membuat elemen HTML nota yang akan dicetak/di-export
     const ReceiptPreviewComponent = useCallback(() => {
-        const trans = transactionData;
+        const K = opsi.kosong;
+        // Kosongan: data transaksi jadi titik-titik (isian form tetap); identitas SPBU & footer tetap
+        const trans = {
+            ...transactionData,
+            ...(K && { shift: TITIK_PENDEK, date: '……/……/20……', time: '……:……', islandPump: TITIK_PENDEK, productName: ISI, operator: ISI, nopol: ISI }),
+            noTrans: !opsi.pakaiNomor ? undefined : K ? TITIK_PENDEK : transactionData.noTrans,
+        };
         const spbu = spbuView;
         const displayVolume = calculatedVolume || parseFloat(trans.volume) || 0;
         const displayPrice = finalPrice || parseFloat(trans.cashAmount) || 0;
         const priceLiter = parseFloat(trans.pricePerLiter) || 0;
 
         if (gaya.id !== 'klasik') {
-            return <GayaNotaReceipt g={gaya} spbu={spbu} trans={trans} logoSrc={logoShown.src} priceLiter={priceLiter} volume={displayVolume} total={displayPrice} k={k} />;
+            return <GayaNotaReceipt g={gaya} spbu={spbu} trans={trans} logoSrc={logoShown.src} priceLiter={priceLiter} volume={displayVolume} total={displayPrice} k={k} kosong={K} />;
         }
 
         // Batasi Address hanya 2 baris saat dirender
@@ -860,7 +875,7 @@ const App = () => {
 
         return (
             <div id="receipt-preview" 
-                 style={{ width: `${spbu.receiptWidth || 275}px`, height: spbu.receiptHeight }}
+                 style={{ width: `${spbu.receiptWidth || 275}px`, height: spbu.receiptHeight, lineHeight: K ? 1.9 : undefined }}
                  className="doc-font text-left p-2 text-black leading-tight font-sans"
             ><ScaleBox k={k}>
                 {/* Logo Section */}
@@ -884,7 +899,7 @@ const App = () => {
                 {/* BLOK DATA TANGGAL/SHIFT/NOTA */}
                 <div className="grid grid-cols-2 gap-x-2 text-base text-center">
                     <div><p className="font-medium text-left">Shift:</p><p className="text-left">{trans.shift}</p></div>
-                    <div><p className="font-medium text-right">No.Trans:</p><p className="text-right">{trans.noTrans}</p></div>
+                    {trans.noTrans !== undefined && <div><p className="font-medium text-right">No.Trans:</p><p className="text-right">{trans.noTrans}</p></div>}
                     
                     <div className="col-span-2 border-t border-dashed border-black my-1 h-0"></div>
 
@@ -898,10 +913,10 @@ const App = () => {
                 <div className="space-y-0 text-base"> 
                     {renderReceiptRow('Pulau/Pompa', trans.islandPump)}
                     {renderReceiptRow('Nama Produk', trans.productName)}
-                    {renderReceiptRow('Harga/Liter', `Rp. ${formatRupiah(priceLiter)}`)}
-                    {renderReceiptRow('Volume', ` (L) ${displayVolume.toFixed(2)}`)}
+                    {renderReceiptRow('Harga/Liter', `Rp. ${K ? ISI : formatRupiah(priceLiter)}`)}
+                    {renderReceiptRow('Volume', ` (L) ${K ? TITIK_PENDEK : displayVolume.toFixed(2)}`)}
                     
-                    {renderReceiptRow('Total Harga', `Rp. ${formatRupiah(displayPrice)}`, true)}
+                    {renderReceiptRow('Total Harga', `Rp. ${K ? ISI : formatRupiah(displayPrice)}`, true)}
 
                     {renderReceiptRow('Operator', trans.operator)}
                     {renderReceiptRow('Nopol', trans.nopol)}
@@ -915,7 +930,7 @@ const App = () => {
                 </div>}
             </ScaleBox></div>
         );
-    }, [transactionData, currentSpbu, calculatedVolume, finalPrice, logoShown.src, gaya, k, receiptW, receiptH]);
+    }, [transactionData, currentSpbu, calculatedVolume, finalPrice, logoShown.src, gaya, k, receiptW, receiptH, opsi]);
 
     // --- EXPORT/PRINT LOGIC ---
 
@@ -1047,6 +1062,7 @@ const App = () => {
                     ))}
                 </select>
             </div>
+            <DocOptions nomor={{ value: opsi.pakaiNomor, onChange: (v) => pilihOpsi({ pakaiNomor: v }) }} kosong={{ value: opsi.kosong, onChange: (v) => pilihOpsi({ kosong: v }) }} />
         </>
     );
     const unduh = (
@@ -1065,11 +1081,13 @@ const App = () => {
                 </button>
         </>
     );
-    // Logo hanya tersimpan lewat Simpan Data User, jadi galeri aktif saat sedang Edit Data User / Buat Baru
-    const galeriIsi = uiState === 'view' ? (
-        <p className="text-xs text-gray-600">Untuk mengganti logo, klik <b>Edit Data User</b> atau <b>Buat Baru</b> di Isi Formulir, lalu pilih logo di sini dan klik Simpan Data User.</p>
-    ) : (
+    // Galeri selalu tampil & dipisah per kategori. Pilihan logo langsung terlihat di nota;
+    // agar tersimpan permanen tetap lewat Edit Data User / Buat Baru lalu Simpan Data User.
+    const galeriIsi = (
         <>
+            {uiState === 'view' && (
+                <p className="text-xs text-gray-600">Logo yang dipilih langsung tampil di nota. Agar tersimpan, klik <b>Edit Data User</b> di Isi Formulir lalu <b>Simpan Data User</b>.</p>
+            )}
             {/* Logo Generik */}
             <div>
                 <label className="text-sm font-medium text-gray-700 block mb-1">Logo Generik (bebas pakai)</label>
@@ -1098,6 +1116,8 @@ const App = () => {
                         </div>
                     </>
                 )}
+                <p className="text-sm font-medium text-gray-700 mt-3 mb-1">Galeri Bersama (Cloudinary)</p>
+                <SharedGallery showEmpty keys={['logo']} data={{ logo: currentSpbu.logoBase64 }} onApply={(u) => u.logo && handleReuseLogo(u.logo)} />
             </div>
         </>
     );
@@ -1258,6 +1278,12 @@ const App = () => {
                                     <button onClick={handleClearLogo} className="text-xs text-red-600 hover:underline" disabled={isProcessing || isAiGenerating}>Hapus Logo</button>
                                 )}
                             </div>
+                        </div>
+
+                        {/* Galeri Foto per kategori juga di form Edit Data User (sama dengan di Edit Canvas) */}
+                        <div className="space-y-2 rounded-xl border border-gray-200 p-3">
+                            <p className="text-sm font-bold text-gray-800">Galeri Foto</p>
+                            {galeriIsi}
                         </div>
 
                         <div>
