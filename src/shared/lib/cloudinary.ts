@@ -4,9 +4,9 @@
 // API Secret TIDAK PERNAH ada di sini; ia hanya di server (api/cloudinary-sign.ts).
 // Urutan upload: (1) signed via /api/cloudinary-sign  ->  (2) unsigned preset  ->  gagal (caller fallback lokal)
 // ============================================================
-export const CLOUDINARY_CLOUD_NAME: string = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dl4pyan8v';
-export const CLOUDINARY_API_KEY: string = import.meta.env.VITE_CLOUDINARY_API_KEY || '654582583389542';
-const UPLOAD_PRESET: string = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
+export const CLOUDINARY_CLOUD_NAME: string = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'tdja56xe';
+export const CLOUDINARY_API_KEY: string = import.meta.env.VITE_CLOUDINARY_API_KEY || '493779522596543';
+const UPLOAD_PRESET: string = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'CloudDB_HKHUB_001';
 const UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 
 export type UploadResult = { url: string; publicId: string };
