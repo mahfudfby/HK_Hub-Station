@@ -25,6 +25,7 @@ async function uploadSigned(file: Blob, folder: string): Promise<UploadResult> {
   body.append('api_key', CLOUDINARY_API_KEY);
   body.append('timestamp', String(timestamp));
   body.append('folder', folder);
+  body.append('asset_folder', folder); // mode dynamic folders: folder sebenarnya di Media Library
   body.append('signature', signature);
   return send(body);
 }
@@ -34,6 +35,7 @@ async function uploadUnsigned(file: Blob, folder: string): Promise<UploadResult>
   body.append('file', file);
   body.append('upload_preset', UPLOAD_PRESET);
   body.append('folder', folder);
+  body.append('asset_folder', folder); // mode dynamic folders: folder sebenarnya di Media Library
   return send(body);
 }
 
