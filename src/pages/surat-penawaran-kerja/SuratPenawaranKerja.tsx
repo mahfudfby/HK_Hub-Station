@@ -9,16 +9,19 @@ import SharedGallery from '../../shared/components/SharedGallery';
 import UserData from '../../shared/components/UserData';
 import DocOptions, { Switch, TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
-import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
-import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSigner } from '../../shared/components/LetterLayouts';
+import { TextSizeSlider } from '../../shared/components/TextScale';
+import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, type Notify } from '../../shared/components/LetterKit';
+import { InfoRows, LayoutPicker, P, type LayoutSigner } from '../../shared/components/LetterLayouts';
+import { usePagesExport } from '../surat-kontrak-kerja/exportPages';
+import { ClosingSigns, LampiranField, SIGN, lampiranOtomatis, usePagedLetter, type Unit } from './paged';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { num, rupiah } from '../../shared/lib/money';
+import FormSection from '../../shared/components/FormSection';
 
 // Surat Penawaran Kerja (Offer Letter): penawaran resmi HRD kepada kandidat terpilih berisi posisi,
 // status kerja, kompensasi (gaji pokok + tunjangan, total otomatis), benefit & batas konfirmasi.
-// Menu berdiri sendiri (file, form & penyimpanan terpisah). Tata letak dari LetterLayouts.
+// Menu berdiri sendiri (file, form & penyimpanan terpisah). Tata letak dari LetterLayouts; isi panjang berlanjut ke halaman berikut.
 
 // ============================================================
 // SECTION: Data
@@ -29,6 +32,7 @@ type Form = {
   pakaiNomor: boolean; kosong: boolean;
   logo: string; instansi: string; subKop: string; alamat: string; kontak: string;
   judul: string; nomor: string; kota: string; tanggal: string; perihal: string;
+  lampiranManual: boolean; lampiran: string; // Otomatis = jumlah lembar sesudah halaman 1
   kandidat: string; alamatKandidat: string; pembuka: string;
   jabatan: string; departemen: string; atasan: string; statusKerja: string; mulai: string;
   lokasi: string; jamKerja: string;
@@ -51,6 +55,7 @@ const makeDefault = (): Form => ({
   alamat: 'Jl. Jenderal Sudirman No. 88, Kel. Karet Tengsin, Kec. Tanah Abang, Jakarta Pusat, DKI Jakarta 10220',
   kontak: 'Telp. (021) 5790-1234 • hrd@cahayanusantara.co.id • www.cahayanusantara.co.id',
   judul: 'SURAT PENAWARAN KERJA', nomor: randomDocNo(POLA), kota: 'Jakarta', tanggal: today(), perihal: 'Penawaran Kerja',
+  lampiranManual: false, lampiran: '',
   kandidat: 'Sdr. Rizky Ramadhan', alamatKandidat: 'Jl. Kenanga No. 7, RT 002/RW 005, Kel. Pondok Labu, Jakarta Selatan',
   pembuka: 'Dengan hormat,\nMenindaklanjuti rangkaian proses seleksi yang telah Saudara ikuti, dengan senang hati kami menawarkan kepada Saudara untuk bergabung bersama perusahaan kami dengan ketentuan sebagai berikut:',
   jabatan: 'Staf Pemasaran Digital', departemen: 'Pemasaran', atasan: 'Dimas Saputra (Manajer Pemasaran)',
@@ -158,10 +163,10 @@ export default function SuratPenawaranKerja() {
 
   const letterRef = useRef<HTMLDivElement>(null);
   const pg = letterPage(f.paper, f.landscape);
-  const k = useFitScale(f.skala / 100, () => letterRef.current?.firstElementChild as HTMLElement, true, [f, logo.src, ttd.src, stempel.src]);
+  const k = f.skala / 100; // huruf normal (tidak dikecilkan otomatis); isi panjang berlanjut ke halaman berikut
   const kk = k * pg.f * 0.86;
   const fileName = `surat-penawaran-kerja-${(f.nomor || 'surat').replace(/[^\w-]+/g, '-').toLowerCase()}`;
-  const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
+  const { exporting, run } = usePagesExport(() => [...letterRef.current!.querySelectorAll<HTMLElement>('[data-page]')], fileName, notify, pg.paper);
 
   const komponen: [string, number][] = [['Gaji pokok', num(f.gajiPokok)], ...f.tunjangan.filter((t) => t.label.trim() || num(t.nominal)).map((t): [string, number] => [t.label, num(t.nominal)])];
   const total = komponen.reduce((s, [, n]) => s + n, 0);
@@ -174,33 +179,36 @@ export default function SuratPenawaranKerja() {
     f.pakaiKandidat && { heading: 'Menyetujui,', role: 'Kandidat', name: ks ? '' : f.kandidat },
     f.pakaiHrd && { heading: 'Hormat kami,', role: f.ttdJabatan, name: f.ttdNama, idLine: f.ttdId, ttd: ks ? '' : ttd.src, stempel: ks ? '' : stempel.src, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
   ] as (LayoutSigner | false)[]).filter((x): x is LayoutSigner => !!x);
-  const doc: LayoutDoc = {
+  const nomor = nomorTampil(f.nomor, f.pakaiNomor, ks);
+  // Unit isi (halaman dipotong di batas unit); penutup + tanda tangan selalu bersama di halaman terakhir
+  const units: Unit[] = [
+    { g: 0, el: <P>{f.pembuka}</P> },
+    { g: 1, el: <InfoRows rows={[
+      { label: 'Posisi / jabatan', value: v(f.jabatan) }, { label: 'Departemen', value: v(f.departemen) },
+      { label: 'Atasan langsung', value: v(f.atasan) }, { label: 'Status kerja', value: v(f.statusKerja) },
+      { label: 'Tanggal mulai', value: ks ? '' : fmtTanggal(f.mulai) }, { label: 'Lokasi kerja', value: v(f.lokasi) },
+      { label: 'Jam kerja', value: v(f.jamKerja) },
+      ...(f.percobaan.trim() ? [{ label: 'Masa percobaan', value: v(f.percobaan) }] : []),
+    ]} /> },
+    { g: 2, el: <><P>Kompensasi yang akan Saudara terima setiap bulan adalah sebagai berikut:</P><KompensasiTable rows={komponen} total={total} k={kk} kosong={ks} /></> },
+    ...(f.benefit.trim() ? [{ g: 3, el: <><P>Selain itu, Saudara berhak memperoleh fasilitas dan benefit berikut:</P><NumList text={f.benefit} k={kk} /></> }] : []),
+    ...(f.dokumen.trim() ? [{ g: 4, el: <><P>Pada hari pertama bekerja, mohon membawa dokumen berikut:</P><NumList text={f.dokumen} k={kk} /></> }] : []),
+    { g: 5, el: <P>Mohon konfirmasi atas penawaran ini paling lambat tanggal <b>{tgl(f.batas)}</b>. Apabila sampai batas waktu tersebut kami belum menerima konfirmasi, penawaran ini dianggap batal.</P> },
+    { g: SIGN, el: <P>{f.penutup}</P> },
+    { g: SIGN, el: <ClosingSigns placeDate={[f.kota, tgl(f.tanggal)].filter(Boolean).join(', ')} signers={signers} k={kk} /> },
+  ];
+  const { count, render } = usePagedLetter(units, [f, logo.src, ttd.src, stempel.src], letterRef, { gaya: f.gaya, pg, kk, title: f.judul, nomor });
+  const lampiranAuto = lampiranOtomatis(count);
+  const lampiran = f.lampiranManual ? f.lampiran.trim() : lampiranAuto;
+  const pages = render({
     logo: logo.src, logoOffset: getOffset(f.posisi, 'logo'),
     kopName: f.instansi, kopLines: [f.subKop, f.alamat, f.kontak],
-    title: f.judul, nomor: nomorTampil(f.nomor, f.pakaiNomor, ks),
-    meta: f.perihal.trim() ? [{ label: 'Perihal', value: f.perihal }] : undefined,
-    placeDate: [f.kota, tgl(f.tanggal)].filter(Boolean).join(', '),
+    title: f.judul, nomor,
+    meta: [{ label: 'Lampiran', value: lampiran }, { label: 'Perihal', value: f.perihal.trim() }].filter((r) => r.value),
+    placeDate: '',
     recipient: ['Kepada Yth.', ks ? TITIK : f.kandidat, ...(ks ? [TITIK] : f.alamatKandidat.split('\n')), 'di Tempat'].filter(Boolean),
-    body: (
-      <>
-        <P>{f.pembuka}</P>
-        <InfoRows rows={[
-          { label: 'Posisi / jabatan', value: v(f.jabatan) }, { label: 'Departemen', value: v(f.departemen) },
-          { label: 'Atasan langsung', value: v(f.atasan) }, { label: 'Status kerja', value: v(f.statusKerja) },
-          { label: 'Tanggal mulai', value: ks ? '' : fmtTanggal(f.mulai) }, { label: 'Lokasi kerja', value: v(f.lokasi) },
-          { label: 'Jam kerja', value: v(f.jamKerja) },
-          ...(f.percobaan.trim() ? [{ label: 'Masa percobaan', value: v(f.percobaan) }] : []),
-        ]} />
-        <P>Kompensasi yang akan Saudara terima setiap bulan adalah sebagai berikut:</P>
-        <KompensasiTable rows={komponen} total={total} k={kk} kosong={ks} />
-        {f.benefit.trim() && <><P>Selain itu, Saudara berhak memperoleh fasilitas dan benefit berikut:</P><NumList text={f.benefit} k={kk} /></>}
-        {f.dokumen.trim() &&<><P>Pada hari pertama bekerja, mohon membawa dokumen berikut:</P><NumList text={f.dokumen} k={kk} /></>}
-        <P>Mohon konfirmasi atas penawaran ini paling lambat tanggal <b>{tgl(f.batas)}</b>. Apabila sampai batas waktu tersebut kami belum menerima konfirmasi, penawaran ini dianggap batal.</P>
-        <P>{f.penutup}</P>
-      </>
-    ),
-    signers,
-  };
+    signers: [],
+  });
 
   const [geser, setGeser] = useState('logo');
   const [canvas, setCanvas] = useCanvasMode();
@@ -208,6 +216,7 @@ export default function SuratPenawaranKerja() {
     <>
       <DocOptions nomor={{ value: f.pakaiNomor, onChange: (x) => set('pakaiNomor', x) }} kosong={{ value: f.kosong, onChange: (x) => set('kosong', x) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(x) => set('skala', x)} />
+      <p className="text-xs text-gray-500">Dokumen {count} halaman; isi yang tidak muat otomatis berlanjut ke halaman berikutnya.</p>
       <PositionPad targets={[{ id: 'logo', label: 'Logo' }, ...(f.pakaiHrd ? [{ id: 'ttd', label: 'TTD HRD' }, { id: 'stempel', label: 'Stempel' }] : [])]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(x) => set('posisi', x)} />
       <LayoutPicker value={f.gaya} onChange={(x) => set('gaya', x)} />
@@ -244,17 +253,15 @@ export default function SuratPenawaranKerja() {
             ) : (<>
             <UserData storageKey="data-user:surat-penawaran-kerja" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Surat</h2>
+            <FormSection title="Kop Surat">
               <ImageUpload label="Logo" value={f.logo} onChange={(x) => set('logo', x)} notify={notify} {...bgFor('logo', logo)} />
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
               {text('kontak', 'Telepon, email, website')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Surat</h2>
+            <FormSection title="Data Surat">
               {text('judul', 'Judul surat')}
               <Field label="Nomor surat"><NumberFormatInput parts={['Nomor', 'Kode', 'Unit', 'Bulan', 'Tahun']} example={`021/OL/HRD/${ROMAN[new Date().getMonth()]}/${new Date().getFullYear()} (bulan angka romawi)`} value={f.nomor} onChange={(x) => set('nomor', x)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
@@ -262,10 +269,10 @@ export default function SuratPenawaranKerja() {
                 {date('tanggal', 'Tanggal surat')}
                 {text('perihal', 'Perihal (opsional)')}
               </div>
-            </section>
+              <LampiranField manual={f.lampiranManual} value={f.lampiran} auto={lampiranAuto} onManual={(x) => set('lampiranManual', x)} onValue={(x) => set('lampiran', x)} />
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kandidat & Posisi</h2>
+            <FormSection title="Kandidat & Posisi">
               {text('kandidat', 'Nama kandidat')}
               {text('alamatKandidat', 'Alamat kandidat', 2)}
               {text('pembuka', 'Kalimat pembuka', 3)}
@@ -282,26 +289,23 @@ export default function SuratPenawaranKerja() {
                 {text('jamKerja', 'Jam kerja')}
                 {text('percobaan', 'Masa percobaan (opsional)')}
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kompensasi</h2>
+            <FormSection title="Kompensasi">
               <Field label="Gaji pokok (Rp / bulan)"><input type="number" min="0" inputMode="numeric" className={`${inputCls} min-h-[40px]`} value={f.gajiPokok} onChange={(e) => set('gajiPokok', e.target.value)} /></Field>
               <p className="text-sm font-bold text-gray-700">Tunjangan</p>
               <TunjanganEditor rows={f.tunjangan} onChange={(x) => set('tunjangan', x)} />
               <p className="text-sm text-gray-700">Total (otomatis): <b>Rp {rupiah(total)}</b></p>
               {text('benefit', 'Benefit (satu per baris)', 4)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Konfirmasi & Penutup</h2>
+            <FormSection title="Konfirmasi & Penutup">
               {text('dokumen', 'Dokumen yang harus dibawa (satu per baris)', 4)}
               {date('batas', 'Batas waktu konfirmasi')}
               {text('penutup', 'Kalimat penutup', 3)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penanda Tangan</h2>
+            <FormSection title="Penanda Tangan">
               <p className="text-sm text-gray-700">Tampilkan tanda tangan (boleh keduanya atau salah satu):</p>
               <div className="flex flex-wrap gap-x-4">
                 {([['pakaiHrd', 'HRD (pengirim)'], ['pakaiKandidat', 'Kolom persetujuan kandidat']] as const).map(([key, label]) => (
@@ -318,13 +322,13 @@ export default function SuratPenawaranKerja() {
                 <ImageUpload label="Stempel" value={f.stempel} onChange={(x) => set('stempel', x)} notify={notify} {...bgFor('stempel', stempel)} />
               </>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 
           <FitPreview>
-            <div ref={letterRef} className="w-max shadow-lg">
-              <LayoutLetter layout={f.gaya} doc={doc} k={kk} W={pg.W} H={pg.H} pf={pg.f} />
+            <div ref={letterRef} className="w-max flex flex-col gap-6">
+              {pages}
             </div>
           </FitPreview>
         </div>

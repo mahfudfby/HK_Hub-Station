@@ -9,16 +9,19 @@ import SharedGallery from '../../shared/components/SharedGallery';
 import UserData from '../../shared/components/UserData';
 import DocOptions, { Switch, TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
-import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
-import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSigner } from '../../shared/components/LetterLayouts';
+import { TextSizeSlider } from '../../shared/components/TextScale';
+import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, type Notify } from '../../shared/components/LetterKit';
+import { InfoRows, LayoutPicker, P, type LayoutSigner } from '../../shared/components/LetterLayouts';
+import { usePagesExport } from '../surat-kontrak-kerja/exportPages';
+import { ClosingSigns, LampiranField, SIGN, lampiranOtomatis, usePagedLetter, type Unit } from '../surat-penawaran-kerja/paged';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { num, rupiah, terbilangRupiah } from '../../shared/lib/money';
+import FormSection from '../../shared/components/FormSection';
 
 // Surat Pemutusan Hubungan Kerja (PHK): pemberitahuan resmi berakhirnya hubungan kerja, dengan alasan
 // siap pakai (tetap bisa diedit), tanggal efektif, rincian hak (total otomatis + terbilang), serah terima aset.
-// Nada formal, netral & manusiawi. Menu berdiri sendiri (file, form & penyimpanan terpisah). Tata letak dari LetterLayouts.
+// Nada formal, netral & manusiawi. Menu berdiri sendiri (file, form & penyimpanan terpisah). Tata letak dari LetterLayouts; isi panjang berlanjut ke halaman berikut.
 
 // ============================================================
 // SECTION: Data
@@ -29,6 +32,7 @@ type Form = {
   pakaiNomor: boolean; kosong: boolean;
   logo: string; instansi: string; subKop: string; alamat: string; kontak: string;
   judul: string; nomor: string; kota: string; tanggal: string; perihal: string; kepada: string;
+  lampiranManual: boolean; lampiran: string; // Otomatis = jumlah lembar sesudah halaman 1
   pembuka: string; nama: string; nik: string; jabatan: string; divisi: string; mulaiKerja: string;
   alasan: string; efektif: string; hak: Hak[]; serahTerima: string; terimaKasih: string; penutup: string;
   pakaiUtama: boolean; pakaiKaryawan: boolean; // tanda tangan yang tampil (bebas 1 atau 2)
@@ -57,6 +61,7 @@ const makeDefault = (): Form => ({
   kontak: 'Telp. (021) 5790-1234 • hrd@cahayanusantara.co.id • www.cahayanusantara.co.id',
   judul: 'SURAT PEMUTUSAN HUBUNGAN KERJA', nomor: randomDocNo(POLA), kota: 'Jakarta', tanggal: today(),
   perihal: 'Pemutusan Hubungan Kerja', kepada: 'Sdr. Andi Pratama\ndi Tempat',
+  lampiranManual: false, lampiran: '',
   pembuka: 'Dengan hormat,\nMelalui surat ini, manajemen menyampaikan keputusan mengenai hubungan kerja karyawan berikut:',
   nama: 'Andi Pratama', nik: 'KRY-2018-0112', jabatan: 'Staf Gudang', divisi: 'Operasional', mulaiKerja: '2 Juli 2018',
   alasan: ALASAN[0][1], efektif: today(),
@@ -154,10 +159,10 @@ export default function SuratPhk() {
 
   const letterRef = useRef<HTMLDivElement>(null);
   const pg = letterPage(f.paper, f.landscape);
-  const k = useFitScale(f.skala / 100, () => letterRef.current?.firstElementChild as HTMLElement, true, [f, logo.src, ttd.src, stempel.src, ttdKaryawan.src]);
+  const k = f.skala / 100; // huruf normal (tidak dikecilkan otomatis); isi panjang berlanjut ke halaman berikut
   const kk = k * pg.f * 0.86;
   const fileName = `surat-phk-${(f.nomor || 'surat').replace(/[^\w-]+/g, '-').toLowerCase()}`;
-  const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
+  const { exporting, run } = usePagesExport(() => [...letterRef.current!.querySelectorAll<HTMLElement>('[data-page]')], fileName, notify, pg.paper);
 
   // Template kosongan: data karyawan, tanggal, rincian hak → titik-titik/baris kosong; gambar ttd/stempel disembunyikan
   const ks = f.kosong;
@@ -168,34 +173,39 @@ export default function SuratPhk() {
     f.pakaiKaryawan && { heading: 'Yang menerima,', role: 'Karyawan', name: ks ? '' : f.nama, ttd: img(ttdKaryawan.src), ttdOffset: getOffset(f.posisi, 'ttdKaryawan') },
     f.pakaiUtama && { heading: f.ttdHeading, role: f.ttdJabatan, name: f.ttdNama, idLine: f.ttdId, ttd: img(ttd.src), stempel: img(stempel.src), ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
   ] as (LayoutSigner | false)[]).filter((x): x is LayoutSigner => !!x);
-  const doc: LayoutDoc = {
+  const nomor = nomorTampil(f.nomor, f.pakaiNomor, ks);
+  // Unit isi (halaman dipotong di batas unit); penutup + tanda tangan selalu bersama di halaman terakhir
+  const units: Unit[] = [
+    { g: 0, el: <P>{f.pembuka}</P> },
+    { g: 1, el: <InfoRows rows={[
+      { label: 'Nama', value: v(f.nama) }, { label: 'NIK karyawan', value: v(f.nik) },
+      { label: 'Jabatan / divisi', value: v([f.jabatan, f.divisi].filter(Boolean).join(' / ')) },
+      ...(f.mulaiKerja.trim() || ks ? [{ label: 'Mulai bekerja', value: v(f.mulaiKerja) }] : []),
+    ]} /> },
+    { g: 2, el: <P>{f.alasan}</P> },
+    { g: 3, el: <P>Pemutusan hubungan kerja ini berlaku efektif sejak tanggal <b>{ks ? TITIK : fmtTanggal(f.efektif)}</b>. Sesuai ketentuan yang berlaku, Saudara/i menerima hak-hak sebagai berikut:</P> },
+    { g: 3, el: <><HakTable rows={f.hak} kosong={ks} k={kk} /><P><i>Terbilang: {ks ? TITIK + TITIK : terbilangRupiah(total)}</i></P></> },
+    ...(f.serahTerima.trim() || ks ? [{ g: 4, el: <>
+      <P style={{ marginBottom: 2 * kk }}>Sebelum tanggal efektif, Saudara/i diminta untuk:</P>
+      <NumList text={f.serahTerima} k={kk} blank={ks && !f.serahTerima.trim() ? 3 : undefined} />
+    </> }] : []),
+    { g: 5, el: <P>{f.terimaKasih}</P> },
+    { g: SIGN, el: <P>{f.penutup}</P> },
+    { g: SIGN, el: <ClosingSigns k={kk} placeDate={[f.kota, ks ? TITIK : fmtTanggal(f.tanggal)].filter(Boolean).join(', ')} signers={signers}
+      footer={f.tembusan ? <><div style={{ fontWeight: 700 }}>Tembusan:</div><div style={{ whiteSpace: 'pre-line' }}>{f.tembusan}</div></> : undefined} /> },
+  ];
+  const { count, render } = usePagedLetter(units, [f, logo.src, ttd.src, stempel.src, ttdKaryawan.src], letterRef, { gaya: f.gaya, pg, kk, title: f.judul, nomor });
+  const lampiranAuto = lampiranOtomatis(count);
+  const lampiran = f.lampiranManual ? f.lampiran.trim() : lampiranAuto;
+  const pages = render({
     logo: logo.src, logoOffset: getOffset(f.posisi, 'logo'),
     kopName: f.instansi, kopLines: [f.subKop, f.alamat, f.kontak],
-    title: f.judul, nomor: nomorTampil(f.nomor, f.pakaiNomor, ks),
-    meta: f.perihal.trim() ? [{ label: 'Perihal', value: f.perihal }] : undefined,
-    placeDate: [f.kota, ks ? TITIK : fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
+    title: f.judul, nomor,
+    meta: [{ label: 'Lampiran', value: lampiran }, { label: 'Perihal', value: f.perihal.trim() }].filter((r) => r.value),
+    placeDate: '',
     recipient: f.kepada.trim() ? ['Kepada Yth.', ...(ks ? [`Sdr. ${TITIK}`, 'di Tempat'] : f.kepada.split('\n'))] : undefined,
-    body: (
-      <>
-        <P>{f.pembuka}</P>
-        <InfoRows rows={[
-          { label: 'Nama', value: v(f.nama) }, { label: 'NIK karyawan', value: v(f.nik) },
-          { label: 'Jabatan / divisi', value: v([f.jabatan, f.divisi].filter(Boolean).join(' / ')) },
-          ...(f.mulaiKerja.trim() || ks ? [{ label: 'Mulai bekerja', value: v(f.mulaiKerja) }] : []),
-        ]} />
-        <P>{f.alasan}</P>
-        <P>Pemutusan hubungan kerja ini berlaku efektif sejak tanggal <b>{ks ? TITIK : fmtTanggal(f.efektif)}</b>. Sesuai ketentuan yang berlaku, Saudara/i menerima hak-hak sebagai berikut:</P>
-        <HakTable rows={f.hak} kosong={ks} k={kk} />
-        <P><i>Terbilang: {ks ? TITIK + TITIK : terbilangRupiah(total)}</i></P>
-        {(f.serahTerima.trim() || ks) && <P style={{ marginBottom: 2 * kk }}>Sebelum tanggal efektif, Saudara/i diminta untuk:</P>}
-        <NumList text={f.serahTerima} k={kk} blank={ks && !f.serahTerima.trim() ? 3 : undefined} />
-        <P>{f.terimaKasih}</P>
-        <P>{f.penutup}</P>
-      </>
-    ),
-    signers,
-    footer: f.tembusan ? <><div style={{ fontWeight: 700 }}>Tembusan:</div><div style={{ whiteSpace: 'pre-line' }}>{f.tembusan}</div></> : undefined,
-  };
+    signers: [],
+  });
 
   const [geser, setGeser] = useState('logo');
   const [canvas, setCanvas] = useCanvasMode();
@@ -203,6 +213,7 @@ export default function SuratPhk() {
     <>
       <DocOptions nomor={{ value: f.pakaiNomor, onChange: (x) => set('pakaiNomor', x) }} kosong={{ value: f.kosong, onChange: (x) => set('kosong', x) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(x) => set('skala', x)} />
+      <p className="text-xs text-gray-500">Dokumen {count} halaman; isi yang tidak muat otomatis berlanjut ke halaman berikutnya.</p>
       <PositionPad targets={[
         { id: 'logo', label: 'Logo' },
         ...(f.pakaiKaryawan ? [{ id: 'ttdKaryawan', label: 'TTD Karyawan' }] : []),
@@ -239,29 +250,27 @@ export default function SuratPhk() {
             ) : (<>
             <UserData storageKey="data-user:surat-phk" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Surat</h2>
+            <FormSection title="Kop Surat">
               <ImageUpload label="Logo" value={f.logo} onChange={(x) => set('logo', x)} notify={notify} {...bgFor('logo', logo)} />
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
               {text('kontak', 'Telepon, email, website')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Surat</h2>
+            <FormSection title="Data Surat">
               {text('judul', 'Judul surat')}
               <Field label="Nomor surat"><NumberFormatInput parts={['Nomor', 'Kode', 'Unit', 'Bulan', 'Tahun']} example={`021/PHK/HRD/${ROMAN[new Date().getMonth()]}/${new Date().getFullYear()} (bulan angka romawi)`} value={f.nomor} onChange={(x) => set('nomor', x)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('kota', 'Kota')}
                 <Field label="Tanggal surat"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
               </div>
+              <LampiranField manual={f.lampiranManual} value={f.lampiran} auto={lampiranAuto} onManual={(x) => set('lampiranManual', x)} onValue={(x) => set('lampiran', x)} />
               {text('perihal', 'Perihal (opsional)')}
               {text('kepada', 'Kepada Yth. (opsional)', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Karyawan</h2>
+            <FormSection title="Data Karyawan">
               {text('pembuka', 'Kalimat pembuka', 3)}
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('nama', 'Nama karyawan')}
@@ -270,10 +279,9 @@ export default function SuratPhk() {
                 {text('divisi', 'Divisi')}
                 {text('mulaiKerja', 'Mulai bekerja (opsional)')}
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Dasar & Tanggal Efektif PHK</h2>
+            <FormSection title="Dasar & Tanggal Efektif PHK">
               <p className="text-sm text-gray-700">Pilih alasan siap pakai (kalimat tetap bisa diedit):</p>
               <div className="flex flex-wrap gap-2">
                 {ALASAN.map(([label, kalimat]) => (
@@ -283,10 +291,9 @@ export default function SuratPhk() {
               </div>
               {text('alasan', 'Dasar / alasan PHK', 4)}
               <Field label="Tanggal efektif"><input type="date" className={inputCls} value={f.efektif} onChange={(e) => set('efektif', e.target.value)} /></Field>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Rincian Hak yang Diterima</h2>
+            <FormSection title="Rincian Hak yang Diterima">
               {f.hak.map((r, i) => (
                 <div key={i} className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)_auto] gap-2 items-start">
                   <AutoTextarea aria-label={`Uraian hak ${i + 1}`} placeholder="Uraian" className={inputCls} value={r.uraian} onChange={(e) => setHak(i, { uraian: e.target.value })} />
@@ -297,18 +304,16 @@ export default function SuratPhk() {
               ))}
               <button type="button" onClick={() => set('hak', [...f.hak, { uraian: '', jumlah: '' }])} className="min-h-[40px] text-sm font-medium text-blue-700">+ Tambah baris</button>
               <p className="text-sm text-gray-600">Total: <b>Rp {rupiah(total)}</b> — {terbilangRupiah(total)}</p>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Serah Terima & Penutup</h2>
+            <FormSection title="Serah Terima & Penutup">
               {text('serahTerima', 'Kewajiban serah terima & pengembalian aset (satu per baris)', 3)}
               {text('terimaKasih', 'Ucapan terima kasih', 3)}
               {text('penutup', 'Kalimat penutup', 2)}
               {text('tembusan', 'Tembusan (opsional)', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penanda Tangan</h2>
+            <FormSection title="Penanda Tangan">
               <p className="text-sm text-gray-700">Tampilkan tanda tangan (boleh keduanya atau salah satu):</p>
               <div className="flex flex-wrap gap-x-4">
                 {([['pakaiUtama', 'HRD/Direktur'], ['pakaiKaryawan', 'Yang menerima (karyawan)']] as const).map(([key, label]) => (
@@ -330,13 +335,13 @@ export default function SuratPhk() {
                 <ImageUpload label="Tanda tangan karyawan (nama mengikuti data karyawan)" value={f.ttdKaryawan} onChange={(x) => set('ttdKaryawan', x)} notify={notify} {...bgFor('ttdKaryawan', ttdKaryawan)} />
               )}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 
           <FitPreview>
-            <div ref={letterRef} className="w-max shadow-lg">
-              <LayoutLetter layout={f.gaya} doc={doc} k={kk} W={pg.W} H={pg.H} pf={pg.f} />
+            <div ref={letterRef} className="w-max flex flex-col gap-6">
+              {pages}
             </div>
           </FitPreview>
         </div>
