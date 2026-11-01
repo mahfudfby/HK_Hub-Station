@@ -12,6 +12,7 @@ import { Toast, type ToastState } from './Feedback';
 import { ExportButton, Field, ImageUpload, inputCls, fmtTanggal, mmToPx, signSpace, PAPERS, PAPER_GROUPS, paperOf, orient, useLetterExport, type Notify, type Paper } from './LetterKit';
 import { useBgRemoved } from '../lib/removeBg';
 import { num, rupiah, terbilangRupiah } from '../lib/money';
+import { orRandomNo, randomDocNo } from '../lib/docNumber';
 import { cssFamily, loadGoogleFont, useGoogleFonts, type WebFont } from '../lib/fonts';
 
 // Generator Invoice & Faktur Penjualan: satu mesin, beberapa template gaya, ukuran kertas & orientasi bebas.
@@ -136,6 +137,7 @@ const USER_KEYS = ['logo', 'posisi', 'namaFont', 'penjual', 'penjualAlamat', 'pe
 const today = () => new Date().toISOString().slice(0, 10);
 const blankItem = (): Item => ({ nama: '', qty: '1', satuan: 'pcs', harga: '', diskon: '' });
 
+const noFmt = (kind: DocKind) => `${kind === 'invoice' ? 'INV' : 'FJ'}/{yyyy}/{n3}`;
 const makeDefault = (kind: DocKind): Doc => ({
   template: kind === 'invoice' ? 'modern' : 'klasik',
   paper: 'A4',
@@ -153,7 +155,7 @@ const makeDefault = (kind: DocKind): Doc => ({
   pembeli: '',
   pembeliAlamat: '',
   pembeliKontak: '',
-  nomor: `${kind === 'invoice' ? 'INV' : 'FJ'}/${new Date().getFullYear()}/001`,
+  nomor: randomDocNo(noFmt(kind)),
   tanggal: today(),
   jatuhTempo: '',
   items: [
@@ -564,7 +566,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
   const [d, setD] = useState<Doc>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
-      return saved ? { ...makeDefault(kind), ...saved } : makeDefault(kind);
+      return saved ? { ...makeDefault(kind), ...saved, nomor: orRandomNo(saved.nomor, noFmt(kind)) } : makeDefault(kind);
     } catch {
       return makeDefault(kind);
     }

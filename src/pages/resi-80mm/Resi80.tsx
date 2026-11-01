@@ -10,6 +10,7 @@ import { ExportButton, Field, ImageUpload, inputCls, fmtTanggal, useLetterExport
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { num, rupiah } from '../../shared/lib/money';
 import { code128 } from '../../shared/lib/code128';
+import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { cssFamily, useGoogleFonts, type WebFont } from '../../shared/lib/fonts';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 
@@ -59,6 +60,8 @@ type Resi = {
   skala: number; // ukuran teks (%)
 };
 
+const RESI_FMT = 'RS00{n8}';
+const PESANAN_FMT = 'ORD-{yyyy}-{n4}';
 const DEFAULT: Resi = {
   kertas: 'T80x100',
   landscape: false,
@@ -67,8 +70,8 @@ const DEFAULT: Resi = {
   toko: 'TOKO ANDA',
   ekspedisi: 'EKSPEDISI',
   layanan: 'REG',
-  noResi: 'RS0012345678',
-  noPesanan: 'ORD-2026-0001',
+  noResi: randomDocNo(RESI_FMT),
+  noPesanan: randomDocNo(PESANAN_FMT),
   tanggal: new Date().toISOString().slice(0, 10),
   penerima: 'Nama Penerima',
   penerimaTelp: '081234567890',
@@ -332,7 +335,7 @@ export default function Resi80() {
     try {
       const { ukuran, ...saved } = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') ?? {};
       // migrasi: ukuran lama label/continuous → id kertas
-      return { ...DEFAULT, ...(ukuran ? { kertas: ukuran === 'continuous' ? 'T80' : 'T80x100' } : {}), ...saved };
+      return { ...DEFAULT, ...(ukuran ? { kertas: ukuran === 'continuous' ? 'T80' : 'T80x100' } : {}), ...saved, noResi: orRandomNo(saved.noResi, RESI_FMT), noPesanan: orRandomNo(saved.noPesanan, PESANAN_FMT) };
     } catch {
       return DEFAULT;
     }
@@ -378,8 +381,8 @@ export default function Resi80() {
     </label>
   );
   const kirimBaru = () => {
-    setR((p) => ({ ...p, noResi: '', noPesanan: '', tanggal: new Date().toISOString().slice(0, 10), penerima: '', penerimaTelp: '', penerimaAlamat: '', penerimaKota: '', cod: false, nilaiCod: '', items: [{ nama: '', qty: '1' }], catatan: '' }));
-    notify('info', 'Form dikosongkan untuk pengiriman baru.');
+    setR((p) => ({ ...p, noResi: randomDocNo(RESI_FMT), noPesanan: randomDocNo(PESANAN_FMT), tanggal: new Date().toISOString().slice(0, 10), penerima: '', penerimaTelp: '', penerimaAlamat: '', penerimaKota: '', cod: false, nilaiCod: '', items: [{ nama: '', qty: '1' }], catatan: '' }));
+    notify('info', 'Form disiapkan untuk pengiriman baru (nomor resi & pesanan baru).');
   };
 
   const [canvas, setCanvas] = useCanvasMode();

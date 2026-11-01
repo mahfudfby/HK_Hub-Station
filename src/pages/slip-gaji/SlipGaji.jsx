@@ -16,6 +16,7 @@ import BgToggle from '../../shared/components/BgToggle';
 import { ScaleBox, TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import { PaperPicker, PAPERS, paperOf, orient, mmToPx } from '../../shared/components/LetterKit';
 import { useBgRemoved } from '../../shared/lib/removeBg';
+import { randomDocNo } from '../../shared/lib/docNumber';
 import { cssFamily, fontsReady, useGoogleFonts } from '../../shared/lib/fonts';
 import './SlipGaji.css';
 
@@ -108,7 +109,7 @@ const buildInitialForm = () => ({
   addressLine1: 'Jl. Contoh Raya No. 12',
   addressLine2: 'Kec. Sudirman, Jakarta Pusat',
   addressLine3: 'Indonesia - 10220',
-  slipID: 'SLIP-001',
+  slipID: randomDocNo('SLIP-{n3}'),
   slipMonth: 'NOVEMBER 2025',
   transferDate: todayLocal(),
   name: 'Nama Karyawan',

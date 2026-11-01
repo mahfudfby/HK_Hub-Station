@@ -80,16 +80,16 @@ export const svgToDataUri = (svg: string) => 'data:image/svg+xml;charset=utf-8,'
 export type GayaNota = {
   id: string;
   name: string;
-  desc: string;
+  desc: string; // ringkasan TATA LETAK (tampil di pemilih)
   font: { family: string; weights?: number[]; google?: boolean; fallback: string };
   size: number; // px teks dasar
-  header: 'center' | 'left'; // logo di atas tengah / logo di kiri nama
+  header: 'center' | 'left' | 'right' | 'invert'; // logo atas tengah / logo kiri / logo kanan / blok kepala hitam
   title: 'plain' | 'invert' | 'box' | 'spaced';
-  sep: 'dash' | 'eq' | 'dot' | 'star' | 'solid' | 'double' | 'dashline';
-  meta: 'grid' | 'rows'; // Shift/No.Trans/Tanggal/Jam
-  rows: 'cols' | 'stack' | 'table';
-  total: 'plain' | 'invert' | 'box' | 'big';
-  footer: 'bold' | 'normal' | 'invert';
+  sep: 'dash' | 'eq' | 'dot' | 'star' | 'solid' | 'double' | 'dashline' | 'none';
+  meta: 'grid' | 'rows' | 'line' | 'boxes'; // Shift/No.Trans/Tanggal/Jam
+  rows: 'cols' | 'stack' | 'table' | 'leader' | 'left' | 'grid2';
+  total: 'plain' | 'invert' | 'box' | 'big' | 'hero'; // hero = Volume & Total angka besar berkotak
+  footer: 'bold' | 'normal' | 'invert' | 'box' | 'small';
   upper?: boolean;
 };
 
@@ -99,25 +99,46 @@ const mono = (family: string, weights = [400, 700]) => ({ family, weights, googl
 const sans = (family: string, weights = [400, 700]) => ({ family, weights, google: true, fallback: 'sans-serif' });
 const local = (family: string, fallback: string) => ({ family, fallback });
 
+// id lama tetap (tersimpan di localStorage); nama & deskripsi menjelaskan tata letak, isi data sama.
 export const GAYA_NOTA: GayaNota[] = [
-  { id: 'klasik', name: 'Klasik', desc: 'Tampilan asli', font: local('Arimo', 'sans-serif'), size: 16, header: 'center', title: 'plain', sep: 'dashline', meta: 'grid', rows: 'cols', total: 'plain', footer: 'bold' },
-  { id: 'space-mono', name: 'Struk Mono', desc: 'Space Mono, garis -', font: mono('Space Mono'), size: 13, header: 'center', title: 'plain', sep: 'dash', meta: 'grid', rows: 'cols', total: 'plain', footer: 'bold' },
-  { id: 'plex', name: 'Kasir Plex', desc: 'Nama & total blok hitam', font: mono('IBM Plex Mono'), size: 14, header: 'center', title: 'invert', sep: 'eq', meta: 'rows', rows: 'cols', total: 'invert', footer: 'bold' },
-  { id: 'roboto-mono', name: 'Logo Kiri', desc: 'Roboto Mono, berkotak', font: mono('Roboto Mono'), size: 13, header: 'left', title: 'box', sep: 'solid', meta: 'rows', rows: 'cols', total: 'box', footer: 'normal' },
-  { id: 'source-code', name: 'Total Besar', desc: 'Source Code Pro, titik', font: mono('Source Code Pro'), size: 14, header: 'center', title: 'spaced', sep: 'dot', meta: 'grid', rows: 'stack', total: 'big', footer: 'bold' },
-  { id: 'jetbrains', name: 'Tabel', desc: 'JetBrains Mono, tabel', font: mono('JetBrains Mono'), size: 13, header: 'center', title: 'invert', sep: 'double', meta: 'rows', rows: 'table', total: 'invert', footer: 'normal' },
-  { id: 'courier', name: 'Mesin Ketik', desc: 'Courier Prime, kapital', font: mono('Courier Prime'), size: 14, header: 'center', title: 'plain', sep: 'dash', meta: 'rows', rows: 'cols', total: 'plain', footer: 'bold', upper: true },
-  { id: 'inconsolata', name: 'Kiri Tabel', desc: 'Inconsolata, garis =', font: mono('Inconsolata'), size: 15, header: 'left', title: 'plain', sep: 'eq', meta: 'grid', rows: 'table', total: 'box', footer: 'normal' },
-  { id: 'share-tech', name: 'Digital', desc: 'Share Tech Mono, bintang', font: mono('Share Tech Mono', [400]), size: 15, header: 'center', title: 'spaced', sep: 'star', meta: 'rows', rows: 'cols', total: 'invert', footer: 'normal' },
-  { id: 'pt-mono', name: 'Bertumpuk', desc: 'PT Mono, label di atas', font: mono('PT Mono', [400]), size: 14, header: 'center', title: 'box', sep: 'dot', meta: 'grid', rows: 'stack', total: 'big', footer: 'normal' },
-  { id: 'fira-mono', name: 'Fira Garis', desc: 'Fira Mono, garis tegas', font: mono('Fira Mono', [400, 500, 700]), size: 13, header: 'center', title: 'invert', sep: 'solid', meta: 'rows', rows: 'cols', total: 'box', footer: 'invert' },
-  { id: 'vt323', name: 'Dot Matrix', desc: 'VT323 retro', font: mono('VT323', [400]), size: 19, header: 'center', title: 'plain', sep: 'dash', meta: 'rows', rows: 'cols', total: 'invert', footer: 'normal', upper: true },
-  { id: 'condensed', name: 'Ramping', desc: 'Roboto Condensed', font: sans('Roboto Condensed'), size: 16, header: 'left', title: 'invert', sep: 'dashline', meta: 'rows', rows: 'table', total: 'big', footer: 'bold' },
-  { id: 'oswald', name: 'Poster', desc: 'Oswald, kapital renggang', font: sans('Oswald'), size: 15, header: 'center', title: 'spaced', sep: 'double', meta: 'grid', rows: 'stack', total: 'invert', footer: 'invert', upper: true },
-  { id: 'barlow', name: 'Barlow', desc: 'Barlow Condensed, kotak', font: sans('Barlow Condensed'), size: 17, header: 'center', title: 'box', sep: 'solid', meta: 'rows', rows: 'cols', total: 'big', footer: 'bold' },
-  { id: 'tinos', name: 'Formal', desc: 'Tinos serif, garis ganda', font: local('Tinos', 'serif'), size: 15, header: 'center', title: 'plain', sep: 'double', meta: 'rows', rows: 'cols', total: 'box', footer: 'normal' },
-  { id: 'cousine', name: 'Cousine', desc: 'Mono bawaan, tabel', font: local('Cousine', 'monospace'), size: 13, header: 'center', title: 'box', sep: 'eq', meta: 'grid', rows: 'table', total: 'plain', footer: 'bold' },
-  { id: 'carlito', name: 'Modern', desc: 'Carlito, logo kiri', font: local('Carlito', 'sans-serif'), size: 16, header: 'left', title: 'spaced', sep: 'dashline', meta: 'grid', rows: 'stack', total: 'invert', footer: 'normal' },
-  { id: 'minimal', name: 'Minimal', desc: 'Arimo, garis tipis', font: local('Arimo', 'sans-serif'), size: 15, header: 'center', title: 'plain', sep: 'solid', meta: 'rows', rows: 'cols', total: 'big', footer: 'normal' },
-  { id: 'tebal', name: 'Tebal', desc: 'Arimo, blok hitam', font: local('Arimo', 'sans-serif'), size: 16, header: 'center', title: 'invert', sep: 'eq', meta: 'grid', rows: 'cols', total: 'invert', footer: 'invert', upper: true },
+  { id: 'klasik', name: 'Klasik', desc: 'tampilan asli, label : nilai', font: local('Arimo', 'sans-serif'), size: 16, header: 'center', title: 'plain', sep: 'dashline', meta: 'grid', rows: 'cols', total: 'plain', footer: 'bold' },
+  { id: 'space-mono', name: 'Struk Pompa', desc: 'mono rata tengah, garis ----', font: mono('Space Mono'), size: 13, header: 'center', title: 'plain', sep: 'dash', meta: 'grid', rows: 'cols', total: 'plain', footer: 'bold' },
+  { id: 'plex', name: 'Titik Penuntun', desc: 'Harga ...... Rp, nama & total hitam', font: mono('IBM Plex Mono'), size: 14, header: 'center', title: 'invert', sep: 'eq', meta: 'rows', rows: 'leader', total: 'invert', footer: 'bold' },
+  { id: 'roboto-mono', name: 'Logo Kiri', desc: 'logo kiri teks kanan, footer berkotak', font: mono('Roboto Mono'), size: 13, header: 'left', title: 'box', sep: 'solid', meta: 'rows', rows: 'cols', total: 'box', footer: 'box' },
+  { id: 'source-code', name: 'Total Besar', desc: 'label di atas nilai, total raksasa', font: mono('Source Code Pro'), size: 14, header: 'center', title: 'spaced', sep: 'dot', meta: 'grid', rows: 'stack', total: 'big', footer: 'bold' },
+  { id: 'jetbrains', name: 'Tabel Bergaris', desc: 'semua data dalam tabel', font: mono('JetBrains Mono'), size: 13, header: 'center', title: 'invert', sep: 'double', meta: 'rows', rows: 'table', total: 'invert', footer: 'normal' },
+  { id: 'courier', name: 'Mesin Ketik', desc: 'rata kiri label: nilai, kapital', font: mono('Courier Prime'), size: 14, header: 'center', title: 'plain', sep: 'dash', meta: 'line', rows: 'left', total: 'plain', footer: 'bold', upper: true },
+  { id: 'inconsolata', name: 'Kiri Tabel', desc: 'logo kiri, info 4 kotak, tabel', font: mono('Inconsolata'), size: 15, header: 'left', title: 'plain', sep: 'eq', meta: 'boxes', rows: 'table', total: 'box', footer: 'normal' },
+  { id: 'share-tech', name: 'Digital', desc: 'volume & total angka besar', font: mono('Share Tech Mono', [400]), size: 15, header: 'center', title: 'spaced', sep: 'star', meta: 'rows', rows: 'cols', total: 'hero', footer: 'small' },
+  { id: 'pt-mono', name: 'Kotak-kotak', desc: 'data 2 kolom berkotak', font: mono('PT Mono', [400]), size: 14, header: 'center', title: 'box', sep: 'dot', meta: 'boxes', rows: 'grid2', total: 'box', footer: 'normal' },
+  { id: 'fira-mono', name: 'Kepala Hitam', desc: 'kepala blok hitam, titik penuntun', font: mono('Fira Mono', [400, 500, 700]), size: 13, header: 'invert', title: 'plain', sep: 'solid', meta: 'line', rows: 'leader', total: 'box', footer: 'invert' },
+  { id: 'vt323', name: 'Dot Matrix', desc: 'retro kapital, total hitam', font: mono('VT323', [400]), size: 19, header: 'center', title: 'plain', sep: 'dash', meta: 'grid', rows: 'cols', total: 'invert', footer: 'small', upper: true },
+  { id: 'condensed', name: 'Ramping', desc: 'logo kiri, data 2 kolom', font: sans('Roboto Condensed'), size: 16, header: 'left', title: 'invert', sep: 'dashline', meta: 'rows', rows: 'grid2', total: 'big', footer: 'bold' },
+  { id: 'oswald', name: 'Poster', desc: 'bertumpuk, volume & total besar', font: sans('Oswald'), size: 15, header: 'center', title: 'spaced', sep: 'double', meta: 'grid', rows: 'stack', total: 'hero', footer: 'invert', upper: true },
+  { id: 'barlow', name: 'Logo Kanan', desc: 'teks kiri logo kanan, total besar', font: sans('Barlow Condensed'), size: 17, header: 'right', title: 'box', sep: 'solid', meta: 'rows', rows: 'cols', total: 'big', footer: 'bold' },
+  { id: 'tinos', name: 'Formal', desc: 'serif, titik penuntun, garis ganda', font: local('Tinos', 'serif'), size: 15, header: 'center', title: 'plain', sep: 'double', meta: 'rows', rows: 'leader', total: 'box', footer: 'normal' },
+  { id: 'cousine', name: 'Ringkas', desc: 'satu kolom rata kiri, info 4 kotak', font: local('Cousine', 'monospace'), size: 13, header: 'center', title: 'box', sep: 'eq', meta: 'boxes', rows: 'left', total: 'plain', footer: 'bold' },
+  { id: 'carlito', name: 'Modern', desc: 'logo kiri, 2 kolom, footer berkotak', font: local('Carlito', 'sans-serif'), size: 16, header: 'left', title: 'spaced', sep: 'dashline', meta: 'line', rows: 'grid2', total: 'invert', footer: 'box' },
+  { id: 'minimal', name: 'Minimal', desc: 'tanpa garis pemisah, total besar', font: local('Arimo', 'sans-serif'), size: 15, header: 'center', title: 'plain', sep: 'none', meta: 'line', rows: 'cols', total: 'big', footer: 'small' },
+  { id: 'tebal', name: 'Tebal', desc: 'kepala & total blok hitam, kapital', font: local('Arimo', 'sans-serif'), size: 16, header: 'invert', title: 'spaced', sep: 'eq', meta: 'grid', rows: 'table', total: 'invert', footer: 'invert', upper: true },
+];
+
+// ============================================================
+// SECTION: Footer Nota (disimpan per Data User SPBU, ikut Simpan Data User; boleh dikosongkan)
+// ============================================================
+const GARIS = '____________________________';
+// Teks lama yang dulu terkunci -> jadi footer bawaan agar data lama tampil sama
+export const DEFAULT_FOOTER_TEXT = ` TERIMAKASIH ATAS KUNJUNGAN ANDA \n${GARIS}\n${GARIS}\n${GARIS}\n${GARIS}\n${GARIS}\n`;
+
+export const FOOTER_PRESETS = [
+  { label: 'Bawaan (terima kasih + garis)', value: DEFAULT_FOOTER_TEXT },
+  { label: 'Terima kasih dan selamat jalan', value: 'Terima kasih dan selamat jalan' },
+  { label: 'Pertamina Pasti Pas!', value: 'Pertamina Pasti Pas!\nTerima kasih atas kunjungan Anda' },
+  { label: 'Simpan struk sebagai bukti', value: 'Simpan struk ini sebagai\nbukti pembayaran yang sah' },
+  { label: 'Utamakan keselamatan', value: 'Utamakan keselamatan,\nmatikan mesin saat mengisi BBM' },
+  { label: 'Layanan Pelanggan 135', value: 'Layanan Pelanggan Pertamina: 135' },
+  { label: 'Bukan faktur pajak', value: 'Struk ini bukan faktur pajak' },
+  { label: 'BBM bersubsidi tepat', value: 'Isi BBM sesuai kebutuhan,\ngunakan BBM bersubsidi secara tepat' },
+  { label: 'Selamat sampai tujuan', value: 'Selamat jalan,\nsemoga selamat sampai tujuan' },
+  { label: 'TERIMA KASIH (kapital)', value: 'TERIMA KASIH\nATAS KUNJUNGAN ANDA' },
 ];

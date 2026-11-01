@@ -7,6 +7,7 @@ import type { User } from 'firebase/auth';
 import RequireLogin from '../../shared/components/RequireLogin';
 import FitPreview from '../../shared/components/FitPreview';
 import { useBgRemoved } from '../../shared/lib/removeBg';
+import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import {
   DOTTED, Dots, ExportButton, Field, ImageUpload, PaperPicker, letterPage, dataStyle,
@@ -54,13 +55,15 @@ type Form = {
   skala: number; // ukuran teks surat (%)
 };
 
+const NO_FMT = '445/{n3}/SKS/{yyyy}';
+
 const DEFAULT: Form = {
   instansi: 'NAMA KLINIK / PRAKTIK DOKTER',
   subKop: 'Pelayanan Kesehatan Umum',
   alamatKop: 'Alamat lengkap • Telp. 0000 – 000000',
   logo: '',
   judul: 'SURAT KETERANGAN SEHAT',
-  nomor: '',
+  nomor: randomDocNo(NO_FMT),
   pembuka: 'Yang bertanda tangan di bawah ini, dokter pemeriksa menerangkan dengan sesungguhnya bahwa :',
   rows: ['Nama', 'Tempat / Tgl. Lahir', 'Jenis Kelamin', 'Pekerjaan', 'Alamat'].map((label) => ({ label, value: '' })),
   pengantarHasil: 'Telah kami periksa dan ternyata :',
@@ -91,7 +94,7 @@ const DEFAULT: Form = {
 function loadForm(): Form {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-    return saved ? { ...DEFAULT, ...saved } : DEFAULT;
+    return saved ? { ...DEFAULT, ...saved, nomor: orRandomNo(saved.nomor, NO_FMT) } : DEFAULT;
   } catch {
     return DEFAULT;
   }
@@ -184,12 +187,12 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
   const busy = logo.busy || ttd.busy || stempel.busy;
 
   const resetPasien = () => {
-    setF((p) => ({ ...p, nomor: '', rows: p.rows.map((r) => ({ ...r, value: '' })), ukur: p.ukur.map((r) => ({ ...r, value: '' })), tanggal: '' }));
+    setF((p) => ({ ...p, nomor: randomDocNo(NO_FMT), rows: p.rows.map((r) => ({ ...r, value: '' })), ukur: p.ukur.map((r) => ({ ...r, value: '' })), tanggal: '' }));
     notify('info', 'Data pasien dikosongkan.');
   };
   const resetAll = () => {
     if (!confirm('Kembalikan semua isian ke bawaan?')) return;
-    setF(DEFAULT);
+    setF({ ...DEFAULT, nomor: randomDocNo(NO_FMT) });
     notify('info', 'Semua isian dikembalikan ke bawaan.');
   };
 

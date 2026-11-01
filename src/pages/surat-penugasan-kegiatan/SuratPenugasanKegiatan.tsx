@@ -12,6 +12,7 @@ import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, signSpace, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { FitLine, Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts } from '../../shared/components/LetterStyles';
 import { useBgRemoved } from '../../shared/lib/removeBg';
+import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 
 // Surat Penugasan Kegiatan: Penugasan panitia / petugas untuk sebuah kegiatan.
 // Menu berdiri sendiri (file, form & penyimpanan terpisah). Bahan bersama: kop & 20 template surat (LetterStyles),
@@ -37,7 +38,7 @@ type Form = {
 };
 
 const STORAGE_KEY = 'surat-penugasan-kegiatan:v1';
-const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+const NO_FMT = '{n3}/SPK/{rom}/{yyyy}';
 const today = () => new Date().toISOString().slice(0, 10);
 const PETUGAS_COLS: Col[] = [{ label: "Nama", w: "36%", align: "left" }, { label: "Jabatan", w: "26%", align: "left" }, { label: "Tugas / Peran", w: "auto", align: "left" }];
 
@@ -45,7 +46,7 @@ const DEFAULT: Form = {
   gaya: 'klasik', paper: 'A4', landscape: false, skala: 100, posisi: {},
   logo: '', instansi: 'PT NAMA PERUSAHAAN ANDA', subKop: 'Bidang usaha / unit kerja',
   alamat: 'Jl. Alamat Perusahaan No. 1, Kota, Provinsi 12345', kontak: 'Telp. (021) 000-0000 • email@perusahaan.co.id • www.perusahaan.co.id',
-  judul: "SURAT PENUGASAN KEGIATAN", nomor: `001/SPK/${ROMAN[new Date().getMonth()]}/${new Date().getFullYear()}`, kota: 'Jakarta', tanggal: today(),
+  judul: "SURAT PENUGASAN KEGIATAN", nomor: randomDocNo(NO_FMT), kota: 'Jakarta', tanggal: today(),
   pembuka: "Dalam rangka pelaksanaan kegiatan di bawah ini, dengan ini kami menugaskan nama-nama berikut:",
   kegiatan: [{ label: "Nama kegiatan", value: "Nama kegiatan" }, { label: "Hari / tanggal", value: "" }, { label: "Waktu", value: "08.00 WIB s/d selesai" }, { label: "Tempat", value: "Lokasi kegiatan" }, { label: "Penanggung jawab", value: "" }],
   petugas: [["Nama petugas", "Staf", "Koordinator acara"], ["Nama petugas", "Staf", "Dokumentasi"]],
@@ -215,7 +216,7 @@ export default function SuratPenugasanKegiatan() {
   const [f, setF] = useState<Form>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      return saved ? { ...DEFAULT, ...saved } : DEFAULT;
+      return saved ? { ...DEFAULT, ...saved, nomor: orRandomNo(saved.nomor, NO_FMT) } : DEFAULT;
     } catch {
       return DEFAULT;
     }
@@ -240,7 +241,7 @@ export default function SuratPenugasanKegiatan() {
   const setSigner = (i: number, p: Partial<Signer>) => set('penandaLain', f.penandaLain.map((s, j) => (j === i ? { ...s, ...p } : s)));
   const reset = () => {
     if (!confirm('Kembalikan semua isian ke bawaan?')) return;
-    setF(DEFAULT);
+    setF({ ...DEFAULT, nomor: randomDocNo(NO_FMT) });
     notify('info', 'Semua isian dikembalikan ke bawaan.');
   };
 

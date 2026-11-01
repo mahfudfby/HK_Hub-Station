@@ -16,6 +16,8 @@ const CATEGORIES = [
   { key: 'invoice', title: 'Invoice & Faktur' },
   { key: 'surat', title: 'Surat Perusahaan' },
   { key: 'gaji', title: 'Gaji & Kepegawaian' },
+  { key: 'warga', title: 'Surat Warga, Sekolah & Desa' },
+  { key: 'pribadi', title: 'Surat Pribadi & Lamaran' },
   { key: 'kesehatan', title: 'Kesehatan (Khusus Dokter)' },
 ];
 
