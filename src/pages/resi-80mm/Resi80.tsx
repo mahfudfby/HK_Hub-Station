@@ -6,7 +6,7 @@ import FitPreview from '../../shared/components/FitPreview';
 import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/CanvasMode';
 import SharedGallery from '../../shared/components/SharedGallery';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
-import { ExportButton, Field, ImageUpload, inputCls, fmtTanggal, useLetterExport, type Notify } from '../../shared/components/LetterKit';
+import { ExportButton, Field, ImageUpload, inputCls, fmtTanggal, useLetterExport, PaperPicker, PAPERS, paperOf, orient, type Notify, type Paper } from '../../shared/components/LetterKit';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { num, rupiah } from '../../shared/lib/money';
 import { code128 } from '../../shared/lib/code128';
@@ -15,17 +15,25 @@ import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 
 // Resi / label pengiriman untuk printer thermal 80mm (gaya label marketplace, tanpa merek).
 // Lebar 288px × skala 2 = PNG 576px = lebar titik cetak printer 80mm. Barcode Code 128 dibuat otomatis dari nomor.
-const W = 288;
-const MM = 80;
-// Ukuran: label 80×100mm (bawaan, tinggi tetap) atau Continuous (tinggi mengikuti isi)
-type Ukuran = 'label' | 'continuous';
-const LABEL_MM_H = 100;
-const LABEL_H = Math.round((W * LABEL_MM_H) / MM); // 360px
+// Semua ukuran kertas bersama (PAPERS). Skala render 3,6 px/mm agar 80mm tetap 288px (label 80×100 = 288×360px).
+const PX_MM = 288 / 80;
 const STORAGE_KEY = 'resi-80mm:v1';
+// Geometri halaman: W/H px, z = skala huruf/jarak terhadap 80mm (dibatasi agar tidak raksasa / terlalu kecil),
+// c = tata letak ringkas untuk kertas tinggi tetap (non-gulung), roll = tinggi mengikuti isi.
+function geom(kertas: string, landscape: boolean) {
+  const def = paperOf(kertas, 'T80x100');
+  const mm = orient(def, landscape);
+  const W = Math.round(mm.w * PX_MM);
+  const H = Math.round(mm.h * PX_MM);
+  return { def, mm, W, H, roll: !!def.roll, c: !def.roll, z: Math.min(1.6, Math.max(0.8, W / 288)) };
+}
+type Geom = ReturnType<typeof geom>;
+console.assert(geom('T80x100', false).W === 288 && geom('T80x100', false).H === 360 && geom('T80', false).z === 1 && geom('T80', false).roll && !geom('T80', false).c, 'geom');
 
 type Item = { nama: string; qty: string };
 type Resi = {
-  ukuran: Ukuran;
+  kertas: string; // id PAPERS
+  landscape: boolean;
   template: string;
   logo: string;
   toko: string;
@@ -52,7 +60,8 @@ type Resi = {
 };
 
 const DEFAULT: Resi = {
-  ukuran: 'label',
+  kertas: 'T80x100',
+  landscape: false,
   template: 'klasik',
   logo: '',
   toko: 'TOKO ANDA',
@@ -150,17 +159,18 @@ const tplOf = (id: string) => TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0]
 
 // ---------------- Tampilan resi ----------------
 // Label 80×100mm memakai tata letak ringkas agar muat; continuous memakai tata letak lega
-// k = skala ukuran teks (slider); lebar 288px & tinggi label 360px tetap, lebar modul barcode tidak diskalakan
-function Label({ r, k }: { r: Resi; k: number }) {
+// k = skala ukuran teks (slider); g.z = skala ukuran kertas (1 untuk 80mm); lebar modul barcode tetap bulat (px)
+function Label({ r, k: ks, g }: { r: Resi; k: number; g: Geom }) {
   const t = tplOf(r.template);
-  const c = r.ukuran === 'label';
+  const { c, z, W } = g;
+  const k = ks * z;
   const f = (n: number) => n * (t.k ?? 1) * k;
   const s = (n: number) => Math.round(n * k * 2) / 2; // jarak terkait teks
   const bw = t.bw ?? 1.5;
   const line = `${bw}px ${t.box === 'putus' ? 'dashed' : 'solid'} #000`;
   const tab = t.box === 'tab';
   const hp = (v: string) => (r.samarkanHp ? samarkan(v) : v);
-  const pad = c ? 12 : 16;
+  const pad = Math.round((c ? 12 : 16) * z);
   const gap = s(c ? 3 : 6);
   const inner = W - pad * 2;
   const bpad = c ? `${s(3)}px ${s(5)}px` : s(6);
@@ -177,7 +187,7 @@ function Label({ r, k }: { r: Resi; k: number }) {
   const isi = r.items.filter((it) => it.nama);
 
   // Kepala
-  const logo = (h: number) => r.logo && <img src={r.logo} alt="Logo" style={{ height: h, maxWidth: 80, objectFit: 'contain' }} />;
+  const logo = (h: number) => r.logo && <img src={r.logo} alt="Logo" style={{ height: Math.round(h * z), maxWidth: Math.round(80 * z), objectFit: 'contain' }} />;
   const toko = <div style={{ fontWeight: 700, fontSize: f(c ? 11 : 12) }}>{r.toko}</div>;
   const kurir = (align: 'left' | 'right' | 'center', white = false) => (
     <div style={{ textAlign: align, flexShrink: 0, display: c ? 'flex' : 'block', alignItems: 'center', justifyContent: align === 'center' ? 'center' : undefined, gap: 4 }}>
@@ -221,7 +231,7 @@ function Label({ r, k }: { r: Resi; k: number }) {
     garis: { ...numBase, fontSize: f(c ? 11.5 : 13), letterSpacing: 2, borderTop: '1px solid #000', borderBottom: '1px solid #000', padding: '1px 0', marginTop: 4 },
   }[t.num];
   const kode = <>
-    <Barcode text={r.noResi} height={c ? Math.max(36, Math.round((kotak ? 36 : 38) * k)) : Math.round((kotak ? 54 : 58) * Math.min(k, 1.2))} maxWidth={kotak ? inner - Math.ceil(bw) * 2 - 12 : inner} />
+    <Barcode text={r.noResi} height={c ? Math.max(Math.round(36 * z), Math.round((kotak ? 36 : 38) * k)) : Math.round((kotak ? 54 : 58) * Math.min(ks, 1.2) * z)} maxWidth={kotak ? inner - Math.ceil(bw) * 2 - 12 : inner} />
     <div style={numStyle}>{r.noResi}</div>
   </>;
 
@@ -253,7 +263,7 @@ function Label({ r, k }: { r: Resi; k: number }) {
   );
 
   return (
-    <div style={{ width: W, ...(c ? { height: LABEL_H, overflow: 'hidden' } : {}), boxSizing: 'border-box', padding: pad, background: '#fff', color: '#000', fontFamily: t.font, fontSize: f(c ? 9.5 : 11), lineHeight: c ? 1.25 : 1.3, wordBreak: 'break-word' }}>
+    <div style={{ width: W, ...(c ? { height: g.H, overflow: 'hidden' } : {}), boxSizing: 'border-box', padding: pad, background: '#fff', color: '#000', fontFamily: t.font, fontSize: f(c ? 9.5 : 11), lineHeight: c ? 1.25 : 1.3, wordBreak: 'break-word' }}>
       {kepala}
 
       {/* Barcode nomor resi */}
@@ -285,7 +295,7 @@ function Label({ r, k }: { r: Resi; k: number }) {
             <span>No. Pesanan: <b>{r.noPesanan}</b></span>
             {r.tanggal && <span style={{ whiteSpace: 'nowrap' }}>{fmtTanggal(r.tanggal)}</span>}
           </div>
-          <Barcode text={r.noPesanan} height={Math.round((c ? 18 : 28) * Math.min(k, 1.2))} maxWidth={inner - 12} />
+          <Barcode text={r.noPesanan} height={Math.round((c ? 18 : 28) * Math.min(ks, 1.2) * z)} maxWidth={inner - 12} />
         </div>
       )}
 
@@ -320,8 +330,9 @@ export default function Resi80() {
   const closeToast = useCallback(() => setToast(null), []);
   const [r, setR] = useState<Resi>(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      return saved ? { ...DEFAULT, ...saved } : DEFAULT;
+      const { ukuran, ...saved } = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') ?? {};
+      // migrasi: ukuran lama label/continuous → id kertas
+      return { ...DEFAULT, ...(ukuran ? { kertas: ukuran === 'continuous' ? 'T80' : 'T80x100' } : {}), ...saved };
     } catch {
       return DEFAULT;
     }
@@ -330,8 +341,9 @@ export default function Resi80() {
   const logo = useBgRemoved(r.logo, logoBg, (m) => notify('error', m));
   const ref = useRef<HTMLDivElement>(null);
   useGoogleFonts([tplOf(r.template).web]);
-  // Label: tinggi tetap → k diturunkan sampai muat; continuous: hanya lebar dijaga
-  const k = useFitScale(r.skala / 100, () => ref.current?.firstElementChild as HTMLElement, r.ukuran === 'label', [r, logo.src]);
+  const g = geom(r.kertas, r.landscape);
+  // Kertas tinggi tetap → k diturunkan sampai muat; kertas gulung: hanya lebar dijaga
+  const k = useFitScale(r.skala / 100, () => ref.current?.firstElementChild as HTMLElement, !g.roll, [r, logo.src]);
 
   useEffect(() => {
     try {
@@ -345,18 +357,12 @@ export default function Resi80() {
   const setItem = (i: number, patch: Partial<Item>) => set('items', r.items.map((it, j) => (j === i ? { ...it, ...patch } : it)));
   const fileName = `resi-${(r.noResi || 'pengiriman').replace(/[^\w-]+/g, '-').toLowerCase()}`;
   const { exporting, run } = useLetterExport(() => ref.current!.firstElementChild as HTMLElement, fileName, notify,
-    (page) => (r.ukuran === 'label' ? { w: MM, h: LABEL_MM_H } : { w: MM, h: Math.ceil((MM * page.offsetHeight) / W) }), 2);
-  // Pilihan ukuran kertas (halaman Edit Canvas)
+    (page): Paper => (g.roll ? { w: g.mm.w, h: Math.ceil((g.mm.w * page.offsetHeight) / g.W) } : g.mm), 2);
+  // Pilihan ukuran kertas (halaman Edit Canvas): semua kertas bersama, termasuk dot-matrix & thermal
   const ukuranPicker = (
     <>
-      <h3 className="text-sm font-semibold text-gray-700">Ukuran kertas</h3>
-      <div className="flex gap-2" role="radiogroup" aria-label="Ukuran kertas">
-        {([['label', 'Label 80×100mm'], ['continuous', 'Continuous 80mm']] as [Ukuran, string][]).map(([v, l]) => (
-          <button key={v} type="button" role="radio" aria-checked={r.ukuran === v} onClick={() => set('ukuran', v)}
-            className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium min-h-[44px] ${r.ukuran === v ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}>{l}</button>
-        ))}
-      </div>
-      <p className="text-xs text-gray-500">Label: tinggi tetap 100mm (stiker thermal). Continuous: tinggi mengikuti isi (kertas gulung).</p>
+      <PaperPicker paper={r.kertas in PAPERS ? r.kertas : 'T80x100'} landscape={r.landscape} onPaper={(v) => set('kertas', v)} onLandscape={(v) => set('landscape', v)} />
+      <p className="text-xs text-gray-500">Kertas gulung (thermal): tinggi mengikuti isi. Kertas lain: tinggi tetap, teks dikecilkan otomatis agar muat.</p>
     </>
   );
   const txt = (k: keyof Resi, label: string, rows = 1) => (
@@ -478,10 +484,10 @@ export default function Resi80() {
           </div>
 
           <div className="bg-white rounded-2xl shadow p-4 min-w-0">
-            <p className="mb-2 text-xs text-gray-500 text-center">{r.ukuran === 'label' ? 'Label 80×100mm • PNG 576×720px' : 'Continuous 80mm • PNG lebar 576px'}</p>
+            <p className="mb-2 text-xs text-gray-500 text-center">{g.def.label}{g.def.fixed ? '' : r.landscape ? ' • Landscape' : ' • Vertikal'} • PNG {g.roll ? `lebar ${g.W * 2}px` : `${g.W * 2}×${g.H * 2}px`}</p>
             <FitPreview>
               <div ref={ref} className="w-max shadow-md mx-auto">
-                <Label r={{ ...r, logo: logo.src }} k={k} />
+                <Label r={{ ...r, logo: logo.src }} k={k} g={g} />
               </div>
             </FitPreview>
           </div>

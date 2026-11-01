@@ -98,40 +98,67 @@ export const mmToPx = (mm: number) => Math.round((mm * 96) / 25.4); // 96 DPI CS
 // Ukuran fisik tetap (mm), tidak ikut slider ukuran teks; base = tinggi lama yang ikut skala.
 export const signSpace = (base: number) => Math.max(base, mmToPx(32));
 
-// Pilihan kertas surat. Isi surat dirancang untuk A5; di kertas lain huruf & margin ikut diperbesar (f).
-export const LETTER_PAPERS: Record<string, Paper & { label: string }> = {
-  A5: { w: 148, h: 210, label: 'A5 (148×210 mm)' },
-  A4: { w: 210, h: 297, label: 'A4 (210×297 mm)' },
-  Letter: { w: 215.9, h: 279.4, label: 'Letter (216×279 mm)' },
-  F4: { w: 215, h: 330, label: 'F4 / Folio (215×330 mm)' },
+// Daftar kertas bersama SEMUA menu: kertas biasa, dot-matrix continuous form, thermal.
+// fixed: orientasi tetap. roll: kertas gulung (menu nota/resi: tinggi mengikuti isi; dokumen halaman: h = panjang potongan).
+export type PaperDef = Paper & { label: string; group: string; fixed?: boolean; roll?: boolean };
+export const PAPERS: Record<string, PaperDef> = {
+  A4: { w: 210, h: 297, label: 'A4 (210×297 mm)', group: 'Kertas biasa' },
+  A5: { w: 148, h: 210, label: 'A5 (148×210 mm)', group: 'Kertas biasa' },
+  Letter: { w: 215.9, h: 279.4, label: 'Letter (216×279 mm)', group: 'Kertas biasa' },
+  F4: { w: 215, h: 330, label: 'F4 / Folio (215×330 mm)', group: 'Kertas biasa' },
+  CF95x11: { w: 241.3, h: 279.4, label: 'Continuous 9½×11 in (penuh)', group: 'Dot-Matrix continuous form', fixed: true },
+  CF95x55: { w: 241.3, h: 139.7, label: 'Continuous 9½×5½ in (½)', group: 'Dot-Matrix continuous form', fixed: true },
+  CF15x11: { w: 377.8, h: 279.4, label: 'Continuous 14⅞×11 in (lebar)', group: 'Dot-Matrix continuous form', fixed: true },
+  T80x100: { w: 80, h: 100, label: 'Thermal label 80×100 mm', group: 'Thermal', fixed: true },
+  T80: { w: 80, h: 297, label: 'Thermal 80 mm (gulung)', group: 'Thermal', fixed: true, roll: true },
+  T58: { w: 58, h: 210, label: 'Thermal 58 mm (gulung)', group: 'Thermal', fixed: true, roll: true },
 };
+export const PAPER_GROUPS = [...new Set(Object.values(PAPERS).map((p) => p.group))];
+export const paperOf = (id: string, fallback = 'A4') => PAPERS[id] ?? PAPERS[fallback];
+// Ukuran halaman (mm) sesuai orientasi; kertas fixed mengabaikan landscape
+export function orient(def: PaperDef, landscape: boolean): Paper {
+  return landscape && !def.fixed ? { w: def.h, h: def.w } : { w: def.w, h: def.h };
+}
+// Alias lama (surat): kunci A5/A4/Letter/F4 tetap sama
+export const LETTER_PAPERS = PAPERS;
+// Isi surat dirancang untuk A5; di kertas lain huruf & margin ikut diperbesar/diperkecil (f).
+// Thermal sangat sempit: f dibatasi minimal 0.5 agar teks tetap terbaca (isi membungkus ke bawah).
 export function letterPage(paperId: string, landscape: boolean) {
-  const b = LETTER_PAPERS[paperId] ?? LETTER_PAPERS.A5;
-  const paper: Paper = landscape ? { w: b.h, h: b.w } : { w: b.w, h: b.h };
+  const paper = orient(paperOf(paperId, 'A5'), landscape);
   const W = mmToPx(paper.w);
   const H = mmToPx(paper.h);
-  return { paper, W, H, f: Math.min(W, H) / PAGE_W }; // f = 1 untuk A5 vertikal
+  return { paper, W, H, f: Math.max(0.5, Math.min(W, H) / PAGE_W) }; // f = 1 untuk A5 vertikal
 }
-console.assert(letterPage('A5', false).W === PAGE_W && letterPage('A5', false).H === PAGE_H && letterPage('A4', true).W > letterPage('A4', true).H, 'letterPage');
+console.assert(letterPage('A5', false).W === PAGE_W && letterPage('A5', false).H === PAGE_H && letterPage('A4', true).W > letterPage('A4', true).H && letterPage('T58', true).W < letterPage('T58', true).H, 'letterPage');
 
+// Pilih kertas (dikelompokkan) + orientasi. Orientasi disembunyikan untuk kertas fixed (dot-matrix/thermal).
 export function PaperPicker({ paper, landscape, onPaper, onLandscape }: {
-  paper: string; landscape: boolean; onPaper: (v: string) => void; onLandscape: (v: boolean) => void;
+  paper: string; landscape?: boolean; onPaper: (v: string) => void; onLandscape?: (v: boolean) => void;
 }) {
+  const def = PAPERS[paper];
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-end">
       <Field label="Ukuran kertas">
         <select className={inputCls} value={paper} onChange={(e) => onPaper(e.target.value)}>
-          {Object.entries(LETTER_PAPERS).map(([id, p]) => <option key={id} value={id}>{p.label}</option>)}
+          {PAPER_GROUPS.map((g) => (
+            <optgroup key={g} label={g}>
+              {Object.entries(PAPERS).filter(([, p]) => p.group === g).map(([id, p]) => <option key={id} value={id}>{p.label}</option>)}
+            </optgroup>
+          ))}
         </select>
       </Field>
-      <div className="flex gap-2" role="radiogroup" aria-label="Orientasi kertas">
-        {[false, true].map((ls) => (
-          <button key={String(ls)} type="button" role="radio" aria-checked={landscape === ls} onClick={() => onLandscape(ls)}
-            className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium min-h-[44px] ${landscape === ls ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
-            {ls ? 'Landscape' : 'Vertikal'}
-          </button>
-        ))}
-      </div>
+      {onLandscape && !def?.fixed ? (
+        <div className="flex gap-2" role="radiogroup" aria-label="Orientasi kertas">
+          {[false, true].map((ls) => (
+            <button key={String(ls)} type="button" role="radio" aria-checked={!!landscape === ls} onClick={() => onLandscape(ls)}
+              className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium min-h-[44px] ${!!landscape === ls ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
+              {ls ? 'Landscape' : 'Vertikal'}
+            </button>
+          ))}
+        </div>
+      ) : (
+        onLandscape && <p className="text-xs text-gray-600 sm:pb-3">Orientasi tetap untuk kertas ini.</p>
+      )}
     </div>
   );
 }

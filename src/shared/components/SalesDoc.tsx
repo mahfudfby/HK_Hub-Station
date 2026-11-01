@@ -9,7 +9,7 @@ import SharedGallery from './SharedGallery';
 import { TextSizeSlider, useFitScale } from './TextScale';
 import PositionPad, { fxOf, getOffset, type Offset, type Offsets } from './PositionPad';
 import { Toast, type ToastState } from './Feedback';
-import { ExportButton, Field, ImageUpload, inputCls, fmtTanggal, mmToPx, signSpace, useLetterExport, type Notify, type Paper } from './LetterKit';
+import { ExportButton, Field, ImageUpload, inputCls, fmtTanggal, mmToPx, signSpace, PAPERS, PAPER_GROUPS, paperOf, orient, useLetterExport, type Notify, type Paper } from './LetterKit';
 import { useBgRemoved } from '../lib/removeBg';
 import { num, rupiah, terbilangRupiah } from '../lib/money';
 import { cssFamily, loadGoogleFont, useGoogleFonts, type WebFont } from '../lib/fonts';
@@ -67,20 +67,7 @@ export function tint(hex: string, t: number) {
 }
 console.assert(tint('#000000', 0.5) === '#808080' && tint('#1d4ed8', 0) === '#1d4ed8' && tint('#123456', 1) === '#ffffff', 'tint');
 
-type PaperId = 'A4' | 'A5' | 'Letter' | 'F4' | 'CF95x11' | 'CF95x55' | 'CF15x11' | 'T80x100';
-
-// group: label kelompok di dropdown; fixed: orientasi tetap (continuous form & thermal)
-const PAPERS: Record<PaperId, Paper & { label: string; group: string; fixed?: boolean }> = {
-  A4: { w: 210, h: 297, label: 'A4 (210×297 mm)', group: 'Kertas biasa' },
-  A5: { w: 148, h: 210, label: 'A5 (148×210 mm)', group: 'Kertas biasa' },
-  Letter: { w: 215.9, h: 279.4, label: 'Letter (216×279 mm)', group: 'Kertas biasa' },
-  F4: { w: 215, h: 330, label: 'F4 / Folio (215×330 mm)', group: 'Kertas biasa' },
-  CF95x11: { w: 241.3, h: 279.4, label: 'Continuous 9½×11 in (penuh)', group: 'Dot-Matrix continuous form', fixed: true },
-  CF95x55: { w: 241.3, h: 139.7, label: 'Continuous 9½×5½ in (½)', group: 'Dot-Matrix continuous form', fixed: true },
-  CF15x11: { w: 377.8, h: 279.4, label: 'Continuous 14⅞×11 in (lebar)', group: 'Dot-Matrix continuous form', fixed: true },
-  T80x100: { w: 80, h: 100, label: 'Thermal 80×100 mm', group: 'Thermal', fixed: true },
-};
-const PAPER_GROUPS = [...new Set(Object.values(PAPERS).map((p) => p.group))];
+type PaperId = string; // kunci dari PAPERS bersama (LetterKit)
 
 // Font tebal untuk nama usaha (Google Fonts, dimuat saat dipilih agar sama di semua perangkat)
 type NameFont = { id: string; label: string; family: string; weight: number; fallback: string };
@@ -604,8 +591,8 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
   const set = <K extends keyof Doc>(k: K, v: Doc[K]) => setD((p) => ({ ...p, [k]: v }));
   const setItem = (i: number, patch: Partial<Item>) => set('items', d.items.map((it, j) => (j === i ? { ...it, ...patch } : it)));
 
-  const base = PAPERS[d.paper];
-  const paper: Paper = d.landscape && !base.fixed ? { w: base.h, h: base.w } : { w: base.w, h: base.h };
+  const base = paperOf(d.paper);
+  const paper: Paper = orient(base, d.landscape);
   const W = mmToPx(paper.w);
   const H = mmToPx(paper.h);
   // Huruf & margin mengikuti sisi terpendek kertas: thermal 80mm sangat kecil, A5/½ continuous kecil

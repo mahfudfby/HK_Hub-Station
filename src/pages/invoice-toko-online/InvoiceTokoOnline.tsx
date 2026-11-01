@@ -8,7 +8,7 @@ import FitPreview from '../../shared/components/FitPreview';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import PositionPad, { fxOf, getOffset, type Offset, type Offsets } from '../../shared/components/PositionPad';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
-import { ExportButton, Field, ImageUpload, inputCls, mmToPx, signSpace, useLetterExport, type Notify, type Paper } from '../../shared/components/LetterKit';
+import { ExportButton, Field, ImageUpload, inputCls, mmToPx, signSpace, PAPERS, PAPER_GROUPS, paperOf, orient, useLetterExport, type Notify, type Paper } from '../../shared/components/LetterKit';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { num, rupiah } from '../../shared/lib/money';
 import { cssFamily, useGoogleFonts, type WebFont } from '../../shared/lib/fonts';
@@ -55,13 +55,7 @@ const DOC_FONTS: { id: string; label: string; css: string; web?: WebFont }[] = [
   { id: 'poppins', label: 'Poppins', css: cssFamily('Poppins'), web: { family: 'Poppins', weights: [400, 700] } },
 ];
 
-type PaperId = 'A4' | 'A5' | 'Letter' | 'F4';
-const PAPERS: Record<PaperId, Paper & { label: string }> = {
-  A4: { w: 210, h: 297, label: 'A4 (210×297 mm)' },
-  A5: { w: 148, h: 210, label: 'A5 (148×210 mm)' },
-  Letter: { w: 215.9, h: 279.4, label: 'Letter (216×279 mm)' },
-  F4: { w: 215, h: 330, label: 'F4 / Folio (215×330 mm)' },
-};
+type PaperId = string; // kunci dari PAPERS bersama (LetterKit)
 
 // ============================================================
 // SECTION: Data
@@ -298,15 +292,17 @@ export default function InvoiceTokoOnline() {
     notify('info', 'Semua isian dikembalikan ke bawaan.');
   };
 
-  const base = PAPERS[n.paper];
-  const paper: Paper = n.landscape ? { w: base.h, h: base.w } : { w: base.w, h: base.h };
+  const base = paperOf(n.paper);
+  const paper: Paper = orient(base, n.landscape);
   const W = mmToPx(paper.w);
   const H = mmToPx(paper.h);
   const ref = useRef<HTMLDivElement>(null);
   const k = useFitScale(n.skala / 100, () => ref.current?.firstElementChild as HTMLElement, true, [n, W, H]);
-  const short = Math.min(paper.w, paper.h) < 160;
-  const fs = (short ? 10 : 13) * k;
-  const pad = short ? 30 : 44;
+  const minSide = Math.min(paper.w, paper.h);
+  const short = minSide < 160;
+  const tiny = minSide < 100; // thermal: huruf & margin kecil
+  const fs = (tiny ? 7 : short ? 10 : 13) * k;
+  const pad = tiny ? 10 : short ? 30 : 44;
   const c = calc(n);
   const fileName = `nota-pesanan-${(n.noPesanan || 'toko').replace(/[^\w-]+/g, '-').toLowerCase()}`;
   const { exporting, run } = useLetterExport(() => ref.current!.firstElementChild as HTMLElement, fileName, notify, paper);
@@ -343,14 +339,18 @@ export default function InvoiceTokoOnline() {
         </Field>
         <Field label="Ukuran kertas">
           <select className={inputCls} value={n.paper} onChange={(e) => set('paper', e.target.value as PaperId)}>
-            {(Object.keys(PAPERS) as PaperId[]).map((p) => <option key={p} value={p}>{PAPERS[p].label}</option>)}
+            {PAPER_GROUPS.map((g) => (
+              <optgroup key={g} label={g}>
+                {Object.entries(PAPERS).filter(([, p]) => p.group === g).map(([id, p]) => <option key={id} value={id}>{p.label}</option>)}
+              </optgroup>
+            ))}
           </select>
         </Field>
       </div>
       <div className="grid grid-cols-2 gap-2 items-end">
         <div className="flex gap-2" role="radiogroup" aria-label="Orientasi">
           {[false, true].map((ls) => (
-            <button key={String(ls)} type="button" role="radio" aria-checked={n.landscape === ls} onClick={() => set('landscape', ls)}
+            <button key={String(ls)} type="button" role="radio" aria-checked={n.landscape === ls} disabled={!!base.fixed} title={base.fixed ? 'Orientasi tetap untuk kertas ini' : undefined} onClick={() => set('landscape', ls)}
               className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium min-h-[44px] ${n.landscape === ls ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
               {ls ? 'Landscape' : 'Vertikal'}
             </button>

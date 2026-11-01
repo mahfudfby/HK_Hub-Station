@@ -8,6 +8,7 @@ import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
 import BgToggle from '../../shared/components/BgToggle';
 import { TextSizeSlider, useFitScale, ScaleBox } from '../../shared/components/TextScale';
+import { PaperPicker, PAPERS, paperOf, orient, mmToPx } from '../../shared/components/LetterKit';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ADDRESS_TEMPLATES, DEFAULT_FUELS, PLATE_REGIONS, GENERIC_LOGOS, buildPlate, randomRegionCode, svgToDataUri, GAYA_NOTA, GAYA_NOTA_KEY } from './SPBU.templates';
 import { useGoogleFonts, cssFamily, fontsReady } from '../../shared/lib/fonts';
@@ -264,7 +265,7 @@ const GayaNotaReceipt = ({ g, spbu, trans, logoSrc, priceLiter, volume, total, k
     const footerLines = (spbu.footerNote || '').split('\n');
     return (
         <div id="receipt-preview" className="text-left"
-            style={{ width: `${spbu.receiptWidth || 275}px`, padding: 8, background: PAPER, color: INK, fontFamily: cssFamily(g.font.family, g.font.fallback), fontSize: fs, lineHeight: 1.25, textTransform: g.upper ? 'uppercase' : 'none' }}><ScaleBox k={k}>
+            style={{ width: `${spbu.receiptWidth || 275}px`, height: spbu.receiptHeight, padding: 8, background: PAPER, color: INK, fontFamily: cssFamily(g.font.family, g.font.fallback), fontSize: fs, lineHeight: 1.25, textTransform: g.upper ? 'uppercase' : 'none' }}><ScaleBox k={k}>
             {g.header === 'left' ? (
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
                     <div style={{ width: '36%', flexShrink: 0, marginRight: 6 }}>{logo}</div>
@@ -343,6 +344,11 @@ const App = () => {
     const [skala, setSkala] = useState(() => { try { return Number(localStorage.getItem('spbu:skala:v1')) || 100; } catch { return 100; } });
     const pilihSkala = (v) => { setSkala(v); try { localStorage.setItem('spbu:skala:v1', String(v)); } catch { /* mode privat */ } };
     useGoogleFonts([gaya.font.google ? gaya.font : null]);
+    // Ukuran kertas (lokal per perangkat). T58 = perilaku lama: lebar dari "Lebar Nota (px)" + cetak 58mm.
+    const [paperId, setPaperId] = useState(() => { try { return PAPERS[localStorage.getItem('spbu:paper:v1')] ? localStorage.getItem('spbu:paper:v1') : 'T58'; } catch { return 'T58'; } });
+    const [landscape, setLandscape] = useState(() => { try { return localStorage.getItem('spbu:landscape:v1') === '1'; } catch { return false; } });
+    const pilihPaper = (v) => { setPaperId(v); try { localStorage.setItem('spbu:paper:v1', v); } catch { /* mode privat */ } };
+    const pilihLandscape = (v) => { setLandscape(v); try { localStorage.setItem('spbu:landscape:v1', v ? '1' : '0'); } catch { /* mode privat */ } };
 
     // --- EFFECT: FIREBASE INITIALIZATION & AUTH ---
     useEffect(() => {
@@ -760,12 +766,21 @@ const App = () => {
     // Logo yang tampil di nota (opsional tanpa background)
     const logoShown = useBgRemoved(currentSpbu.logoBase64 || FALLBACK_LOGO_URL, logoBg, (m) => displayFeedback(m, 'error'));
 
-    const k = useFitScale(skala / 100, () => document.getElementById('receipt-preview'), false, [skala, gayaNota, transactionData, currentSpbu, logoShown.src]);
+    // Kertas: T58 = lebar px dari Data User (native). Lainnya: lebar = lebar kertas, isi diperbesar (f) relatif ke 275px;
+    // gulung: tinggi ikut isi; lembar/continuous form: tinggi halaman tetap (isi dikecilkan otomatis bila tidak muat).
+    const paperDef = paperOf(paperId, 'T58');
+    const paperMm = orient(paperDef, landscape);
+    const native = paperId === 'T58';
+    const receiptW = native ? (currentSpbu.receiptWidth || 275) : mmToPx(paperMm.w);
+    const receiptH = paperDef.roll ? undefined : mmToPx(paperMm.h);
+    const fPaper = native ? 1 : Math.min(2, receiptW / 275); // maks 2x: teks tidak raksasa di kertas lebar
+    const spbuView = { ...currentSpbu, receiptWidth: receiptW, receiptHeight: receiptH };
+    const k = useFitScale(skala / 100 * fPaper, () => document.getElementById('receipt-preview'), !paperDef.roll, [skala, gayaNota, transactionData, currentSpbu, logoShown.src, paperId, landscape]);
 
     // Fungsi untuk membuat elemen HTML nota yang akan dicetak/di-export
     const ReceiptPreviewComponent = useCallback(() => {
         const trans = transactionData;
-        const spbu = currentSpbu;
+        const spbu = spbuView;
         const displayVolume = calculatedVolume || parseFloat(trans.volume) || 0;
         const displayPrice = finalPrice || parseFloat(trans.cashAmount) || 0;
         const priceLiter = parseFloat(trans.pricePerLiter) || 0;
@@ -792,7 +807,7 @@ const App = () => {
 
         return (
             <div id="receipt-preview" 
-                 style={{ width: `${spbu.receiptWidth || 275}px` }}
+                 style={{ width: `${spbu.receiptWidth || 275}px`, height: spbu.receiptHeight }}
                  className="doc-font text-left p-2 text-black leading-tight font-sans"
             ><ScaleBox k={k}>
                 {/* Logo Section */}
@@ -847,7 +862,7 @@ const App = () => {
                 </div>
             </ScaleBox></div>
         );
-    }, [transactionData, currentSpbu, calculatedVolume, finalPrice, logoShown.src, gaya, k]);
+    }, [transactionData, currentSpbu, calculatedVolume, finalPrice, logoShown.src, gaya, k, receiptW, receiptH]);
 
     // --- EXPORT/PRINT LOGIC ---
 
@@ -864,7 +879,7 @@ const App = () => {
         await fontsReady(); // font dokumen (termasuk Google Font gaya nota) wajib termuat agar tata letak sama di semua perangkat
 
         // Skala tetap (bukan dibagi devicePixelRatio) supaya resolusi nota sama di semua perangkat
-        const width = currentSpbu.receiptWidth || 275;
+        const width = receiptW;
 
         return await window.html2canvas(receiptEl, { 
             scale: 3,
@@ -873,8 +888,9 @@ const App = () => {
             useCORS: true, 
             backgroundColor: '#ffffff',
             width: width, 
+            ...(receiptH && { height: receiptH }),
         });
-    }, [isLibReady, currentSpbu.receiptWidth]);
+    }, [isLibReady, receiptW, receiptH]);
 
     const handleExportImage = useCallback(async () => {
         if (!isLibReady || isProcessing) return;
@@ -899,6 +915,8 @@ const App = () => {
         try {
             const canvas = await generateCanvas();
             const imgData = canvas.toDataURL('image/png');
+            const printW = paperMm.w;
+            const printH = paperDef.roll ? 'auto' : `${paperMm.h}mm`;
             
             const win = window.open('', '_blank');
             if (!win) throw new Error('Pop-up diblokir browser. Izinkan pop-up untuk mencetak.');
@@ -910,10 +928,10 @@ const App = () => {
                             body { margin: 0; padding: 0; background-color: #eee; display: flex; justify-content: center; }
                             img { max-width: 100%; height: auto; display: block; }
                             @media print {
-                                @page { size: 58mm auto; margin: 0mm; }
+                                @page { size: ${printW}mm ${printH}; margin: 0mm; }
                                 body { 
                                     margin: 0; 
-                                    width: 58mm;    
+                                    width: ${printW}mm;    
                                     background-color: transparent;
                                     display: block; 
                                 }
@@ -937,7 +955,7 @@ const App = () => {
         } finally { 
             setIsProcessing(false); 
         }
-    }, [isLibReady, isProcessing, generateCanvas, displayFeedback]);
+    }, [isLibReady, isProcessing, generateCanvas, displayFeedback, paperMm.w, paperMm.h, paperDef.roll]);
 
     // --- RENDER MAIN LAYOUT ---
 
@@ -964,7 +982,9 @@ const App = () => {
     );
     const tampilan = (
         <>
-            <TextSizeSlider value={skala} onChange={pilihSkala} effective={k} />
+            <PaperPicker paper={paperId} landscape={landscape} onPaper={pilihPaper} onLandscape={pilihLandscape} />
+            <p className="text-xs text-gray-600">Thermal 58 mm memakai Lebar Nota (px) dari Data User.</p>
+            <TextSizeSlider value={skala} onChange={pilihSkala} effective={k / fPaper} />
             <div>
                 <label htmlFor="gaya-nota" className="block text-sm font-semibold text-gray-700 mb-1">Gaya Nota</label>
                 <select id="gaya-nota" aria-label="Gaya nota" value={gaya.id} onChange={(e) => pilihGayaNota(e.target.value)}
@@ -988,7 +1008,7 @@ const App = () => {
                     className={`flex-1 min-w-[140px] p-3 rounded-xl font-bold flex justify-center items-center space-x-1 transition ${!isLibReady || isProcessing || isAiGenerating ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}>
                     {isProcessing || !isLibReady ? <div className="spinner mr-2"></div> : 
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m0 0h6m-6 0v2a2 2 0 002 2h2a2 2 0 002-2v-2" /></svg>}
-                    <span>Cetak 58mm</span>
+                    <span>{native ? 'Cetak 58mm' : `Cetak ${paperDef.label.split(' (')[0]}`}</span>
                 </button>
         </>
     );
