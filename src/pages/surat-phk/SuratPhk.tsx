@@ -18,6 +18,7 @@ import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { num, rupiah, terbilangRupiah } from '../../shared/lib/money';
 import FormSection from '../../shared/components/FormSection';
+import KontakFields from '../../shared/components/KontakFields';
 
 // Surat Pemutusan Hubungan Kerja (PHK): pemberitahuan resmi berakhirnya hubungan kerja, dengan alasan
 // siap pakai (tetap bisa diedit), tanggal efektif, rincian hak (total otomatis + terbilang), serah terima aset.
@@ -255,7 +256,7 @@ export default function SuratPhk() {
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
-              {text('kontak', 'Telepon, email, website')}
+              <KontakFields value={f.kontak} onChange={(v) => set('kontak', v)} />
             </FormSection>
 
             <FormSection title="Data Surat">

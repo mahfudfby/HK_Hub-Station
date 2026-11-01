@@ -17,6 +17,7 @@ import { ClosingSigns, LampiranField, SIGN, lampiranOtomatis, usePagedLetter, ty
 import { removeBackground, useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import FormSection from '../../shared/components/FormSection';
+import KontakFields from '../../shared/components/KontakFields';
 
 // Berita Acara Serah Terima Jabatan: pejabat lama (Pihak Pertama) menyerahkan jabatan kepada pejabat baru
 // (Pihak Kedua) beserta lampiran pekerjaan berjalan, dokumen/arsip, dan aset; diketahui atasan/direktur.
@@ -335,7 +336,7 @@ export default function BeritaAcaraSerahTerimaJabatan() {
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
-              {text('kontak', 'Telepon, email, website')}
+              <KontakFields value={f.kontak} onChange={(v) => set('kontak', v)} />
             </FormSection>
 
             <FormSection title="Data Berita Acara">

@@ -16,6 +16,7 @@ import { num, rupiah, terbilangRupiah } from '../lib/money';
 import { orRandomNo, randomDocNo } from '../lib/docNumber';
 import { cssFamily, loadGoogleFont, useGoogleFonts, type WebFont } from '../lib/fonts';
 import FormSection from './FormSection';
+import KontakFields from './KontakFields';
 
 // Generator Invoice & Faktur Penjualan: satu mesin, beberapa template gaya, ukuran kertas & orientasi bebas.
 
@@ -747,7 +748,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
             <FormSection title={<>{L.kepada}</>}>
               {txt('pembeli', 'Nama pembeli / perusahaan')}
               {txt('pembeliAlamat', 'Alamat', 2)}
-              {txt('pembeliKontak', 'Telepon / email')}
+              <KontakFields label="Kontak pembeli (opsional)" value={d.pembeliKontak} onChange={(v) => set('pembeliKontak', v)} />
               {kind === 'faktur' && <ImageUpload label="Tanda tangan — Penerima" value={d.ttdPenerima} onChange={(v) => set('ttdPenerima', v)} notify={notify} {...bgFor('ttdPenerima', ttdPenerima)} />}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div className="sm:col-span-3">

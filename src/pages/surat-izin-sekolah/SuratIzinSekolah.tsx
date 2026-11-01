@@ -16,6 +16,7 @@ import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { terbilangRupiah } from '../../shared/lib/money';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import FormSection from '../../shared/components/FormSection';
+import KontakFields from '../../shared/components/KontakFields';
 
 // Surat Izin Tidak Masuk Sekolah: dari orang tua/wali ke wali kelas, diketahui Ketua RT & Ketua RW (kop RT/RW).
 // Menu berdiri sendiri (file, form & penyimpanan terpisah). Tata letak dari LetterLayouts.
@@ -227,7 +228,7 @@ export default function SuratIzinSekolah() {
               </div>
               {text('kabKota', 'Kota / kabupaten')}
               {text('alamatKop', 'Alamat sekretariat')}
-              {text('kontak', 'Telepon / email')}
+              <KontakFields value={f.kontak} onChange={(v) => set('kontak', v)} />
             </FormSection>
 
             <FormSection title="Data Surat">

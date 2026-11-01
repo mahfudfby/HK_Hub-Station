@@ -15,6 +15,7 @@ import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSig
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import FormSection from '../../shared/components/FormSection';
+import KontakFields from '../../shared/components/KontakFields';
 
 // Surat Perintah Lembur (SPL): perintah atasan kepada satu/lebih karyawan untuk bekerja lembur
 // pada tanggal tertentu, dengan tabel jam mulai–selesai (total jam otomatis, mendukung lewat tengah malam).
@@ -262,7 +263,7 @@ export default function SuratPerintahLembur() {
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
-              {text('kontak', 'Telepon, email, website')}
+              <KontakFields value={f.kontak} onChange={(v) => set('kontak', v)} />
             </FormSection>
 
             <FormSection title="Data Surat">

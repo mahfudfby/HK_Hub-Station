@@ -19,6 +19,7 @@ import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { num, rupiah, terbilangRupiah } from '../../shared/lib/money';
 import FormSection, { NarrativeField } from '../../shared/components/FormSection';
 import { LampiranField, lampiranTeks } from './Lampiran';
+import KontakFields from '../../shared/components/KontakFields';
 
 // Surat Kontrak Kerja (PKWT): perjanjian kerja waktu tertentu dengan pasal-pasal yang bisa diedit,
 // termasuk daftar tugas & tanggung jawab (preset per posisi). Tata letak dari LetterLayouts.
@@ -416,7 +417,7 @@ export default function SuratKontrakKerja() {
               <Field label="Nama perusahaan"><AutoTextarea className={inputCls} value={f.instansi} onChange={(e) => set('instansi', e.target.value)} /></Field>
               <Field label="Bidang usaha (baris kedua kop)"><AutoTextarea className={inputCls} value={f.subKop} onChange={(e) => set('subKop', e.target.value)} /></Field>
               <Field label="Alamat lengkap"><AutoTextarea className={inputCls} value={f.alamat} onChange={(e) => set('alamat', e.target.value)} /></Field>
-              <Field label="Telepon, email, website"><AutoTextarea className={inputCls} value={f.kontak} onChange={(e) => set('kontak', e.target.value)} /></Field>
+              <KontakFields value={f.kontak} onChange={(v) => set('kontak', v)} />
             </FormSection>
 
             <FormSection title="Data Perjanjian">

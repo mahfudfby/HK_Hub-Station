@@ -16,6 +16,7 @@ import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { terbilangRupiah } from '../../shared/lib/money';
 import FormSection from '../../shared/components/FormSection';
+import KontakFields from '../../shared/components/KontakFields';
 
 // Surat Izin Tidak Masuk Kerja: permohonan izin dari karyawan kepada atasan/HRD.
 // Kop bisa kop perusahaan (formulir perusahaan) atau kop pribadi karyawan. Tata letak dari LetterLayouts.
@@ -218,13 +219,13 @@ export default function SuratIzinTidakMasukKerja() {
               {f.kopPribadi ? <>
                 <p className="text-xs text-gray-500">Nama di kop memakai nama karyawan (bagian Data Karyawan).</p>
                 {text('alamatK', 'Alamat karyawan')}
-                {text('kontakK', 'Telepon & email karyawan')}
+                <KontakFields label="Kontak karyawan (opsional)" value={f.kontakK} onChange={(v) => set('kontakK', v)} />
               </> : <>
                 <ImageUpload label="Logo" value={f.logo} onChange={(x) => set('logo', x)} notify={notify} {...bgFor('logo', logo)} />
                 {text('instansi', 'Nama perusahaan')}
                 {text('subKop', 'Bidang usaha (baris kedua kop)')}
                 {text('alamat', 'Alamat lengkap')}
-                {text('kontak', 'Telepon, email, website')}
+                <KontakFields value={f.kontak} onChange={(v) => set('kontak', v)} />
               </>}
             </FormSection>
 

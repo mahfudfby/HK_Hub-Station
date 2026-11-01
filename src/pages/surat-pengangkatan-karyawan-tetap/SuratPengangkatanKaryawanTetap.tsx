@@ -10,7 +10,7 @@ import UserData from '../../shared/components/UserData';
 import DocOptions, { Switch, TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, type Notify } from '../../shared/components/LetterKit';
+import { Dots, ExportButton, Field, ImageUpload, PaperPicker, dataStyle, fmtTanggal, inputCls, letterPage, type Notify } from '../../shared/components/LetterKit';
 import { InfoRows, LayoutPicker, P, type LayoutSigner } from '../../shared/components/LetterLayouts';
 import { usePagesExport } from '../surat-kontrak-kerja/exportPages';
 import { ClosingSigns, LampiranField, SIGN, lampiranOtomatis, usePagedLetter, type Unit } from '../surat-penawaran-kerja/paged';
@@ -18,6 +18,7 @@ import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { num, rupiah, terbilangRupiah } from '../../shared/lib/money';
 import FormSection from '../../shared/components/FormSection';
+import KontakFields from '../../shared/components/KontakFields';
 
 // Surat Keputusan Pengangkatan Karyawan Tetap: SK direksi yang mengangkat karyawan kontrak (PKWT) /
 // masa percobaan menjadi karyawan tetap (PKWTT), dengan menimbang/mengingat, diktum, gaji & hak-kewajiban.
@@ -35,7 +36,7 @@ type Form = {
   menimbang: string; mengingat: string; pembuka: string;
   nama: string; nik: string; jabatan: string; divisi: string;
   statusSemula: string; periodeSemula: string; tmt: string;
-  gaji: string; hak: string; kewajiban: string; penutup: string;
+  gaji: string; rincian: Rincian; hak: string; kewajiban: string; penutup: string;
   pakaiUtama: boolean; pakaiKaryawan: boolean; // tanda tangan yang tampil (bebas 1 atau 2)
   ttdHeading: string; ttdJabatan: string; ttdNama: string; ttdId: string; ttd: string; stempel: string;
   ttdKaryawan: string; tembusan: string;
@@ -59,6 +60,8 @@ const makeDefault = (): Form => ({
   nama: 'Siti Nurhaliza', nik: 'KRY-2024-0418', jabatan: 'Staf Administrasi Keuangan', divisi: 'Keuangan & Akuntansi',
   statusSemula: 'Karyawan Kontrak (PKWT)', periodeSemula: '1 November 2024 s.d. 31 Oktober 2026', tmt: today(),
   gaji: '6250000',
+  rincian: contohRincian([['Tunjangan Jabatan', 750000], ['Tunjangan Transport', 500000], ['Tunjangan Makan', 600000]],
+    [['BPJS Kesehatan (1%)', 62500], ['BPJS Ketenagakerjaan (JHT 2% + JP 1%)', 187500], ['PPh 21', 95000]]),
   hak: 'Menerima gaji pokok dan tunjangan sesuai struktur dan skala upah perusahaan.\nMendapatkan jaminan sosial BPJS Kesehatan dan BPJS Ketenagakerjaan.\nMemperoleh hak cuti tahunan, THR, dan fasilitas lain sesuai Peraturan Perusahaan.',
   kewajiban: 'Melaksanakan tugas dan tanggung jawab jabatan dengan penuh dedikasi.\nMematuhi Peraturan Perusahaan, tata tertib, dan kode etik yang berlaku.\nMenjaga kerahasiaan data dan nama baik perusahaan.',
   penutup: 'Keputusan ini berlaku sejak tanggal ditetapkan, dengan ketentuan apabila di kemudian hari terdapat kekeliruan dalam keputusan ini akan diadakan perbaikan sebagaimana mestinya.',
@@ -95,6 +98,124 @@ function Diktum({ items, k }: { items: [string, ReactNode][]; k: number }) {
   );
 }
 
+// Baris lanjutan diktum (tanpa label): kolom tetap sejajar dengan diktum di atasnya, termasuk di halaman berikut
+function DiktumLanjut({ k, children }: { k: number; children: ReactNode }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '6.6em max-content 1fr', columnGap: 6 * k }}>
+      <span /><span style={{ visibility: 'hidden' }}>:</span><div>{children}</div>
+    </div>
+  );
+}
+
+// ============================================================
+// SECTION: Rincian gaji (dipakai juga oleh menu Surat Promosi Jabatan)
+// ============================================================
+export type Komponen = { label: string; nilai: string };
+export type Rincian = { tampil: boolean; tunjangan: Komponen[]; pakaiPotongan: boolean; potongan: Komponen[] };
+// Data tersimpan versi lama (belum ada rincian): daftar kosong, rincian tampil
+export const RINCIAN_LAMA: Rincian = { tampil: true, tunjangan: [], pakaiPotongan: false, potongan: [] };
+const komp = (xs: [string, number][]) => xs.map(([label, n]) => ({ label, nilai: String(n) }));
+export const contohRincian = (tunjangan: [string, number][], potongan: [string, number][]): Rincian =>
+  ({ tampil: true, tunjangan: komp(tunjangan), pakaiPotongan: false, potongan: komp(potongan) });
+export const bacaRincian = (saved: Partial<Rincian> | undefined): Rincian => ({ ...RINCIAN_LAMA, ...saved });
+
+const jumlah = (xs: Komponen[]) => xs.reduce((a, x) => a + num(x.nilai), 0);
+// Take Home Pay = gaji pokok + Σ tunjangan − Σ potongan (potongan hanya bila ditampilkan), tidak pernah negatif
+export const hitungThp = (pokok: string, r: Rincian) => Math.max(0, num(pokok) + jumlah(r.tunjangan) - (r.pakaiPotongan ? jumlah(r.potongan) : 0));
+console.assert(
+  hitungThp('5000000', contohRincian([['A', 500000], ['B', 250000]], [['P', 100000]])) === 5750000 &&
+    hitungThp('5000000', { ...contohRincian([['A', 500000]], [['P', 100000]]), pakaiPotongan: true }) === 5400000 &&
+    hitungThp('100', { ...contohRincian([], [['P', 500]]), pakaiPotongan: true }) === 0 &&
+    hitungThp('', RINCIAN_LAMA) === 0,
+  'hitungThp',
+);
+
+// Isian Rupiah di form: tebal + miring + garis titik-titik, ribuan diberi titik saat mengetik (Rp 5.000.000)
+export function RupiahInput({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+  return (
+    <div className="flex items-center border-b-2 border-dotted border-gray-500 focus-within:border-blue-600">
+      <span className="pl-1 text-sm font-bold italic text-gray-600">Rp</span>
+      <input inputMode="numeric" aria-label={label} placeholder="0" className="w-full min-w-0 bg-transparent px-1 py-2 text-sm font-bold italic outline-none"
+        style={{ border: 0, background: 'transparent' }} value={value ? rupiah(num(value)) : ''} onChange={(e) => onChange(e.target.value.replace(/\D/g, ''))} />
+    </div>
+  );
+}
+
+// Daftar komponen (tambah / hapus / naik-turun)
+function KomponenList({ name, items, onChange, contoh }: { name: string; items: Komponen[]; onChange: (v: Komponen[]) => void; contoh: string }) {
+  const up = (i: number, p: Partial<Komponen>) => onChange(items.map((x, j) => (j === i ? { ...x, ...p } : x)));
+  const move = (i: number, d: number) => {
+    const next = [...items];
+    [next[i], next[i + d]] = [next[i + d], next[i]];
+    onChange(next);
+  };
+  const btn = 'min-h-[40px] min-w-[40px] rounded-lg border text-sm disabled:opacity-30';
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-bold text-gray-700">{name}</p>
+      {items.map((it, i) => (
+        <div key={i} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-lg border p-2 sm:grid-cols-[minmax(0,1fr)_9rem_auto] sm:items-end">
+          <input aria-label={`Nama ${name.toLowerCase()} ${i + 1}`} placeholder={contoh} className={inputCls} value={it.label} onChange={(e) => up(i, { label: e.target.value })} />
+          <div className="order-last col-span-2 sm:order-none sm:col-span-1"><RupiahInput label={`Nilai ${name.toLowerCase()} ${i + 1}`} value={it.nilai} onChange={(v) => up(i, { nilai: v })} /></div>
+          <div className="flex gap-1">
+            <button type="button" disabled={i === 0} onClick={() => move(i, -1)} aria-label={`Naikkan ${name.toLowerCase()} ${i + 1}`} className={btn}>↑</button>
+            <button type="button" disabled={i === items.length - 1} onClick={() => move(i, 1)} aria-label={`Turunkan ${name.toLowerCase()} ${i + 1}`} className={btn}>↓</button>
+            <button type="button" onClick={() => onChange(items.filter((_, j) => j !== i))} aria-label={`Hapus ${name.toLowerCase()} ${i + 1}`} className={`${btn} text-red-600 border-red-200`}>✕</button>
+          </div>
+        </div>
+      ))}
+      <button type="button" onClick={() => onChange([...items, { label: '', nilai: '' }])} className="min-h-[40px] text-sm font-medium text-blue-700">+ Tambah {name.toLowerCase()}</button>
+    </div>
+  );
+}
+
+// Kartu form "Rincian Gaji & Tunjangan"; children = isian gaji pokok milik tiap menu
+export function RincianGajiCard({ pokok, r, onChange, children }: { pokok: string; r: Rincian; onChange: (r: Rincian) => void; children: ReactNode }) {
+  const thp = hitungThp(pokok, r);
+  return (
+    <FormSection title="Rincian Gaji & Tunjangan">
+      <Switch checked={r.tampil} onChange={(tampil) => onChange({ ...r, tampil })} label="Tampilkan rincian gaji" hint="Matikan agar surat hanya menyebut gaji pokok." />
+      {children}
+      {r.tampil && <>
+        <KomponenList name="Tunjangan" contoh="Tunjangan Jabatan / Transport / Makan / Komunikasi" items={r.tunjangan} onChange={(tunjangan) => onChange({ ...r, tunjangan })} />
+        <Switch checked={r.pakaiPotongan} onChange={(pakaiPotongan) => onChange({ ...r, pakaiPotongan })} label="Tampilkan potongan" hint="BPJS Kesehatan, BPJS Ketenagakerjaan, PPh 21, dll." />
+        {r.pakaiPotongan && <KomponenList name="Potongan" contoh="BPJS Kesehatan / BPJS Ketenagakerjaan / PPh 21" items={r.potongan} onChange={(potongan) => onChange({ ...r, potongan })} />}
+        <div className="rounded-lg bg-indigo-50 p-3 text-sm">
+          <p>Take Home Pay (gaji pokok + tunjangan{r.pakaiPotongan ? ' − potongan' : ''}), otomatis: <b><i>Rp {rupiah(thp)}</i></b></p>
+          <p className="text-gray-600 italic">{terbilangRupiah(thp)}</p>
+        </div>
+      </>}
+    </FormSection>
+  );
+}
+
+// Baris rincian di surat: label kiri, nilai kanan (tebal miring bergaris titik); kosongan = titik-titik, label tetap
+function BarisGaji({ label, n, ks, minus, total }: { label: string; n: number; ks: boolean; minus?: boolean; total?: boolean }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5em', ...(total && { fontWeight: 700, background: '#ececec', borderTop: '1px solid #000', padding: '0.1em 0.3em' }) }}>
+      <span style={{ flex: 1, minWidth: 0 }}>{label}</span>
+      <span style={{ flex: '0 0 42%', textAlign: 'right' }}>
+        {ks ? <Dots w="100%" /> : <span style={{ ...dataStyle, fontWeight: 700, padding: '0 4px 0.22em' }}>{minus ? '− ' : ''}Rp {rupiah(n)}</span>}
+      </span>
+    </div>
+  );
+}
+
+// Isi rincian untuk surat: komponen (gaji pokok, tunjangan, potongan), baris THP & terbilang terpisah agar bisa ditata per menu
+export function rincianGajiDoc(pokok: string, r: Rincian, ks: boolean) {
+  const lbl = (x: Komponen, d: string) => x.label.trim() || (ks ? TITIK : d);
+  const thp = hitungThp(pokok, r);
+  return {
+    items: [
+      <BarisGaji key="p" label="Gaji pokok" n={num(pokok)} ks={ks} />,
+      ...r.tunjangan.map((x, i) => <BarisGaji key={`t${i}`} label={lbl(x, 'Tunjangan')} n={num(x.nilai)} ks={ks} />),
+      ...(r.pakaiPotongan ? r.potongan.map((x, i) => <BarisGaji key={`p${i}`} label={`Potongan ${lbl(x, '')}`.trim()} n={num(x.nilai)} ks={ks} minus />) : []),
+    ],
+    total: <BarisGaji label="Take Home Pay (THP) per bulan" n={thp} ks={ks} total />,
+    terbilang: <div style={{ fontStyle: 'italic' }}>Terbilang: {ks ? <Dots w="70%" /> : <span style={{ ...dataStyle, fontWeight: 700 }}>({terbilangRupiah(thp)})</span>}</div>,
+  };
+}
+
 // ============================================================
 // SECTION: Halaman
 // ============================================================
@@ -106,7 +227,7 @@ export default function SuratPengangkatanKaryawanTetap() {
     const d = makeDefault();
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      return saved ? { ...d, ...saved, nomor: orRandomNo(saved.nomor, POLA) } : d;
+      return saved ? { ...d, ...saved, nomor: orRandomNo(saved.nomor, POLA), rincian: bacaRincian(saved.rincian) } : d;
     } catch {
       return d;
     }
@@ -147,6 +268,9 @@ export default function SuratPengangkatanKaryawanTetap() {
   const v = (s: string) => isian(s, ks);
   const img = (src: string) => (ks ? '' : src);
   const gaji = num(f.gaji);
+  const rincian = f.rincian;
+  const rg = rincianGajiDoc(f.gaji, rincian, ks);
+  const rgUnits = rincian.tampil ? [...rg.items, rg.total, rg.terbilang] : [];
   const signers = ([
     f.pakaiKaryawan && { heading: 'Yang bersangkutan,', role: 'Karyawan', name: ks ? '' : f.nama, ttd: img(ttdKaryawan.src), ttdOffset: getOffset(f.posisi, 'ttdKaryawan') },
     f.pakaiUtama && { heading: f.ttdHeading, role: f.ttdJabatan, name: f.ttdNama, idLine: f.ttdId, ttd: img(ttd.src), stempel: img(stempel.src), ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
@@ -157,6 +281,8 @@ export default function SuratPengangkatanKaryawanTetap() {
   const hak = linesOf(f.hak);
   const kewajiban = linesOf(f.kewajiban);
   // Bagian diktum yang tampil; diberi nomor berurutan PERTAMA, KEDUA, … sesuai yang tampil
+  const gajiDiktum = rincian.tampil ? <P style={{ margin: 0 }}>Kepada karyawan tersebut diberikan penghasilan per bulan dengan rincian sebagai berikut:</P>
+    : (gaji > 0 || ks) && <P style={{ margin: 0 }}>Kepada karyawan tersebut diberikan gaji pokok sebesar <b>Rp {ks ? TITIK : `${rupiah(gaji)},-`}</b> ({ks ? TITIK : terbilangRupiah(gaji)}) per bulan, ditambah tunjangan sesuai ketentuan perusahaan.</P>;
   const diktum: ReactNode[] = [
     <>
       <P>{f.pembuka}</P>
@@ -168,7 +294,7 @@ export default function SuratPengangkatanKaryawanTetap() {
         { label: 'Terhitung mulai', value: v(fmtTanggal(f.tmt)) },
       ]} />
     </>,
-    (gaji > 0 || ks) && <P style={{ margin: 0 }}>Kepada karyawan tersebut diberikan gaji pokok sebesar <b>Rp {ks ? TITIK : `${rupiah(gaji)},-`}</b> ({ks ? TITIK : terbilangRupiah(gaji)}) per bulan, ditambah tunjangan sesuai ketentuan perusahaan.</P>,
+    gajiDiktum,
     (hak.length > 0 || kewajiban.length > 0) && <>
       {hak.length > 0 && <><P style={{ margin: 0 }}>Hak karyawan:</P><NumList lines={hak} k={kk} alpha /></>}
       {kewajiban.length > 0 && <><P style={{ margin: `${4 * kk}px 0 0` }}>Kewajiban karyawan:</P><NumList lines={kewajiban} k={kk} alpha /></>}
@@ -187,7 +313,15 @@ export default function SuratPengangkatanKaryawanTetap() {
       <P style={{ textAlign: 'center', fontWeight: 700, letterSpacing: '0.15em', textIndent: 0, marginTop: 4 * kk }}>MEMUTUSKAN</P>
       <P style={{ textIndent: 0 }}><b>Menetapkan</b> : Keputusan Direksi tentang Pengangkatan Karyawan Tetap.</P>
     </> },
-    ...diktumUrut.map((d, i) => ({ g: i === diktumUrut.length - 1 ? SIGN : 3 + i, el: <Diktum k={kk} items={[d]} /> })),
+    // Diktum gaji: kalimat lalu satu baris rincian per unit (boleh berlanjut ke halaman berikut)
+    ...diktumUrut.flatMap((d, i) => {
+      const g = i === diktumUrut.length - 1 ? SIGN : 3 + i;
+      if (diktum[i] !== gajiDiktum || !rgUnits.length) return [{ g, el: <Diktum k={kk} items={[d]} /> }];
+      return [
+        { g, el: <Diktum k={kk} items={[d]} /> },
+        ...rgUnits.map((el, j) => ({ g, el: <DiktumLanjut k={kk}><div style={{ margin: `${j ? 2 * kk : -4 * kk}px 0 ${j === rgUnits.length - 1 ? 6 * kk : 0}px` }}>{el}</div></DiktumLanjut> })),
+      ];
+    }),
     { g: SIGN, el: <ClosingSigns k={kk} placeDate={[f.kota, ks ? TITIK : fmtTanggal(f.tanggal)].filter(Boolean).join(', ')} signers={signers}
       footer={f.tembusan ? <><div style={{ fontWeight: 700 }}>Tembusan:</div><div style={{ whiteSpace: 'pre-line' }}>{f.tembusan}</div></> : undefined} /> },
   ];
@@ -251,7 +385,7 @@ export default function SuratPengangkatanKaryawanTetap() {
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
-              {text('kontak', 'Telepon, email, website')}
+              <KontakFields value={f.kontak} onChange={(v) => set('kontak', v)} />
             </FormSection>
 
             <FormSection title="Data Surat Keputusan">
@@ -277,11 +411,12 @@ export default function SuratPengangkatanKaryawanTetap() {
                 {text('periodeSemula', 'Periode status semula (opsional)')}
               </div>
               <Field label="Karyawan tetap terhitung mulai"><input type="date" className={inputCls} value={f.tmt} onChange={(e) => set('tmt', e.target.value)} /></Field>
-              <Field label="Gaji pokok per bulan (Rp, opsional)">
-                <input inputMode="numeric" placeholder="Kosongkan bila tidak dicantumkan" className={inputCls} value={f.gaji} onChange={(e) => set('gaji', e.target.value.replace(/\D/g, ''))} />
-              </Field>
-              {gaji > 0 && <p className="text-sm text-gray-600">Rp {rupiah(gaji)} — {terbilangRupiah(gaji)}</p>}
             </FormSection>
+
+            <RincianGajiCard pokok={f.gaji} r={rincian} onChange={(x) => set('rincian', x)}>
+              <Field label="Gaji pokok per bulan (opsional)"><RupiahInput label="Gaji pokok per bulan" value={f.gaji} onChange={(x) => set('gaji', x)} /></Field>
+              {!rincian.tampil && gaji > 0 && <p className="text-sm text-gray-600">{terbilangRupiah(gaji)}</p>}
+            </RincianGajiCard>
 
             <FormSection title="Hak, Kewajiban & Penutup">
               {text('hak', 'Hak karyawan (satu poin per baris)', 3)}

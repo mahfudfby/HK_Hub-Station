@@ -347,6 +347,13 @@ export const routes = [
     desc: 'Perjanjian kerahasiaan perusahaan–karyawan dengan pasal yang bisa diedit, otomatis multi-halaman.',
   },
   {
+    path: '/surat-hutang-ringkas/*',
+    cat: 'pribadi',
+    component: lazy(() => import('../pages/surat-hutang-ringkas')),
+    title: 'Surat Pernyataan Hutang (Ringkas, 1 Halaman)',
+    desc: 'Pernyataan hutang satu halaman tanpa pasal: lunas sekaligus atau dicicil sampai tanggal tertentu, sanksi bila terlambat, saksi & lampiran foto opsional.',
+  },
+  {
     path: '/surat-perjanjian-hutang-piutang/*',
     cat: 'pribadi',
     component: lazy(() => import('../pages/surat-perjanjian-hutang-piutang')),

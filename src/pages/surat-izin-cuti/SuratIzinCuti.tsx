@@ -15,6 +15,7 @@ import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSig
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import FormSection from '../../shared/components/FormSection';
+import KontakFields from '../../shared/components/KontakFields';
 
 // Surat Izin Cuti / Formulir Cuti Karyawan: permohonan cuti dari karyawan, disetujui atasan langsung
 // dan diketahui HRD. Jumlah hari & sisa cuti dihitung otomatis; status persetujuan berupa kotak centang.
@@ -240,7 +241,7 @@ export default function SuratIzinCuti() {
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
-              {text('kontak', 'Telepon, email, website')}
+              <KontakFields value={f.kontak} onChange={(v) => set('kontak', v)} />
             </FormSection>
 
             <FormSection title="Data Surat">

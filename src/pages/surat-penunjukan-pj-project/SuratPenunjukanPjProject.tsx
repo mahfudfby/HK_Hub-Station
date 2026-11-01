@@ -16,6 +16,7 @@ import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { rupiah, terbilangRupiah } from '../../shared/lib/money';
 import FormSection from '../../shared/components/FormSection';
+import KontakFields from '../../shared/components/KontakFields';
 
 // Surat Penunjukan Penanggung Jawab Project: data project (klien, lokasi, nilai kontrak, periode),
 // karyawan yang ditunjuk, daftar tugas (dengan preset), wewenang, pelaporan, tim pendukung.
@@ -270,7 +271,7 @@ export default function SuratPenunjukanPjProject() {
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
-              {text('kontak', 'Telepon, email, website')}
+              <KontakFields value={f.kontak} onChange={(v) => set('kontak', v)} />
             </FormSection>
 
             <FormSection title="Data Surat">

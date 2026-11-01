@@ -10,12 +10,14 @@ import UserData from '../../shared/components/UserData';
 import DocOptions, { TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
+import { Dots, ExportButton, Field, dataStyle, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSigner } from '../../shared/components/LetterLayouts';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
-import { num, rupiah } from '../../shared/lib/money';
+import { num, rupiah, terbilangRupiah } from '../../shared/lib/money';
 import FormSection from '../../shared/components/FormSection';
+import KontakFields from '../../shared/components/KontakFields';
+import { RincianGajiCard, RupiahInput, bacaRincian, contohRincian, hitungThp, rincianGajiDoc, type Rincian } from '../surat-pengangkatan-karyawan-tetap/SuratPengangkatanKaryawanTetap';
 
 // Surat Pengangkatan / Promosi Jabatan: jabatan lama → jabatan baru, tanggal efektif, tugas jabatan baru.
 // Menu berdiri sendiri (file, form & penyimpanan terpisah). Tata letak dari LetterLayouts.
@@ -31,7 +33,7 @@ type Form = {
   judul: string; nomor: string; kota: string; tanggal: string;
   menimbang: string; pembuka: string;
   nama: string; nik: string; masuk: string;
-  lama: Posisi; baru: Posisi;
+  lama: Posisi; baru: Posisi; rincian: Rincian; // rincian gaji jabatan baru (gaji pokok = baru.gaji)
   efektif: string; percobaan: string; tugas: string; penutup: string;
   ttdHeading: string; ttdJabatan: string; ttdNama: string; ttdId: string; ttd: string; stempel: string;
   ttdYbs: boolean; ttdKaryawan: string; tembusan: string;
@@ -49,14 +51,16 @@ const makeDefault = (): Form => ({
   alamat: 'Jl. Merdeka Raya No. 45, Kel. Gambir, Kec. Gambir, Jakarta Pusat, DKI Jakarta 10110',
   kontak: 'Telp. (021) 3456-7890 • hrd@sinarmaju.co.id • www.sinarmaju.co.id',
   judul: JUDUL[0], nomor: randomDocNo(POLA), kota: 'Jakarta', tanggal: iso(new Date()),
-  menimbang: 'Hasil penilaian kinerja karyawan periode tahun berjalan dengan predikat sangat baik.\nKebutuhan organisasi untuk mengisi jabatan Kepala Gudang Cabang Bekasi.\nRekomendasi atasan langsung dan hasil rapat Direksi.',
+  menimbang: 'Hasil penilaian kinerja tahun berjalan dengan predikat sangat baik dan rekomendasi atasan langsung.\nKebutuhan organisasi untuk mengisi jabatan Kepala Gudang Cabang Bekasi.',
   pembuka: 'Direksi PT Sinar Maju Sejahtera, dengan ini memutuskan untuk mengangkat karyawan:',
   nama: 'Andi Pratama', nik: 'KRY-2019-0145', masuk: '2019-03-04',
   lama: { jabatan: 'Supervisor Logistik', level: 'Golongan III / Staf Senior', divisi: 'Operasional', gaji: '6500000' },
   baru: { jabatan: 'Kepala Gudang Cabang Bekasi', level: 'Golongan IV / Manajerial', divisi: 'Operasional', gaji: '8750000' },
+  rincian: contohRincian([['Tunjangan Jabatan', 1500000], ['Tunjangan Transport', 600000], ['Tunjangan Makan', 750000]],
+    [['BPJS Kesehatan (1%)', 87500], ['BPJS Ketenagakerjaan (JHT 2% + JP 1%)', 262500], ['PPh 21', 210000]]),
   efektif: iso(new Date()), percobaan: '3 (tiga) bulan',
-  tugas: 'Memimpin dan mengawasi seluruh kegiatan operasional gudang cabang.\nMenjamin ketepatan penerimaan, penyimpanan, dan pengiriman barang.\nMenyusun laporan persediaan dan kinerja gudang setiap bulan kepada Manajer Operasional.\nMembina, mengatur jadwal, dan menilai kinerja staf gudang.\nMenerapkan prosedur keselamatan dan keamanan kerja di area gudang.',
-  penutup: 'Kami mengucapkan selamat atas kepercayaan yang diberikan dan berharap Saudara dapat menjalankan amanah jabatan baru ini dengan sebaik-baiknya. Demikian surat ini dibuat untuk dilaksanakan sebagaimana mestinya.',
+  tugas: 'Memimpin dan mengawasi kegiatan operasional gudang cabang.\nMenjamin ketepatan penerimaan, penyimpanan, dan pengiriman barang.\nMenyusun laporan persediaan dan kinerja gudang setiap bulan.\nMembina dan menilai kinerja staf gudang.',
+  penutup: 'Selamat atas jabatan baru ini. Demikian surat ini dibuat untuk dilaksanakan sebagaimana mestinya.',
   ttdHeading: 'Ditetapkan oleh,', ttdJabatan: 'Direktur', ttdNama: 'Hendra Wijaya', ttdId: '', ttd: '', stempel: '',
   ttdYbs: false, ttdKaryawan: '', tembusan: 'Manajer HRD\nManajer Operasional\nArsip',
 });
@@ -77,16 +81,25 @@ function NumList({ text, k }: { text: string; k: number }) {
   );
 }
 
-// Tabel Semula | Menjadi; baris yang kedua sisinya kosong disembunyikan (kecuali template kosongan)
+// Tabel Semula | Menjadi; baris yang kedua sisinya kosong disembunyikan (kecuali template kosongan).
+// `rincian` (bila tampil): tunjangan/potongan jabatan baru dua kolom + baris Take Home Pay, menyatu di tabel agar surat tetap 1 halaman.
 const ROWS: [keyof Posisi, string][] = [['jabatan', 'Jabatan'], ['level', 'Golongan / Level'], ['divisi', 'Divisi'], ['gaji', 'Gaji pokok']];
-function PromosiTable({ lama, baru, kosong, k }: { lama: Posisi; baru: Posisi; kosong: boolean; k: number }) {
+function PromosiTable({ lama, baru, kosong, k, rincian }: { lama: Posisi; baru: Posisi; kosong: boolean; k: number; rincian?: Rincian }) {
   const cell: CSSProperties = { border: '1px solid #000', padding: `${3 * k}px ${6 * k}px`, verticalAlign: 'top', height: '1.6em' };
   const show = (p: Posisi, key: keyof Posisi) => (kosong ? '' : key === 'gaji' ? (p.gaji ? `Rp ${rupiah(num(p.gaji))}` : '') : p[key]);
   const rows = ROWS.filter(([key]) => kosong || lama[key].trim() || baru[key].trim());
+  const label: CSSProperties = { ...cell, width: '24%', fontWeight: 700 };
+  const komponen = rincian ? rincianGajiDoc(baru.gaji, rincian, kosong).items.slice(1) : []; // tanpa gaji pokok (sudah di baris atas)
+  const thp = rincian ? hitungThp(baru.gaji, rincian) : 0;
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse', margin: `0 0 ${10 * k}px` }}>
       <thead><tr>{['Uraian', 'Semula', 'Menjadi'].map((h) => <th key={h} style={{ ...cell, fontWeight: 700, textAlign: 'center' }}>{h}</th>)}</tr></thead>
-      <tbody>{rows.map(([key, label]) => <tr key={key}><td style={{ ...cell, width: '24%', fontWeight: 700 }}>{label}</td><td style={cell}>{show(lama, key)}</td><td style={cell}>{show(baru, key)}</td></tr>)}</tbody>
+      <tbody>{rows.map(([key, label]) => <tr key={key}><td style={{ ...cell, width: '24%', fontWeight: 700 }}>{label}</td><td style={cell}>{show(lama, key)}</td><td style={cell}>{show(baru, key)}</td></tr>)}
+        {komponen.length > 0 && <tr><td style={label}>{rincian?.pakaiPotongan && rincian.potongan.length ? 'Tunjangan & potongan' : 'Tunjangan'}</td>
+          <td colSpan={2} style={cell}><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 14 * k, rowGap: k }}>{komponen}</div></td></tr>}
+        {rincian && <tr style={{ background: '#ececec' }}><td style={label}>Take Home Pay</td>
+          <td colSpan={2} style={{ ...cell, fontWeight: 700 }}>{kosong ? <Dots w="45%" /> : <><span style={{ ...dataStyle, padding: '0 4px 0.22em' }}>Rp {rupiah(thp)}</span> <i style={{ fontWeight: 400 }}>({terbilangRupiah(thp)})</i></>} <span style={{ fontWeight: 400 }}>per bulan</span></td></tr>}
+      </tbody>
     </table>
   );
 }
@@ -102,7 +115,7 @@ export default function SuratPromosiJabatan() {
     const d = makeDefault();
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      return saved ? { ...d, ...saved, nomor: orRandomNo(saved.nomor, POLA) } : d;
+      return saved ? { ...d, ...saved, nomor: orRandomNo(saved.nomor, POLA), rincian: bacaRincian(saved.rincian) } : d;
     } catch {
       return d;
     }
@@ -146,6 +159,8 @@ export default function SuratPromosiJabatan() {
     ...(f.ttdYbs ? [{ heading: 'Yang bersangkutan,', role: isian(f.baru.jabatan, ks), name: isian(f.nama, ks), idLine: !ks && f.nik ? `NIK. ${f.nik}` : '', ttd: ks ? '' : ttdKaryawan.src, ttdOffset: getOffset(f.posisi, 'ttdKaryawan') }] : []),
     { heading: f.ttdHeading, role: f.ttdJabatan, name: f.ttdNama, idLine: f.ttdId, ttd: ks ? '' : ttd.src, stempel: ks ? '' : stempel.src, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
   ];
+  const rincian = f.rincian;
+  const tampilRincian = rincian.tampil && (ks || num(f.baru.gaji) > 0 || rincian.tunjangan.length > 0);
   const tugas = ks ? Array(4).fill(TITIK).join('\n') : f.tugas;
   const doc: LayoutDoc = {
     logo: logo.src, logoOffset: getOffset(f.posisi, 'logo'),
@@ -163,7 +178,7 @@ export default function SuratPromosiJabatan() {
           ...(f.masuk || ks ? [{ label: 'Tanggal mulai bekerja', value: isian(fmtTanggal(f.masuk), ks) }] : []),
         ]} />
         <P>Dari jabatan semula ke jabatan baru dengan rincian sebagai berikut:</P>
-        <PromosiTable lama={f.lama} baru={f.baru} kosong={ks} k={kk} />
+        <PromosiTable lama={f.lama} baru={f.baru} kosong={ks} k={kk} rincian={tampilRincian ? rincian : undefined} />
         <P>Pengangkatan ini berlaku efektif sejak tanggal {t(fmtTanggal(f.efektif))}{f.percobaan.trim() ? `, dengan masa percobaan selama ${t(f.percobaan)}. Apabila selama masa percobaan yang bersangkutan dinilai belum memenuhi persyaratan jabatan, perusahaan berhak meninjau kembali keputusan ini` : ''}.</P>
         {(f.tugas.trim() || ks) && <P style={{ marginBottom: 2 * kk }}>Tugas dan tanggung jawab jabatan baru:</P>}
         <NumList text={tugas} k={kk} />
@@ -195,9 +210,8 @@ export default function SuratPromosiJabatan() {
       <button onClick={reset} className="px-5 min-h-[44px] rounded-lg bg-white border font-semibold">Reset Semua</button>
     </>
   );
-  const posInput = (side: 'lama' | 'baru', key: keyof Posisi, label: string) => key === 'gaji'
-    ? <input aria-label={label} inputMode="numeric" placeholder="Opsional" className={inputCls} value={f[side].gaji} onChange={(e) => setPos(side, 'gaji', e.target.value.replace(/\D/g, ''))} />
-    : <AutoTextarea aria-label={label} className={inputCls} value={f[side][key]} onChange={(e) => setPos(side, key, e.target.value)} />;
+  const posInput = (side: 'lama' | 'baru', key: keyof Posisi, label: string) =>
+    <AutoTextarea aria-label={label} className={inputCls} value={f[side][key]} onChange={(e) => setPos(side, key, e.target.value)} />;
 
   return (
     <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
@@ -219,7 +233,7 @@ export default function SuratPromosiJabatan() {
               <Field label="Nama perusahaan"><AutoTextarea className={inputCls} value={f.instansi} onChange={(e) => set('instansi', e.target.value)} /></Field>
               <Field label="Bidang usaha (baris kedua kop)"><AutoTextarea className={inputCls} value={f.subKop} onChange={(e) => set('subKop', e.target.value)} /></Field>
               <Field label="Alamat lengkap"><AutoTextarea className={inputCls} value={f.alamat} onChange={(e) => set('alamat', e.target.value)} /></Field>
-              <Field label="Telepon, email, website"><AutoTextarea className={inputCls} value={f.kontak} onChange={(e) => set('kontak', e.target.value)} /></Field>
+              <KontakFields value={f.kontak} onChange={(v) => set('kontak', v)} />
             </FormSection>
 
             <FormSection title="Data Surat">
@@ -250,15 +264,15 @@ export default function SuratPromosiJabatan() {
             <FormSection title="Jabatan Semula → Menjadi">
               <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)] gap-2 items-center text-sm">
                 <span /><span className="font-semibold">Semula</span><span className="font-semibold">Menjadi</span>
-                {ROWS.map(([key, label]) => (
+                {ROWS.filter(([key]) => key !== 'gaji').map(([key, label]) => (
                   <div key={key} className="contents">
-                    <span className="font-medium text-gray-700">{label}{key === 'gaji' && ' (Rp, opsional)'}</span>
+                    <span className="font-medium text-gray-700">{label}</span>
                     {posInput('lama', key, `${label} semula`)}
                     {posInput('baru', key, `${label} menjadi`)}
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-gray-500">Baris yang kedua kolomnya kosong tidak ditampilkan.</p>
+              <p className="text-xs text-gray-500">Baris yang kedua kolomnya kosong tidak ditampilkan. Gaji pokok diisi di kartu Rincian Gaji &amp; Tunjangan.</p>
               <div className="grid sm:grid-cols-2 gap-2">
                 <Field label="Tanggal efektif"><input type="date" className={inputCls} value={f.efektif} onChange={(e) => set('efektif', e.target.value)} /></Field>
                 <Field label="Masa percobaan (opsional)"><AutoTextarea className={inputCls} value={f.percobaan} onChange={(e) => set('percobaan', e.target.value)} /></Field>
@@ -266,6 +280,13 @@ export default function SuratPromosiJabatan() {
               <Field label="Tugas & tanggung jawab jabatan baru (satu poin per baris)"><AutoTextarea rows={3} className={inputCls} value={f.tugas} onChange={(e) => set('tugas', e.target.value)} /></Field>
               <Field label="Penutup / ucapan selamat"><AutoTextarea rows={3} className={inputCls} value={f.penutup} onChange={(e) => set('penutup', e.target.value)} /></Field>
             </FormSection>
+
+            <RincianGajiCard pokok={f.baru.gaji} r={rincian} onChange={(x) => set('rincian', x)}>
+              <div className="grid sm:grid-cols-2 gap-2">
+                <Field label="Gaji pokok semula (opsional)"><RupiahInput label="Gaji pokok semula" value={f.lama.gaji} onChange={(x) => setPos('lama', 'gaji', x)} /></Field>
+                <Field label="Gaji pokok jabatan baru"><RupiahInput label="Gaji pokok jabatan baru" value={f.baru.gaji} onChange={(x) => setPos('baru', 'gaji', x)} /></Field>
+              </div>
+            </RincianGajiCard>
 
             <FormSection title="Penanda Tangan">
               <div className="grid sm:grid-cols-2 gap-2">

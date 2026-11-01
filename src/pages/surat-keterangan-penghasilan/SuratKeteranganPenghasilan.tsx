@@ -16,6 +16,7 @@ import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { num, rupiah, terbilangRupiah } from '../../shared/lib/money';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import FormSection from '../../shared/components/FormSection';
+import KontakFields from '../../shared/components/KontakFields';
 
 // Surat Keterangan Penghasilan dari Kelurahan: kop pemerintah, data warga, penghasilan rata-rata per bulan
 // (Rupiah + terbilang), dasar pengantar RT/RW & keperluan; ditandatangani Lurah (opsional ttd pemohon di kiri).
@@ -192,7 +193,7 @@ export default function SuratKeteranganPenghasilan() {
                 {text('kelurahan', 'Kelurahan')}
               </div>
               {text('alamatKop', 'Alamat kantor & kode pos')}
-              {text('kontak', 'Telepon, email, website')}
+              <KontakFields value={f.kontak} onChange={(v) => set('kontak', v)} />
             </FormSection>
 
             <FormSection title="Data Surat">
