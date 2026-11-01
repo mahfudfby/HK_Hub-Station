@@ -197,9 +197,9 @@ export default function SuratIzinCuti() {
       <TextSizeSlider value={f.skala} effective={k} onChange={(x) => set('skala', x)} />
       <PositionPad targets={[
         { id: 'logo', label: 'Logo' },
-        ...(f.pakaiPemohon ? [{ id: 'ttdPemohon', label: 'TTD Pemohon' }] : []),
-        ...(f.pakaiAtasan ? [{ id: 'ttdAtasan', label: 'TTD Atasan' }] : []),
-        ...(f.pakaiHrd ? [{ id: 'ttd', label: 'TTD HRD' }, { id: 'stempel', label: 'Stempel' }] : []),
+        ...(f.pakaiPemohon ? [{ id: 'ttdPemohon', label: `TTD ${f.nama || 'Pemohon'}` }] : []),
+        ...(f.pakaiAtasan ? [{ id: 'ttdAtasan', label: `TTD ${f.atasanNama || 'Atasan'}` }] : []),
+        ...(f.pakaiHrd ? [{ id: 'ttd', label: `TTD ${f.ttdNama || 'HRD'}` }, { id: 'stempel', label: 'Stempel' }] : []),
       ]} active={geser} onActive={setGeser} value={f.posisi} onChange={(x) => set('posisi', x)} />
       <LayoutPicker value={f.gaya} onChange={(x) => set('gaya', x)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(x) => set('paper', x)} onLandscape={(x) => set('landscape', x)} />
@@ -305,11 +305,11 @@ export default function SuratIzinCuti() {
                   <div key={key}><Switch checked={f[key]} onChange={(x) => set(key, x)} label={label} /></div>
                 ))}
               </div>
-              {f.pakaiPemohon && <ImageUpload label="Tanda tangan pemohon" value={f.ttdPemohon} onChange={(x) => set('ttdPemohon', x)} notify={notify} {...bgFor('ttdPemohon', ttdPemohon)} />}
+              {f.pakaiPemohon && <ImageUpload label={`Tanda tangan — ${f.nama || 'Pemohon'} (nama mengikuti data karyawan)`} value={f.ttdPemohon} onChange={(x) => set('ttdPemohon', x)} notify={notify} {...bgFor('ttdPemohon', ttdPemohon)} />}
               {f.pakaiAtasan && <>
                 <p className="text-sm font-bold text-gray-700">Atasan langsung (Menyetujui)</p>
                 <div className="grid sm:grid-cols-2 gap-2">{text('atasanJabatan', 'Jabatan')}{text('atasanNama', 'Nama')}</div>
-                <ImageUpload label="Tanda tangan atasan" value={f.ttdAtasan} onChange={(x) => set('ttdAtasan', x)} notify={notify} {...bgFor('ttdAtasan', ttdAtasan)} />
+                <ImageUpload label={`Tanda tangan — ${f.atasanNama || 'Atasan'}`} value={f.ttdAtasan} onChange={(x) => set('ttdAtasan', x)} notify={notify} {...bgFor('ttdAtasan', ttdAtasan)} />
               </>}
               {f.pakaiHrd && <>
                 <p className="text-sm font-bold text-gray-700">HRD (Mengetahui)</p>
@@ -318,7 +318,7 @@ export default function SuratIzinCuti() {
                   {text('ttdNama', 'Nama')}
                   {text('ttdId', 'NIK karyawan (opsional)')}
                 </div>
-                <ImageUpload label="Tanda tangan HRD" value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
+                <ImageUpload label={`Tanda tangan — ${f.ttdNama || 'HRD'}`} value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
                 <ImageUpload label="Stempel" value={f.stempel} onChange={(x) => set('stempel', x)} notify={notify} {...bgFor('stempel', stempel)} />
               </>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>

@@ -12,7 +12,7 @@ import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import { DOTTED, ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { InfoRows, LayoutLetter, LayoutPicker, P, SignBlock, type LayoutDoc, type LayoutSigner } from '../../shared/components/LetterLayouts';
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
-import { useBgRemoved } from '../../shared/lib/removeBg';
+import { removeBackground, useBgRemoved } from '../../shared/lib/removeBg';
 import DocOptions, { TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import FormSection from '../../shared/components/FormSection';
 
@@ -23,6 +23,7 @@ import FormSection from '../../shared/components/FormSection';
 // SECTION: Data
 // ============================================================
 type Person = { nama: string; nik: string; ttl: string; alamat: string; jabatan: string };
+type Saksi = { id: string; nama: string; ttd: string };
 type Form = {
   gaya: string; paper: string; landscape: boolean; skala: number; posisi: Offsets;
   logo: string; instansi: string; subKop: string; alamat: string; kontak: string;
@@ -30,7 +31,7 @@ type Form = {
   jenis: string; pemberi: Person; penerima: Person;
   keperluan: string; rincian: string[]; berlaku: string; penutup: string;
   ttd: string; stempel: string; ttdPenerima: string;
-  saksi: string[];
+  saksi: Saksi[];
   pakaiNomor: boolean; kosong: boolean;
 };
 
@@ -70,6 +71,26 @@ const personRows = (p: Person, kosong = false) => [
   { label: 'Nama', value: p.nama }, { label: 'NIK', value: p.nik }, { label: 'Tempat, tgl. lahir', value: p.ttl },
   { label: 'Alamat', value: p.alamat }, { label: 'Jabatan', value: p.jabatan },
 ].filter((r) => r.value).map((r) => (kosong ? { ...r, value: '' } : r));
+
+const newId = () => Math.random().toString(36).slice(2, 10);
+
+// Hapus BG untuk daftar tanda tangan dinamis (hook tidak bisa dipanggil per item); hasil di-cache per gambar asli
+function useBgRemovedList(srcs: string[], onError: (m: string) => void) {
+  const [done, setDone] = useState<Record<string, string>>({});
+  const jalan = useRef(new Set<string>());
+  const todo = srcs.filter((s) => s && !(s in done));
+  useEffect(() => {
+    todo.filter((s) => !jalan.current.has(s)).forEach((s) => {
+      jalan.current.add(s);
+      removeBackground(s)
+        .catch((err) => { onError(`Hapus background gagal: ${err?.message || 'gambar tidak bisa dibaca'}.`); return s; })
+        .then((out) => setDone((p) => ({ ...p, [s]: out })));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todo.join(' ')]);
+  return (src: string, on: boolean) => (!on || !src ? { src, busy: false } : src in done ? { src: done[src], busy: false } : { src, busy: true });
+}
+
 
 // ============================================================
 // SECTION: Editor
@@ -115,7 +136,8 @@ export default function SuratKuasa() {
   const [f, setF] = useState<Form>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      return saved ? { ...makeDefault(), ...saved, nomor: orRandomNo(saved.nomor, POLA) } : makeDefault();
+      // data lama: saksi berupa teks nama saja
+      return saved ? { ...makeDefault(), ...saved, nomor: orRandomNo(saved.nomor, POLA), saksi: (saved.saksi ?? []).map((x: string | Saksi) => (typeof x === 'string' ? { id: newId(), nama: x, ttd: '' } : { ...x, id: x.id || newId(), ttd: x.ttd ?? '' })) } : makeDefault();
     } catch {
       return makeDefault();
     }
@@ -135,9 +157,14 @@ export default function SuratKuasa() {
   const stempel = useBgRemoved(f.stempel, bg.stempel, bgError);
   const ttdPenerima = useBgRemoved(f.ttdPenerima, bg.ttdPenerima, bgError);
   const bgFor = (key: keyof typeof bg, shown: { src: string; busy: boolean }) => ({ bg: bg[key], onBg: (v: boolean) => setBg((p) => ({ ...p, [key]: v })), shown: shown.src, bgBusy: shown.busy });
-  const busy = logo.busy || ttd.busy || stempel.busy || ttdPenerima.busy;
+  // Saksi: Hapus BG per orang (bawaan aktif)
+  const [bgSaksi, setBgSaksi] = useState<Record<string, boolean>>({});
+  const saksiBg = useBgRemovedList(f.saksi.filter((x) => bgSaksi[x.id] !== false).map((x) => x.ttd), bgError);
+  const saksiImg = f.saksi.map((x) => saksiBg(x.ttd, bgSaksi[x.id] !== false));
+  const busy = logo.busy || ttd.busy || stempel.busy || ttdPenerima.busy || saksiImg.some((x) => x.busy);
 
   const set = <K extends keyof Form>(key: K, v: Form[K]) => setF((p) => ({ ...p, [key]: v }));
+  const setSaksi = (i: number, x: Partial<Saksi>) => set('saksi', f.saksi.map((s, j) => (j === i ? { ...s, ...x } : s)));
   const pickJenis = (j: (typeof JENIS)[number]) => setF((p) => ({ ...p, jenis: j.id, keperluan: j.keperluan, rincian: j.rincian }));
   const reset = () => {
     if (!confirm('Kembalikan semua isian ke bawaan?')) return;
@@ -147,7 +174,7 @@ export default function SuratKuasa() {
 
   const letterRef = useRef<HTMLDivElement>(null);
   const pg = letterPage(f.paper, f.landscape);
-  const k = useFitScale(f.skala / 100, () => letterRef.current?.firstElementChild as HTMLElement, true, [f, logo.src, ttd.src, stempel.src, ttdPenerima.src]);
+  const k = useFitScale(f.skala / 100, () => letterRef.current?.firstElementChild as HTMLElement, true, [f, logo.src, ttd.src, stempel.src, ttdPenerima.src, ...saksiImg.map((x) => x.src)]);
   const kk = k * pg.f * 0.86;
   const fileName = `surat-kuasa-${(f.nomor || 'surat').replace(/[^\w-]+/g, '-').toLowerCase()}`;
   const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
@@ -157,7 +184,7 @@ export default function SuratKuasa() {
     { heading: 'Penerima Kuasa,', role: isian(f.penerima.jabatan, K), name: isian(f.penerima.nama, K), ttd: K ? '' : ttdPenerima.src, ttdOffset: getOffset(f.posisi, 'ttdPenerima') },
     { heading: 'Pemberi Kuasa,', role: f.pemberi.jabatan, name: f.pemberi.nama, ttd: K ? '' : ttd.src, stempel: K ? '' : stempel.src, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
   ];
-  const saksi = f.saksi.filter(Boolean);
+  const saksi = f.saksi.map((x, i) => ({ ...x, img: saksiImg[i].src })).filter((x) => x.nama);
   const doc: LayoutDoc = {
     logo: logo.src, logoOffset: getOffset(f.posisi, 'logo'),
     kopName: f.instansi, kopLines: [f.subKop, f.alamat, f.kontak],
@@ -188,7 +215,7 @@ export default function SuratKuasa() {
       <div style={{ fontSize: 13 * kk }}>
         <div style={{ textAlign: 'center', marginBottom: 4 * kk }}>Saksi-saksi:</div>
         <div style={{ display: 'flex', justifyContent: 'space-around', gap: 12 * kk }}>
-          {saksi.map((n, i) => <SignBlock key={i} s={{ heading: `Saksi ${i + 1},`, name: isian(n, K) }} k={kk} width={140} />)}
+          {saksi.map((x, i) => <SignBlock key={x.id} s={{ heading: `Saksi ${i + 1},`, name: isian(x.nama, K), ttd: K ? '' : x.img, ttdOffset: getOffset(f.posisi, `ttd_${x.id}`) }} k={kk} width={140} />)}
         </div>
       </div>
     ) : undefined,
@@ -200,7 +227,8 @@ export default function SuratKuasa() {
     <>
       <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
-      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Ttd pemberi' }, { id: 'stempel', label: 'Stempel' }, { id: 'ttdPenerima', label: 'Ttd penerima' }]}
+      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: `TTD ${f.pemberi.nama || 'pemberi kuasa'}` }, { id: 'stempel', label: 'Stempel' },
+        { id: 'ttdPenerima', label: `TTD ${f.penerima.nama || 'penerima kuasa'}` }, ...saksi.map((x) => ({ id: `ttd_${x.id}`, label: `TTD ${x.nama}` }))]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
       <LayoutPicker value={f.gaya} onChange={(v) => set('gaya', v)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
@@ -259,13 +287,13 @@ export default function SuratKuasa() {
 
             <FormSection title="Pemberi Kuasa">
               <PersonEditor p={f.pemberi} onChange={(v) => set('pemberi', v)} />
-              <ImageUpload label="Tanda tangan pemberi kuasa" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
+              <ImageUpload label={`Tanda tangan — ${f.pemberi.nama || 'pemberi kuasa'}`} value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel (opsional, untuk perusahaan)" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
             </FormSection>
 
             <FormSection title="Penerima Kuasa">
               <PersonEditor p={f.penerima} onChange={(v) => set('penerima', v)} />
-              <ImageUpload label="Tanda tangan penerima kuasa" value={f.ttdPenerima} onChange={(v) => set('ttdPenerima', v)} notify={notify} {...bgFor('ttdPenerima', ttdPenerima)} />
+              <ImageUpload label={`Tanda tangan — ${f.penerima.nama || 'penerima kuasa'}`} value={f.ttdPenerima} onChange={(v) => set('ttdPenerima', v)} notify={notify} {...bgFor('ttdPenerima', ttdPenerima)} />
             </FormSection>
 
             <FormSection title="Isi Kuasa">
@@ -277,7 +305,19 @@ export default function SuratKuasa() {
             </FormSection>
 
             <FormSection title="Saksi (opsional)">
-              <ListEditor label="Saksi" items={f.saksi} onChange={(v) => set('saksi', v.slice(0, 3))} />
+              {f.saksi.map((x, i) => (
+                <div key={x.id} className="rounded-xl border border-gray-200 p-3 space-y-2">
+                  <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-2 items-start">
+                    <span className="pt-2 text-sm font-bold text-gray-600">{i + 1}.</span>
+                    <AutoTextarea aria-label={`Saksi ${i + 1}`} placeholder="Nama saksi" className={inputCls} value={x.nama} onChange={(e) => setSaksi(i, { nama: e.target.value })} />
+                    <button type="button" onClick={() => set('saksi', f.saksi.filter((_, j) => j !== i))} aria-label={`Hapus saksi ${i + 1}`}
+                      className="px-3 min-h-[40px] rounded-lg text-red-600 border border-red-200">✕</button>
+                  </div>
+                  <ImageUpload label={`Tanda tangan — ${x.nama || `Saksi ${i + 1}`}`} value={x.ttd} onChange={(v) => setSaksi(i, { ttd: v })} notify={notify}
+                    bg={bgSaksi[x.id] !== false} onBg={(v) => setBgSaksi((b) => ({ ...b, [x.id]: v }))} shown={saksiImg[i].src} bgBusy={saksiImg[i].busy} />
+                </div>
+              ))}
+              {f.saksi.length < 3 && <button type="button" onClick={() => set('saksi', [...f.saksi, { id: newId(), nama: '', ttd: '' }])} className="min-h-[40px] text-sm font-medium text-blue-700">+ Tambah saksi</button>}
               <p className="text-xs text-gray-500">Maksimal 3 saksi. Ruang tanda tangan Pemberi Kuasa sudah cukup untuk meterai.</p>
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </FormSection>

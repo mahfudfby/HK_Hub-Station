@@ -152,7 +152,7 @@ export default function UndanganYasinan() {
     <>
       <DocOptions kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
-      <PositionPad targets={[{ id: 'logo', label: 'Foto almarhum/ah' }, { id: 'ttd', label: 'Tanda tangan' }]}
+      <PositionPad targets={[{ id: 'logo', label: 'Foto almarhum/ah' }, { id: 'ttd', label: `TTD ${f.keluarga || 'Keluarga'}` }]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
       <Field label="Template undangan">
         <select className={inputCls} value={t.id} onChange={(e) => set('gaya', e.target.value)}>
@@ -242,7 +242,7 @@ export default function UndanganYasinan() {
               {ta('wassalam', 'Salam penutup')}
               <div className="grid sm:grid-cols-2 gap-2">{ta('ttdHeading', 'Pembuka tanda tangan')}{ta('keluarga', 'Keluarga / shohibul hajat')}</div>
               {ta('anggota', 'Daftar nama keluarga (satu per baris)', 3)}
-              <ImageUpload label="Tanda tangan (opsional)" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
+              <ImageUpload label={`Tanda tangan — ${f.keluarga || 'Keluarga'} (opsional)`} value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </FormSection>
             </>)}

@@ -132,6 +132,7 @@ type Doc = {
   ttdJabatan: string;
   ttd: string;
   stempel: string;
+  ttdPenerima: string; // faktur: tanda tangan penerima (per dokumen, bukan Data User)
   pakaiNomor: boolean; // sakelar tampilan, bukan Data User
   kosong: boolean; // template kosongan untuk diisi tangan
 };
@@ -180,6 +181,7 @@ const makeDefault = (kind: DocKind): Doc => ({
   ttdJabatan: kind === 'invoice' ? 'Finance' : 'Bagian Penjualan',
   ttd: '',
   stempel: '',
+  ttdPenerima: '',
   pakaiNomor: true,
   kosong: false,
 });
@@ -575,7 +577,7 @@ function DocView(ctx: Ctx & { w: number; h: number }) {
         ? <div style={{ textAlign: 'right', marginBottom: 2 }}>{d.kota || '……………'}, …………… 20……</div>
         : (d.kota || d.tanggal) && <div style={{ textAlign: 'right', marginBottom: 2 }}>{[d.kota, fmtTanggal(d.tanggal)].filter(Boolean).join(', ')}</div>}
       <div style={{ display: 'flex', justifyContent: kind === 'faktur' ? 'space-between' : 'flex-end' }}>
-        {kind === 'faktur' && <SignBox heading="Penerima," name="" title="" fs={fs} short={ctx.short} />}
+        {kind === 'faktur' && <SignBox heading="Penerima," name="" title="" ttd={d.ttdPenerima} fs={fs} short={ctx.short} oTtd={getOffset(d.posisi, 'ttdPenerima')} />}
         <SignBox right heading="Hormat kami," name={d.ttdNama} title={d.ttdJabatan} ttd={d.ttd} stempel={d.stempel} fs={fs} short={ctx.short}
           oTtd={getOffset(d.posisi, 'ttd')} oStempel={getOffset(d.posisi, 'stempel')} />
       </div>
@@ -601,11 +603,12 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
       return makeDefault(kind);
     }
   });
-  const [bg, setBg] = useState({ logo: false, ttd: false, stempel: false });
+  const [bg, setBg] = useState({ logo: false, ttd: false, stempel: false, ttdPenerima: true });
   const bgError = (m: string) => notify('error', m);
   const logo = useBgRemoved(d.logo, bg.logo, bgError);
   const ttd = useBgRemoved(d.ttd, bg.ttd, bgError);
   const stempel = useBgRemoved(d.stempel, bg.stempel, bgError);
+  const ttdPenerima = useBgRemoved(d.ttdPenerima, bg.ttdPenerima, bgError);
   const bgFor = (k: keyof typeof bg, shown: { src: string; busy: boolean }) => ({ bg: bg[k], onBg: (v: boolean) => setBg((p) => ({ ...p, [k]: v })), shown: shown.src, bgBusy: shown.busy });
   const ref = useRef<HTMLDivElement>(null);
 
@@ -638,7 +641,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
 
   const fileName = `${L.file}-${(d.nomor || 'dokumen').replace(/[^\w-]+/g, '-').toLowerCase()}`;
   const { exporting, run } = useLetterExport(() => ref.current!.firstElementChild as HTMLElement, fileName, notify, paper);
-  const busy = logo.busy || ttd.busy || stempel.busy;
+  const busy = logo.busy || ttd.busy || stempel.busy || ttdPenerima.busy;
   const reset = () => {
     if (!confirm('Kembalikan semua isian ke bawaan?')) return;
     setD(makeDefault(kind));
@@ -653,7 +656,8 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
   // Analog geser tanda tangan/stempel (halaman Edit Canvas)
   const [geser, setGeser] = useState('ttd');
   const posPad = (
-    <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
+    <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: `TTD ${d.ttdNama || 'Penjual'}` }, { id: 'stempel', label: 'Stempel' },
+      ...(kind === 'faktur' ? [{ id: 'ttdPenerima', label: 'TTD Penerima' }] : [])]}
       active={geser} onActive={setGeser} value={d.posisi} onChange={(v) => set('posisi', v)} />
   );
   const paperField = (
@@ -744,6 +748,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
               {txt('pembeli', 'Nama pembeli / perusahaan')}
               {txt('pembeliAlamat', 'Alamat', 2)}
               {txt('pembeliKontak', 'Telepon / email')}
+              {kind === 'faktur' && <ImageUpload label="Tanda tangan — Penerima" value={d.ttdPenerima} onChange={(v) => set('ttdPenerima', v)} notify={notify} {...bgFor('ttdPenerima', ttdPenerima)} />}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div className="sm:col-span-3">
                   <Field label={L.nomor}><NumberFormatInput parts={['Kode', 'Tahun', 'Urut']} example={`${kind === 'invoice' ? 'INV' : 'FJ'}/${new Date().getFullYear()}/001`} value={d.nomor} onChange={(v) => set('nomor', v)} /></Field>
@@ -811,7 +816,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
                 {txt('ttdNama', 'Nama penanda tangan')}
                 {txt('ttdJabatan', 'Jabatan')}
               </div>
-              <ImageUpload label="Tanda tangan" value={d.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
+              <ImageUpload label={`Tanda tangan — ${d.ttdNama || 'Penjual'}`} value={d.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel" value={d.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
               <p className="text-xs text-gray-500">Semua isian &amp; gambar hanya disimpan di perangkat ini.</p>
             </FormSection>
@@ -820,7 +825,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
 
           <FitPreview>
             <div ref={ref} className="w-max shadow-lg">
-              <DocView d={{ ...d, logo: logo.src, ttd: d.kosong ? '' : ttd.src, stempel: d.kosong ? '' : stempel.src }} kind={kind} c={c} fs={fs} pad={pad} w={W} h={H} short={H < 600} />
+              <DocView d={{ ...d, logo: logo.src, ttd: d.kosong ? '' : ttd.src, stempel: d.kosong ? '' : stempel.src, ttdPenerima: d.kosong ? '' : ttdPenerima.src }} kind={kind} c={c} fs={fs} pad={pad} w={W} h={H} short={H < 600} />
             </div>
           </FitPreview>
         </div>

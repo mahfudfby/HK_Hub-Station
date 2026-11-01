@@ -193,9 +193,9 @@ export default function SuratPindahDivisi() {
       <TextSizeSlider value={f.skala} effective={k} onChange={(x) => set('skala', x)} />
       <PositionPad targets={[
         { id: 'logo', label: 'Logo' },
-        ...(f.pakaiLama ? [{ id: 'ttdLama', label: 'TTD Manajer lama' }] : []),
-        ...(f.pakaiBaru ? [{ id: 'ttdBaru', label: 'TTD Manajer baru' }] : []),
-        ...(f.pakaiUtama ? [{ id: 'ttd', label: 'TTD HRD/Direktur' }, { id: 'stempel', label: 'Stempel' }] : []),
+        ...(f.pakaiLama ? [{ id: 'ttdLama', label: `TTD ${f.lamaNama || 'manajer lama'}` }] : []),
+        ...(f.pakaiBaru ? [{ id: 'ttdBaru', label: `TTD ${f.baruNama || 'manajer baru'}` }] : []),
+        ...(f.pakaiUtama ? [{ id: 'ttd', label: `TTD ${f.ttdNama || f.ttdJabatan || 'HRD/Direktur'}` }, { id: 'stempel', label: 'Stempel' }] : []),
       ]} active={geser} onActive={setGeser} value={f.posisi} onChange={(x) => set('posisi', x)} />
       <LayoutPicker value={f.gaya} onChange={(x) => set('gaya', x)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(x) => set('paper', x)} onLandscape={(x) => set('landscape', x)} />
@@ -287,12 +287,12 @@ export default function SuratPindahDivisi() {
               {f.pakaiLama && <>
                 <p className="text-sm font-bold text-gray-700">Yang menyerahkan</p>
                 <div className="grid sm:grid-cols-2 gap-2">{text('lamaJabatan', 'Jabatan')}{text('lamaNama', 'Nama')}</div>
-                <ImageUpload label="Tanda tangan manajer divisi lama" value={f.ttdLama} onChange={(x) => set('ttdLama', x)} notify={notify} {...bgFor('ttdLama', ttdLama)} />
+                <ImageUpload label={`Tanda tangan — ${f.lamaNama || 'manajer divisi lama'}`} value={f.ttdLama} onChange={(x) => set('ttdLama', x)} notify={notify} {...bgFor('ttdLama', ttdLama)} />
               </>}
               {f.pakaiBaru && <>
                 <p className="text-sm font-bold text-gray-700">Yang menerima</p>
                 <div className="grid sm:grid-cols-2 gap-2">{text('baruJabatan', 'Jabatan')}{text('baruNama', 'Nama')}</div>
-                <ImageUpload label="Tanda tangan manajer divisi baru" value={f.ttdBaru} onChange={(x) => set('ttdBaru', x)} notify={notify} {...bgFor('ttdBaru', ttdBaru)} />
+                <ImageUpload label={`Tanda tangan — ${f.baruNama || 'manajer divisi baru'}`} value={f.ttdBaru} onChange={(x) => set('ttdBaru', x)} notify={notify} {...bgFor('ttdBaru', ttdBaru)} />
               </>}
               {f.pakaiUtama && <>
                 <p className="text-sm font-bold text-gray-700">Penanda tangan utama</p>
@@ -302,7 +302,7 @@ export default function SuratPindahDivisi() {
                   {text('ttdNama', 'Nama')}
                   {text('ttdId', 'NIK karyawan (opsional)')}
                 </div>
-                <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
+                <ImageUpload label={`Tanda tangan — ${f.ttdNama || f.ttdJabatan || 'HRD/Direktur'}`} value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
                 <ImageUpload label="Stempel" value={f.stempel} onChange={(x) => set('stempel', x)} notify={notify} {...bgFor('stempel', stempel)} />
               </>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>

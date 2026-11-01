@@ -222,8 +222,8 @@ export default function SuratPerintahLembur() {
       <TextSizeSlider value={f.skala} effective={k} onChange={(x) => set('skala', x)} />
       <PositionPad targets={[
         { id: 'logo', label: 'Logo' },
-        ...(f.pakaiHrd ? [{ id: 'ttdHrd', label: 'TTD HRD' }] : []),
-        ...(f.pakaiAtasan ? [{ id: 'ttd', label: 'TTD Atasan' }, { id: 'stempel', label: 'Stempel' }] : []),
+        ...(f.pakaiHrd ? [{ id: 'ttdHrd', label: `TTD ${f.hrdNama || 'HRD'}` }] : []),
+        ...(f.pakaiAtasan ? [{ id: 'ttd', label: `TTD ${f.ttdNama || 'Atasan'}` }, { id: 'stempel', label: 'Stempel' }] : []),
       ]} active={geser} onActive={setGeser} value={f.posisi} onChange={(x) => set('posisi', x)} />
       <LayoutPicker value={f.gaya} onChange={(x) => set('gaya', x)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(x) => set('paper', x)} onLandscape={(x) => set('landscape', x)} />
@@ -328,13 +328,13 @@ export default function SuratPerintahLembur() {
                   {text('ttdNama', 'Nama')}
                   {text('ttdId', 'NIK karyawan (opsional)')}
                 </div>
-                <ImageUpload label="Tanda tangan atasan" value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
+                <ImageUpload label={`Tanda tangan — ${f.ttdNama || 'Atasan'}`} value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
                 <ImageUpload label="Stempel" value={f.stempel} onChange={(x) => set('stempel', x)} notify={notify} {...bgFor('stempel', stempel)} />
               </>}
               {f.pakaiHrd && <>
                 <p className="text-sm font-bold text-gray-700">Mengetahui, HRD</p>
                 <div className="grid sm:grid-cols-2 gap-2">{text('hrdJabatan', 'Jabatan')}{text('hrdNama', 'Nama')}</div>
-                <ImageUpload label="Tanda tangan HRD" value={f.ttdHrd} onChange={(x) => set('ttdHrd', x)} notify={notify} {...bgFor('ttdHrd', ttdHrd)} />
+                <ImageUpload label={`Tanda tangan — ${f.hrdNama || 'HRD'}`} value={f.ttdHrd} onChange={(x) => set('ttdHrd', x)} notify={notify} {...bgFor('ttdHrd', ttdHrd)} />
               </>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </FormSection>

@@ -12,7 +12,7 @@ import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import DocOptions, { TITIK_PENDEK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { Dots, ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, signSpace, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { FitLine, Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts } from '../../shared/components/LetterStyles';
-import { useBgRemoved } from '../../shared/lib/removeBg';
+import { removeBackground, useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import FormSection from '../../shared/components/FormSection';
 
@@ -25,7 +25,7 @@ import FormSection from '../../shared/components/FormSection';
 // ============================================================
 type Row = { label: string; value: string };
 type Col = { label: string; w: string; align: 'left' | 'center' | 'right' };
-type Signer = { heading: string; nama: string; jabatan: string };
+type Signer = { id: string; heading: string; nama: string; jabatan: string; ttd: string };
 type Form = {
   gaya: string; paper: string; landscape: boolean; skala: number; posisi: Offsets;
   logo: string; instansi: string; subKop: string; alamat: string; kontak: string;
@@ -68,6 +68,30 @@ const DEFAULT: Form = {
 
 // Data User: identitas kop, penanda tangan & gambar (bukan template/kertas, bukan isi surat)
 const USER_KEYS = ['logo', 'posisi', 'instansi', 'subKop', 'alamat', 'kontak', 'kota', 'ttdHeading', 'ttdJabatan', 'ttdNama', 'ttdId', 'ttd', 'stempel'] as const;
+
+const newId = () => Math.random().toString(36).slice(2, 10);
+// Data lama: penanda tangan tanpa id/ttd diberi id baru & ttd kosong
+const fixSigners = (list: Signer[]) => list.map((p) => ({ ...p, id: p.id || newId(), ttd: p.ttd ?? '' }));
+const signerName = (p: Signer, i: number) => p.nama || p.heading.replace(/,\s*$/, '') || `Penanda tangan ${i + 1}`;
+
+// Hapus BG untuk tanda tangan penanda tangan lain (useBgRemoved tidak bisa dipanggil dalam loop). Gambar asli tidak diubah.
+function useBgList(items: { src: string; on: boolean }[], onError: (m: string) => void) {
+  const [done, setDone] = useState<Record<string, string>>({}); // gambar asli -> hasil
+  const asked = useRef(new Set<string>());
+  useEffect(() => {
+    items.forEach(({ src, on }) => {
+      if (!on || !src || asked.current.has(src)) return;
+      asked.current.add(src);
+      removeBackground(src)
+        .then((res) => setDone((d) => ({ ...d, [src]: res })))
+        .catch((err) => {
+          setDone((d) => ({ ...d, [src]: src }));
+          onError(`Hapus background gagal: ${err?.message || 'gambar tidak bisa dibaca'}.`);
+        });
+    });
+  });
+  return items.map(({ src, on }) => (on && src ? { src: done[src] ?? src, busy: !(src in done) } : { src, busy: false }));
+}
 
 // ============================================================
 // SECTION: Potongan isi surat
@@ -151,14 +175,21 @@ function Letter({ f, k, W, H, pf }: { f: Form; k: number; W: number; H: number; 
       {/* Jarak elastis ke tanda tangan: lega bila isi pendek, menyusut (tidak keluar kertas) bila isi panjang */}
       <div aria-hidden="true" style={{ flex: `0 1 ${56 * k}px`, minHeight: 14 * k }} />
       <div style={{ display: 'flex', justifyContent: f.penandaLain.length ? 'space-between' : 'flex-end', alignItems: 'flex-end', gap: 16 * k }}>
-        {f.penandaLain.map((p, i) => (
-          <div key={i} style={{ textAlign: 'center', minWidth: 120 * k }}>
+        {f.penandaLain.map((p) => {
+          const o = getOffset(f.posisi, `ttd_${p.id}`);
+          const fx = fxOf(o, 'ttd');
+          const h = signSpace(72 * k);
+          return (
+          <div key={p.id} style={{ textAlign: 'center', minWidth: 120 * k }}>
             <div>{p.heading}</div>
-            <div style={{ height: signSpace(72 * k) }} />
+            <div style={{ position: 'relative', height: h }}>
+              {p.ttd && <img src={p.ttd} alt="Tanda tangan" style={{ position: 'absolute', left: `calc(50% - ${90 * k * fx.z}px + ${o.x}px)`, top: (h - 66 * k * fx.z) / 2 + o.y, height: 66 * k * fx.z, maxWidth: 180 * k * fx.z, opacity: fx.a, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
+            </div>
             <div style={{ fontWeight: 700, borderBottom: '1px solid #000', display: 'inline-block', minWidth: 120 * k, paddingBottom: 1 }}>{isian(p.nama, f.kosong) || ' '}</div>
             {p.jabatan && <div style={{ fontSize: 11 * k }}>{p.jabatan}</div>}
           </div>
-        ))}
+          );
+        })}
         <div style={{ textAlign: 'right', minWidth: 170 * k, marginLeft: 'auto' }}>
           <div>{f.ttdHeading}</div>
           {f.ttdJabatan && <div>{f.ttdJabatan}</div>}
@@ -235,7 +266,7 @@ export default function SuratUndangan() {
   const [f, setF] = useState<Form>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      return saved ? { ...DEFAULT, ...saved, nomor: orRandomNo(saved.nomor, NO_FMT) } : DEFAULT;
+      return saved ? { ...DEFAULT, ...saved, nomor: orRandomNo(saved.nomor, NO_FMT), penandaLain: fixSigners(saved.penandaLain ?? DEFAULT.penandaLain) } : DEFAULT;
     } catch {
       return DEFAULT;
     }
@@ -254,10 +285,12 @@ export default function SuratUndangan() {
   const ttd = useBgRemoved(f.ttd, bg.ttd, bgError);
   const stempel = useBgRemoved(f.stempel, bg.stempel, bgError);
   const bgFor = (key: keyof typeof bg, shown: { src: string; busy: boolean }) => ({ bg: bg[key], onBg: (v: boolean) => setBg((p) => ({ ...p, [key]: v })), shown: shown.src, bgBusy: shown.busy });
-  const busy = logo.busy || ttd.busy || stempel.busy;
+  const [bgLain, setBgLain] = useState<Record<string, boolean>>({}); // Hapus BG per penanda tangan lain (bawaan aktif)
+  const lain = useBgList(f.penandaLain.map((p) => ({ src: p.ttd, on: bgLain[p.id] ?? true })), bgError);
+  const busy = logo.busy || ttd.busy || stempel.busy || lain.some((l) => l.busy);
 
   const set = <K extends keyof Form>(key: K, v: Form[K]) => setF((p) => ({ ...p, [key]: v }));
-  const setSigner = (i: number, p: Partial<Signer>) => set('penandaLain', f.penandaLain.map((s, j) => (j === i ? { ...s, ...p } : s)));
+  const setSigner = (i: number, p: Partial<Signer>) => setF((q) => ({ ...q, penandaLain: q.penandaLain.map((s, j) => (j === i ? { ...s, ...p } : s)) }));
   const reset = () => {
     if (!confirm('Kembalikan semua isian ke bawaan?')) return;
     setF({ ...DEFAULT, nomor: randomDocNo(NO_FMT) });
@@ -271,13 +304,16 @@ export default function SuratUndangan() {
   const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
 
   const [geser, setGeser] = useState('logo');
+  const targets = [
+    { id: 'logo', label: 'Logo' }, { id: 'ttd', label: `TTD ${f.ttdNama || 'utama'}` }, { id: 'stempel', label: 'Stempel' },
+    ...f.penandaLain.map((p, i) => ({ id: `ttd_${p.id}`, label: `TTD ${signerName(p, i)}` })),
+  ];
   const [canvas, setCanvas] = useCanvasMode();
   const tampilan = (
     <>
       <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
-      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
-        active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
+      <PositionPad targets={targets} active={targets.some((t) => t.id === geser) ? geser : 'logo'} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
       <StylePicker value={f.gaya} onChange={(v) => set('gaya', v)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
     </>
@@ -342,18 +378,22 @@ export default function SuratUndangan() {
                 <Field label="Nama"><AutoTextarea className={inputCls} value={f.ttdNama} onChange={(e) => set('ttdNama', e.target.value)} /></Field>
                 <Field label="NIP / NIK (opsional)"><AutoTextarea className={inputCls} value={f.ttdId} onChange={(e) => set('ttdId', e.target.value)} /></Field>
               </div>
-              <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
+              <ImageUpload label={`Tanda tangan — ${f.ttdNama || 'penanda tangan utama'}`} value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
               <p className="text-sm font-bold text-gray-700">Penanda tangan lain (opsional)</p>
               {f.penandaLain.map((p, i) => (
-                <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 items-start">
+                <div key={p.id} className="space-y-2">
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 items-start">
                   <AutoTextarea aria-label={`Salam penanda tangan ${i + 1}`} placeholder="Mis. Penerima," className={inputCls} value={p.heading} onChange={(e) => setSigner(i, { heading: e.target.value })} />
                   <AutoTextarea aria-label={`Nama penanda tangan ${i + 1}`} placeholder="Nama (boleh kosong)" className={inputCls} value={p.nama} onChange={(e) => setSigner(i, { nama: e.target.value })} />
                   <button type="button" onClick={() => set('penandaLain', f.penandaLain.filter((_, j) => j !== i))} aria-label={`Hapus penanda tangan ${i + 1}`}
                     className="px-3 min-h-[40px] rounded-lg text-red-600 border border-red-200">✕</button>
                 </div>
+                <ImageUpload label={`Tanda tangan — ${signerName(p, i)}`} value={p.ttd} onChange={(v) => setSigner(i, { ttd: v })} notify={notify}
+                  bg={bgLain[p.id] ?? true} onBg={(v) => setBgLain((b) => ({ ...b, [p.id]: v }))} shown={lain[i].src} bgBusy={lain[i].busy} />
+                </div>
               ))}
-              <button type="button" onClick={() => set('penandaLain', [...f.penandaLain, { heading: '', nama: '', jabatan: '' }])} className="text-sm font-medium text-blue-700">+ Tambah penanda tangan</button>
+              <button type="button" onClick={() => set('penandaLain', [...f.penandaLain, { id: newId(), heading: '', nama: '', jabatan: '', ttd: '' }])} className="text-sm font-medium text-blue-700">+ Tambah penanda tangan</button>
               <Field label="Tembusan (opsional)"><AutoTextarea rows={2} className={inputCls} value={f.tembusan} onChange={(e) => set('tembusan', e.target.value)} /></Field>
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </FormSection>
@@ -362,7 +402,7 @@ export default function SuratUndangan() {
 
           <FitPreview>
             <div ref={letterRef} className="w-max shadow-lg">
-              <Letter f={{ ...f, logo: logo.src, ttd: f.kosong ? '' : ttd.src, stempel: f.kosong ? '' : stempel.src }} k={k * pg.f * 0.86} W={pg.W} H={pg.H} pf={pg.f} />
+              <Letter f={{ ...f, logo: logo.src, ttd: f.kosong ? '' : ttd.src, stempel: f.kosong ? '' : stempel.src, penandaLain: f.penandaLain.map((p, i) => ({ ...p, ttd: f.kosong ? '' : lain[i].src })) }} k={k * pg.f * 0.86} W={pg.W} H={pg.H} pf={pg.f} />
             </div>
           </FitPreview>
         </div>

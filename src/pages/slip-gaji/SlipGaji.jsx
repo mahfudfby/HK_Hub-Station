@@ -12,7 +12,7 @@ import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import { printImage } from '../../shared/lib/printImage';
 import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
 import { isStaleChunkError, reloadForNewVersion } from '../../shared/lib/staleChunk';
-import PositionPad, { getOffset } from '../../shared/components/PositionPad';
+import PositionPad, { fxOf, getOffset } from '../../shared/components/PositionPad';
 import BgToggle from '../../shared/components/BgToggle';
 import { ScaleBox, TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import { PaperPicker, PAPERS, paperOf, orient, mmToPx } from '../../shared/components/LetterKit';
@@ -420,11 +420,13 @@ function SlipLine({ label, value }) {
   );
 }
 function SignBlock({ heading, image, alt, name, title, offset }) {
+  // ukuran & opacity dari joystick (bawaan: 70px, opacity 0.8 seperti CSS)
+  const fx = fxOf(offset, 'ttd');
   return (
     <div className="text-right" style={{ width: 150 }}>
       <p>{heading}</p>
       <div className="relative h-14 mb-0.5">
-        {image && <img src={image} crossOrigin="anonymous" alt={alt} className="slip-signature" style={{ left: 'auto', right: -(offset?.x ?? 0), transform: 'none', marginBottom: -(offset?.y ?? 0) }} />}
+        {image && <img src={image} crossOrigin="anonymous" alt={alt} className="slip-signature" style={{ left: 'auto', right: -(offset?.x ?? 0), transform: 'none', marginBottom: -(offset?.y ?? 0), height: 70 * fx.z, maxWidth: 120 * fx.z, opacity: 0.8 * fx.a }} />}
       </div>
       <div className="pt-1">
         <p className="border-b border-black font-semibold inline-block pb-0.5">{name}</p>
@@ -458,7 +460,7 @@ function CompanyForm({ form, onChange, onLogoChange, logoBg }) {
   );
 }
 
-function EmployeeForm({ form, onChange, statusText }) {
+function EmployeeForm({ form, onChange, statusText, signatureField }) {
   return (
     <FormSection title="Detail Karyawan &amp; Transfer">
       <div className="input-group">
@@ -469,6 +471,7 @@ function EmployeeForm({ form, onChange, statusText }) {
       <TextField id="inputTransferDate" label="Tanggal Transfer" name="transferDate" type="date" value={form.transferDate} onChange={onChange} />
       <TextField id="inputName" label="Nama Karyawan" name="name" value={form.name} onChange={onChange} wrapClass="pt-4" />
       <TextField id="inputPosition" label="Jabatan" name="position" value={form.position} onChange={onChange} />
+      {signatureField}
       <TextField id="inputBankAccountNumber" label="Nomor Rekening" name="bankAccountNumber" value={form.bankAccountNumber} onChange={onChange} />
       <TextField id="inputBankName" label="Nama Bank" name="bankName" value={form.bankName} onChange={onChange} />
       <div className="input-group pt-4">
@@ -990,7 +993,7 @@ export default function SlipGaji() {
       <PaperPicker paper={paperSel.id} landscape={paperSel.landscape}
         onPaper={(id) => pilihPaper({ ...paperSel, id })} onLandscape={(landscape) => pilihPaper({ ...paperSel, landscape })} />
       <TextSizeSlider value={form.skala} onChange={(v) => setForm((prev) => ({ ...prev, skala: v }))} effective={k} />
-      <PositionPad targets={[{ id: 'karyawan', label: 'TTD Karyawan' }, { id: 'manager', label: 'TTD Manager' }]}
+      <PositionPad targets={[{ id: 'karyawan', label: `TTD ${form.name || 'Karyawan'}` }, { id: 'manager', label: `TTD ${form.managerName || 'Manager'}` }]}
         active={geser} onActive={setGeser} value={form.posisi} onChange={(v) => setForm((prev) => ({ ...prev, posisi: v }))} />
       <TemplatePicker id="inputTemplateCanvas" value={tpl.id} onChange={handleChange} />
     </>
@@ -1044,15 +1047,15 @@ export default function SlipGaji() {
             <h2 className="text-xl font-semibold border-b pb-2 text-gray-700">Formulir Input Data Slip Gaji</h2>
             <UserData storageKey="data-user:slip-gaji" keys={userKeys} data={userData} onApply={applyUser} />
             <CompanyForm form={form} onChange={handleChange} onLogoChange={handleLogoChange} logoBg={bgProps('logo', logoShown)} />
-            <EmployeeForm form={form} onChange={handleChange} statusText={statusText} />
+            <EmployeeForm form={form} onChange={handleChange} statusText={statusText}
+              signatureField={<FileField id="inputReceiverSignatureFile" label={`Tanda tangan — ${form.name || 'Karyawan'}`} onChange={handleSignatureChange} {...bgProps('signature', signatureShown)} />} />
             <EarningsForm form={form} onChange={handleChange} />
             <DeductionsForm form={form} onChange={handleChange} calc={calc} />
 
             <FormSection title="Detail Tanda Tangan">
-              <FileField id="inputReceiverSignatureFile" label="Tanda Tangan Karyawan (Opsional)" onChange={handleSignatureChange} {...bgProps('signature', signatureShown)} />
               <TextField id="inputManagerName" label="Nama Direktur / Manager" name="managerName" value={form.managerName ?? ''} onChange={handleChange} />
               <TextField id="inputManagerTitle" label="Jabatan Penandatangan" name="managerTitle" value={form.managerTitle ?? ''} onChange={handleChange} placeholder="Direktur / Manager" />
-              <FileField id="inputManagerSignatureFile" label="Tanda Tangan Direktur / Manager (Opsional)" onChange={handleManagerSignatureChange} {...bgProps('manager', managerShown)} />
+              <FileField id="inputManagerSignatureFile" label={`Tanda tangan — ${form.managerName || 'Manager'}`} onChange={handleManagerSignatureChange} {...bgProps('manager', managerShown)} />
             </FormSection>
             </div>
             </>)}

@@ -149,7 +149,7 @@ export default function SuratPengunduranDiri() {
     <>
       <DocOptions kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
-      <PositionPad targets={[{ id: 'logo', label: 'Foto / logo' }, { id: 'ttd', label: 'Tanda tangan' }, ...(f.atasanOn ? [{ id: 'ttdAtasan', label: 'Ttd atasan' }] : [])]}
+      <PositionPad targets={[{ id: 'logo', label: 'Foto / logo' }, { id: 'ttd', label: `TTD ${f.nama || 'Karyawan'}` }, ...(f.atasanOn ? [{ id: 'ttdAtasan', label: `TTD ${f.atasanNama || 'Atasan'}` }] : [])]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
       <LayoutPicker value={f.gaya} onChange={(v) => set('gaya', v)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
@@ -222,7 +222,7 @@ export default function SuratPengunduranDiri() {
 
             <FormSection title="Tanda Tangan">
               <Field label="Salam penutup"><AutoTextarea className={inputCls} value={f.ttdHeading} onChange={(e) => set('ttdHeading', e.target.value)} /></Field>
-              <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
+              <ImageUpload label={`Tanda tangan — ${f.nama || 'Karyawan'}`} value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <label className="flex items-center gap-2 min-h-[40px] text-sm font-medium">
                 <input type="checkbox" className="w-5 h-5" checked={f.atasanOn} onChange={(e) => set('atasanOn', e.target.checked)} />
                 Tambah "Mengetahui," atasan langsung
@@ -232,7 +232,7 @@ export default function SuratPengunduranDiri() {
                   <Field label="Jabatan atasan"><AutoTextarea className={inputCls} value={f.atasanJabatan} onChange={(e) => set('atasanJabatan', e.target.value)} /></Field>
                   <Field label="Nama atasan"><AutoTextarea className={inputCls} value={f.atasanNama} onChange={(e) => set('atasanNama', e.target.value)} /></Field>
                 </div>
-                <ImageUpload label="Tanda tangan atasan" value={f.ttdAtasan} onChange={(v) => set('ttdAtasan', v)} notify={notify} {...bgFor('ttdAtasan', ttdAtasan)} />
+                <ImageUpload label={`Tanda tangan — ${f.atasanNama || 'Atasan'}`} value={f.ttdAtasan} onChange={(v) => set('ttdAtasan', v)} notify={notify} {...bgFor('ttdAtasan', ttdAtasan)} />
               </>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </FormSection>

@@ -227,8 +227,8 @@ export default function SuratPenunjukanPjProject() {
       <DocOptions nomor={{ value: f.pakaiNomor, onChange: (x) => set('pakaiNomor', x) }} kosong={{ value: f.kosong, onChange: (x) => set('kosong', x) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(x) => set('skala', x)} />
       <PositionPad targets={[
-        { id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'TTD Direktur' }, { id: 'stempel', label: 'Stempel' },
-        ...(f.ttdDitunjuk ? [{ id: 'ttdPj', label: 'TTD yang ditunjuk' }] : []),
+        { id: 'logo', label: 'Logo' }, { id: 'ttd', label: `TTD ${f.ttdNama || f.ttdJabatan || 'Direktur'}` }, { id: 'stempel', label: 'Stempel' },
+        ...(f.ttdDitunjuk ? [{ id: 'ttdPj', label: `TTD ${f.nama || 'yang ditunjuk'}` }] : []),
       ]} active={geser} onActive={setGeser} value={f.posisi} onChange={(x) => set('posisi', x)} />
       <LayoutPicker value={f.gaya} onChange={(x) => set('gaya', x)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(x) => set('paper', x)} onLandscape={(x) => set('landscape', x)} />
@@ -355,10 +355,10 @@ export default function SuratPenunjukanPjProject() {
                 {text('ttdNama', 'Nama')}
                 {text('ttdId', 'NIK karyawan (opsional)')}
               </div>
-              <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
+              <ImageUpload label={`Tanda tangan — ${f.ttdNama || f.ttdJabatan || 'penanda tangan utama'}`} value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel" value={f.stempel} onChange={(x) => set('stempel', x)} notify={notify} {...bgFor('stempel', stempel)} />
               <Switch checked={f.ttdDitunjuk} onChange={(x) => set('ttdDitunjuk', x)} label={'Tampilkan tanda tangan "Yang ditunjuk," di kiri'} />
-              {f.ttdDitunjuk && <ImageUpload label="Tanda tangan yang ditunjuk" value={f.ttdPj} onChange={(x) => set('ttdPj', x)} notify={notify} {...bgFor('ttdPj', ttdPj)} />}
+              {f.ttdDitunjuk && <ImageUpload label={`Tanda tangan — ${f.nama || 'yang ditunjuk'}`} value={f.ttdPj} onChange={(x) => set('ttdPj', x)} notify={notify} {...bgFor('ttdPj', ttdPj)} />}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </FormSection>
             </>)}

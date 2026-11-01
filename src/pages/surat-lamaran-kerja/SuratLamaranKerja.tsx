@@ -157,7 +157,7 @@ export default function SuratLamaranKerja() {
     <>
       <DocOptions kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
-      <PositionPad targets={[{ id: 'logo', label: 'Foto / logo' }, { id: 'ttd', label: 'Tanda tangan' }]}
+      <PositionPad targets={[{ id: 'logo', label: 'Foto / logo' }, { id: 'ttd', label: `TTD ${f.nama || 'Pelamar'}` }]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
       <LayoutPicker value={f.gaya} onChange={(v) => set('gaya', v)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
@@ -228,7 +228,7 @@ export default function SuratLamaranKerja() {
 
             <FormSection title="Tanda Tangan">
               <Field label="Salam penutup"><AutoTextarea className={inputCls} value={f.ttdHeading} onChange={(e) => set('ttdHeading', e.target.value)} /></Field>
-              <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
+              <ImageUpload label={`Tanda tangan — ${f.nama || 'Pelamar'}`} value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </FormSection>
             </>)}

@@ -178,12 +178,12 @@ export default function SuratPernyataanDiri() {
 
   const [geser, setGeser] = useState('logo');
   const [canvas, setCanvas] = useCanvasMode();
-  const saksiTargets = f.saksiOn ? [{ id: 'ttdSaksi1', label: 'Ttd saksi 1' }, { id: 'ttdSaksi2', label: 'Ttd saksi 2' }] : [];
+  const saksiTargets = f.saksiOn ? [{ id: 'ttdSaksi1', label: `TTD ${f.saksi1 || 'Saksi 1'}` }, { id: 'ttdSaksi2', label: `TTD ${f.saksi2 || 'Saksi 2'}` }] : [];
   const tampilan = (
     <>
       <DocOptions nomor={{ value: f.pakaiNomor, onChange: (x) => set('pakaiNomor', x) }} kosong={{ value: f.kosong, onChange: (x) => set('kosong', x) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
-      <PositionPad targets={[{ id: 'logo', label: 'Foto / logo' }, { id: 'ttd', label: 'Tanda tangan' }, ...saksiTargets]}
+      <PositionPad targets={[{ id: 'logo', label: 'Foto / logo' }, { id: 'ttd', label: `TTD ${f.nama || 'Pembuat pernyataan'}` }, ...saksiTargets]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
       <LayoutPicker value={f.gaya} onChange={(v) => set('gaya', v)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
@@ -264,7 +264,7 @@ export default function SuratPernyataanDiri() {
 
             <FormSection title="Tanda Tangan">
               <Field label="Salam di atas tanda tangan"><AutoTextarea className={inputCls} value={f.ttdHeading} onChange={(e) => set('ttdHeading', e.target.value)} /></Field>
-              <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
+              <ImageUpload label={`Tanda tangan — ${f.nama || 'Pembuat pernyataan'}`} value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <p className="text-xs text-gray-500">Ruang tanda tangan sudah cukup untuk meterai Rp10.000.</p>
               <label className="flex items-center gap-2 min-h-[40px] text-sm font-medium">
                 <input type="checkbox" className="w-5 h-5" checked={f.saksiOn} onChange={(e) => set('saksiOn', e.target.checked)} />
@@ -275,8 +275,8 @@ export default function SuratPernyataanDiri() {
                   <Field label="Nama saksi 1"><AutoTextarea className={inputCls} value={f.saksi1} onChange={(e) => set('saksi1', e.target.value)} /></Field>
                   <Field label="Nama saksi 2"><AutoTextarea className={inputCls} value={f.saksi2} onChange={(e) => set('saksi2', e.target.value)} /></Field>
                 </div>
-                <ImageUpload label="Tanda tangan saksi 1" value={f.ttdSaksi1} onChange={(v) => set('ttdSaksi1', v)} notify={notify} {...bgFor('ttdSaksi1', ttdSaksi1)} />
-                <ImageUpload label="Tanda tangan saksi 2" value={f.ttdSaksi2} onChange={(v) => set('ttdSaksi2', v)} notify={notify} {...bgFor('ttdSaksi2', ttdSaksi2)} />
+                <ImageUpload label={`Tanda tangan — ${f.saksi1 || 'Saksi 1'}`} value={f.ttdSaksi1} onChange={(v) => set('ttdSaksi1', v)} notify={notify} {...bgFor('ttdSaksi1', ttdSaksi1)} />
+                <ImageUpload label={`Tanda tangan — ${f.saksi2 || 'Saksi 2'}`} value={f.ttdSaksi2} onChange={(v) => set('ttdSaksi2', v)} notify={notify} {...bgFor('ttdSaksi2', ttdSaksi2)} />
               </>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </FormSection>

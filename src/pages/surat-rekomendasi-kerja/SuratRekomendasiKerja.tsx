@@ -162,7 +162,7 @@ export default function SuratRekomendasiKerja() {
     <>
       <DocOptions nomor={{ value: f.pakaiNomor, onChange: (x) => set('pakaiNomor', x) }} kosong={{ value: f.kosong, onChange: (x) => set('kosong', x) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(x) => set('skala', x)} />
-      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
+      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: `TTD ${f.pNama || 'Pemberi rekomendasi'}` }, { id: 'stempel', label: 'Stempel' }]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(x) => set('posisi', x)} />
       <LayoutPicker value={f.gaya} onChange={(x) => set('gaya', x)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(x) => set('paper', x)} onLandscape={(x) => set('landscape', x)} />
@@ -258,7 +258,7 @@ export default function SuratRekomendasiKerja() {
                 {text('ttdHeading', 'Salam penutup')}
                 {text('ttdId', 'NIK karyawan (opsional)')}
               </div>
-              <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
+              <ImageUpload label={`Tanda tangan — ${f.pNama || 'Pemberi rekomendasi'}`} value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel (opsional)" value={f.stempel} onChange={(x) => set('stempel', x)} notify={notify} {...bgFor('stempel', stempel)} />
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </FormSection>

@@ -30,6 +30,8 @@ import { num, rupiah, terbilangRupiah } from '../../shared/lib/money';
 // tag: 'bayar' = jadwal cicilan disisipkan setelah pasal; 'jaminan' = daftar jaminan (pasal hilang bila jaminan mati)
 type Pasal = { judul: string; isi: string; tag?: 'bayar' | 'jaminan' };
 type Foto = { src: string; ket: string; bg: boolean };
+// id stabil per saksi: kunci offset tanda tangan tidak bergeser saat saksi dihapus
+type Saksi = { id: string; nama: string; ttd: string };
 type Form = {
   gaya: string; paper: string; landscape: boolean; skala: number; posisi: Offsets;
   pakaiNomor: boolean; kosong: boolean;
@@ -44,13 +46,16 @@ type Form = {
   pakaiJaminan: boolean; jaminan: string;
   pasal: Pasal[];
   ttd: string; stempel: string; ttd2: string;
-  pakaiSaksi: boolean; saksi: string[];
+  pakaiSaksi: boolean; saksi: Saksi[];
   pakaiFoto: boolean; fotoPerHal: number; foto: Foto[];
 };
 
 const STORAGE_KEY = 'surat-perjanjian-hutang-piutang:v1';
 const POLA = '{n3}/SPHP/{rom}/{yyyy}';
 const iso = (d: Date) => d.toISOString().slice(0, 10);
+const newId = () => Math.random().toString(36).slice(2, 8);
+// Data lama: saksi berupa nama (string) tanpa id/ttd
+const toSaksi = (s: string | Partial<Saksi>): Saksi => typeof s === 'string' ? { id: newId(), nama: s, ttd: '' } : { id: s.id || newId(), nama: s.nama ?? '', ttd: s.ttd ?? '' };
 
 // Tambah bulan pada tanggal ISO; tanggal dijepit ke akhir bulan (31 Jan + 1 = 28/29 Feb)
 const addMonths = (s: string, m: number) => {
@@ -111,7 +116,7 @@ const makeDefault = (): Form => {
     pakaiJaminan: true, jaminan: '1 (satu) unit sepeda motor Honda Vario 125 tahun 2021, warna hitam, Nopol B 1234 XYZ\nBPKB asli sepeda motor tersebut atas nama PIHAK KEDUA',
     pasal: PASAL_DEFAULT,
     ttd: '', stempel: '', ttd2: '',
-    pakaiSaksi: true, saksi: ['Rudi Hartono', 'Siti Aminah'],
+    pakaiSaksi: true, saksi: ['Rudi Hartono', 'Siti Aminah'].map(toSaksi),
     pakaiFoto: false, fotoPerHal: 2, foto: [],
   };
 };
@@ -181,7 +186,7 @@ export default function SuratPerjanjianHutangPiutang() {
     const d = makeDefault();
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      return saved ? { ...d, ...saved, nomor: orRandomNo(saved.nomor, POLA) } : d;
+      return saved ? { ...d, ...saved, nomor: orRandomNo(saved.nomor, POLA), saksi: (saved.saksi ?? d.saksi).map(toSaksi) } : d;
     } catch {
       return d;
     }
@@ -204,7 +209,13 @@ export default function SuratPerjanjianHutangPiutang() {
   const stempel = useBgRemoved(f.stempel, bg.stempel, bgError);
   const ttd2 = useBgRemoved(f.ttd2, bg.ttd2, bgError);
   const bgFor = (key: keyof typeof bg, shown: { src: string; busy: boolean }) => ({ bg: bg[key], onBg: (v: boolean) => setBg((p) => ({ ...p, [key]: v })), shown: shown.src, bgBusy: shown.busy });
-  const busy = logo.busy || ttd.busy || stempel.busy || ttd2.busy;
+  // Tanda tangan saksi (maks. 2): Hapus BG per id saksi, bawaan aktif
+  const [bgSaksi, setBgSaksi] = useState<Record<string, boolean>>({});
+  const bgS = (i: number) => bgSaksi[f.saksi[i]?.id ?? ''] ?? true;
+  const ttdS0 = useBgRemoved(f.saksi[0]?.ttd ?? '', bgS(0), bgError);
+  const ttdS1 = useBgRemoved(f.saksi[1]?.ttd ?? '', bgS(1), bgError);
+  const ttdSaksi = [ttdS0, ttdS1];
+  const busy = logo.busy || ttd.busy || stempel.busy || ttd2.busy || ttdS0.busy || ttdS1.busy;
 
   const set = <K extends keyof Form>(key: K, v: Form[K]) => setF((p) => ({ ...p, [key]: v }));
   const setPasal = (i: number, p: Partial<Pasal>) => set('pasal', f.pasal.map((s, j) => (j === i ? { ...s, ...p } : s)));
@@ -365,7 +376,7 @@ export default function SuratPerjanjianHutangPiutang() {
           <div style={{ marginTop: 10 * kk }}>
             <div style={{ textAlign: 'center', marginBottom: 2 * kk }}>Saksi-saksi:</div>
             <div style={{ display: 'flex', justifyContent: saksi.length > 1 ? 'space-between' : 'center', gap: 16 * kk }}>
-              {saksi.map((s, i) => <SignBlock key={i} k={kk} align={saksi.length > 1 ? (i ? 'right' : 'left') : 'center'} s={{ heading: `Saksi ${i + 1},`, name: isian(s, ks) }} />)}
+              {saksi.map((s, i) => <SignBlock key={s.id} k={kk} align={saksi.length > 1 ? (i ? 'right' : 'left') : 'center'} s={{ heading: `Saksi ${i + 1},`, name: isian(s.nama, ks), ttd: ks ? '' : ttdSaksi[i].src, ttdOffset: getOffset(f.posisi, `ttdSaksi-${s.id}`) }} />)}
             </div>
           </div>
         )}
@@ -388,7 +399,7 @@ export default function SuratPerjanjianHutangPiutang() {
     if (cs.fontFamily !== look.ff || cs.fontSize !== look.fs || cs.lineHeight !== look.lh) setLook({ ff: cs.fontFamily, fs: cs.fontSize, lh: cs.lineHeight });
   });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const pageKey = useMemo(() => ({}), [f, logo.src, ttd.src, ttd2.src, stempel.src, look, fontTick]);
+  const pageKey = useMemo(() => ({}), [f, logo.src, ttd.src, ttd2.src, stempel.src, ttdS0.src, ttdS1.src, look, fontTick]);
   const ranges = usePagination(units.length, units.map((u) => u.g), pageKey, () => letterRef.current);
 
   // Halaman lampiran foto (selalu sesudah surat; tidak ikut paginasi karena tanpa [data-flow])
@@ -460,7 +471,8 @@ export default function SuratPerjanjianHutangPiutang() {
       <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <p className="text-xs text-gray-500">Dokumen {totalPages} halaman{fotoPages.length ? ` (termasuk ${fotoPages.length} halaman lampiran foto)` : ''}; pasal yang tidak muat otomatis berlanjut ke halaman berikutnya.</p>
-      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Ttd Pihak Pertama' }, { id: 'stempel', label: 'Stempel' }, { id: 'ttd2', label: 'Ttd Pihak Kedua' }]}
+      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: `TTD ${f.p1Nama || 'Pihak Pertama'}` }, { id: 'stempel', label: 'Stempel' }, { id: 'ttd2', label: `TTD ${f.p2Nama || 'Pihak Kedua'}` },
+        ...saksi.map((s, i) => ({ id: `ttdSaksi-${s.id}`, label: `TTD ${s.nama || `Saksi ${i + 1}`}` }))]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
       <LayoutPicker value={f.gaya} onChange={(v) => set('gaya', v)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
@@ -540,7 +552,7 @@ export default function SuratPerjanjianHutangPiutang() {
                 {txt('No. telepon', 'p1Telp')}
               </div>
               {txt('Alamat', 'p1Alamat')}
-              <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
+              <ImageUpload label={`Tanda tangan — ${f.p1Nama || 'Pihak Pertama'}`} value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel (opsional)" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
             </FormSection>
 
@@ -554,7 +566,7 @@ export default function SuratPerjanjianHutangPiutang() {
               </div>
               {txt('Alamat', 'p2Alamat')}
               <Field label="Bertindak atas nama (kosongkan = diri sendiri)"><AutoTextarea className={inputCls} placeholder="mis. CV Maju Bersama" value={f.p2Mewakili} onChange={(e) => set('p2Mewakili', e.target.value)} /></Field>
-              <ImageUpload label="Tanda tangan Pihak Kedua (opsional)" value={f.ttd2} onChange={(v) => set('ttd2', v)} notify={notify} {...bgFor('ttd2', ttd2)} />
+              <ImageUpload label={`Tanda tangan — ${f.p2Nama || 'Pihak Kedua'} (opsional)`} value={f.ttd2} onChange={(v) => set('ttd2', v)} notify={notify} {...bgFor('ttd2', ttd2)} />
             </FormSection>
 
             <FormSection title="Pinjaman & Pembayaran">
@@ -623,12 +635,16 @@ export default function SuratPerjanjianHutangPiutang() {
               <Switch checked={f.pakaiSaksi} onChange={(v) => set('pakaiSaksi', v)} label="Pakai saksi" hint="Tampil di bawah tanda tangan kedua pihak (maksimal 2 saksi)." />
               {f.pakaiSaksi && (<>
                 {f.saksi.slice(0, 2).map((s, i) => (
-                  <div key={i} className="flex gap-2">
-                    <AutoTextarea aria-label={`Nama saksi ${i + 1}`} placeholder="Nama saksi" className={inputCls} value={s} onChange={(e) => set('saksi', f.saksi.map((x, j) => (j === i ? e.target.value : x)))} />
-                    <button type="button" onClick={() => set('saksi', f.saksi.filter((_, j) => j !== i))} aria-label={`Hapus saksi ${i + 1}`} className="px-3 min-h-[40px] rounded-lg text-red-600 border border-red-200">✕</button>
+                  <div key={s.id} className="space-y-2 rounded-lg border p-3">
+                    <div className="flex gap-2">
+                      <AutoTextarea aria-label={`Nama saksi ${i + 1}`} placeholder="Nama saksi" className={inputCls} value={s.nama} onChange={(e) => set('saksi', f.saksi.map((x, j) => (j === i ? { ...x, nama: e.target.value } : x)))} />
+                      <button type="button" onClick={() => set('saksi', f.saksi.filter((_, j) => j !== i))} aria-label={`Hapus saksi ${i + 1}`} className="px-3 min-h-[40px] rounded-lg text-red-600 border border-red-200">✕</button>
+                    </div>
+                    <ImageUpload label={`Tanda tangan — ${s.nama || `Saksi ${i + 1}`}`} value={s.ttd} onChange={(v) => set('saksi', f.saksi.map((x, j) => (j === i ? { ...x, ttd: v } : x)))} notify={notify}
+                      bg={bgS(i)} onBg={(v) => setBgSaksi((p) => ({ ...p, [s.id]: v }))} shown={ttdSaksi[i].src} bgBusy={ttdSaksi[i].busy} />
                   </div>
                 ))}
-                {f.saksi.length < 2 && <button type="button" onClick={() => set('saksi', [...f.saksi, ''])} className="min-h-[40px] text-sm font-medium text-blue-700">+ Tambah saksi</button>}
+                {f.saksi.length < 2 && <button type="button" onClick={() => set('saksi', [...f.saksi, toSaksi('')])} className="min-h-[40px] text-sm font-medium text-blue-700">+ Tambah saksi</button>}
               </>)}
             </FormSection>
 
