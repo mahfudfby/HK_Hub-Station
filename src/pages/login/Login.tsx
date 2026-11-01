@@ -130,7 +130,7 @@ export default function Login() {
   return (
     <main className="min-h-screen bg-gray-100 text-gray-900 flex items-center justify-center p-4">
       <form onSubmit={loginEmail} className="w-full max-w-sm rounded-2xl border border-gray-300 bg-white p-6 space-y-4 shadow-xl">
-        <Link to="/" className="text-sm font-medium text-primary-700 hover:underline">&larr; Kembali ke HK Hub Station</Link>
+        <Link to="/" className="btn-home">&larr; HK-HUB Menu Utama</Link>
         <h1 className="text-xl font-bold">Login Admin</h1>
 
         <label className="block text-sm font-medium">

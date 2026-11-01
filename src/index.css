@@ -204,3 +204,29 @@ html.dark body { background: #121212; color: #e6e6e6; }
 @media (min-width: 1024px) {
   .grid > :is([data-preview-pane], :has([data-preview-pane])) { position: sticky; top: 1rem; align-self: start; max-height: calc(100vh - 2rem); overflow-y: auto; }
 }
+
+/* Tombol "HK-HUB Menu Utama": kotak berkilau + cahaya berdenyut (semua menu) */
+.btn-home {
+  position: relative; display: inline-flex; align-items: center; gap: .4rem; overflow: hidden;
+  min-height: 44px; padding: .55rem 1.1rem; border-radius: .75rem;
+  font-size: .95rem; font-weight: 800; letter-spacing: .02em; color: #fff; text-decoration: none;
+  background: linear-gradient(135deg, #4f46e5, #2563eb 55%, #0ea5e9);
+  border: 1px solid rgba(255, 255, 255, .35);
+  box-shadow: 0 0 12px rgba(59, 130, 246, .55), 0 0 26px rgba(14, 165, 233, .3);
+  animation: btn-home-glow 2.4s ease-in-out infinite;
+  transition: transform .15s ease;
+}
+.btn-home::after { /* kilau yang menyapu */
+  content: ''; position: absolute; inset: 0; width: 45%; pointer-events: none;
+  background: linear-gradient(110deg, transparent, rgba(255, 255, 255, .55), transparent);
+  transform: translateX(-160%) skewX(-20deg);
+  animation: btn-home-shine 3s ease-in-out infinite;
+}
+.btn-home:hover { transform: translateY(-1px) scale(1.03); }
+.btn-home:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
+@keyframes btn-home-glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(59, 130, 246, .5), 0 0 22px rgba(14, 165, 233, .25); }
+  50% { box-shadow: 0 0 18px rgba(99, 102, 241, .85), 0 0 38px rgba(14, 165, 233, .55); }
+}
+@keyframes btn-home-shine { 0%, 55% { transform: translateX(-160%) skewX(-20deg); } 100% { transform: translateX(320%) skewX(-20deg); } }
+@media (prefers-reduced-motion: reduce) { .btn-home, .btn-home::after { animation: none; } }

@@ -34,7 +34,7 @@ export function ModeTabs({ canvas, onChange }: { canvas: boolean; onChange: (can
           <Palette size={18} aria-hidden="true" /> Edit Canvas
         </button>
       </div>
-      <p className="text-xs text-gray-600">Download dan simpan dari menu <b>Edit Canvas</b>.</p>
+      <p className="text-base font-bold text-gray-800">Download dan simpan dari menu <b>Edit Canvas</b>.</p>
     </div>
   );
 }
