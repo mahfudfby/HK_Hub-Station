@@ -875,7 +875,7 @@ const App = () => {
 
         return (
             <div id="receipt-preview" 
-                 style={{ width: `${spbu.receiptWidth || 275}px`, height: spbu.receiptHeight, lineHeight: K ? 1.9 : undefined }}
+                 style={{ width: `${spbu.receiptWidth || 275}px`, height: spbu.receiptHeight, lineHeight: K ? 1.9 : undefined, background: '#fff' /* kertas selalu putih, juga di mode gelap */ }}
                  className="doc-font text-left p-2 text-black leading-tight font-sans"
             ><ScaleBox k={k}>
                 {/* Logo Section */}
@@ -1149,7 +1149,8 @@ const App = () => {
                 }
             `}</style>
 
-            <div className="w-full max-w-md">
+            {/* Edit Canvas di desktop: dua kolom (alat kiri, pratinjau kanan yang tetap diam) */}
+            <div className={`w-full max-w-md ${canvas ? 'lg:max-w-6xl' : ''}`}>
                 <Link to="/" className="inline-block mb-3 text-sm font-medium text-indigo-700 transition-colors duration-200 hover:text-indigo-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-700">&larr; Kembali ke HK Hub Station</Link>
                 {/* Header */}
                 <header className="text-center mb-6 border-b-4 border-indigo-600 pb-3 bg-white p-4 rounded-xl shadow-lg">
@@ -1170,7 +1171,7 @@ const App = () => {
                 
                 <ModeTabs canvas={canvas} onChange={setCanvas} />
 
-                {canvas ? (<>
+                {canvas ? (<div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-6 items-start">
                     <div className="mb-6 p-4 bg-white rounded-xl shadow-lg space-y-6">
                         <CanvasPanel tampilan={tampilan} unduh={unduh} galeri={galeri} />
                         {/* BAGIAN BARU: Petunjuk Cetak */}
@@ -1187,7 +1188,7 @@ const App = () => {
                         {/* AKHIR BAGIAN BARU */}
                     </div>
                     {previewCard}
-                </>) : (<>
+                </div>) : (<>
                 {/* --- Bagian 1: Pilih SPBU --- */}
                 <div className="mb-6 p-4 bg-white rounded-xl shadow-lg">
                     <h2 className="text-xl font-bold mb-3 text-indigo-700">1. Pilih Data User SPBU</h2>

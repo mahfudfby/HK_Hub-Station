@@ -18,13 +18,18 @@ export default function FitPreview({ children }: { children: ReactNode }) {
       if (!outer.current || !inner.current) return;
       const w = inner.current.offsetWidth; // offset* tidak terpengaruh transform
       const h = inner.current.offsetHeight;
-      setBox({ k: Math.min(1, outer.current.clientWidth / w), w, h });
+      let k = Math.min(1, outer.current.clientWidth / w);
+      // Desktop: pratinjau menempel di layar (lihat [data-preview-pane] di index.css); dokumen 1 halaman
+      // dikecilkan agar seluruhnya terlihat. Dokumen panjang (banyak halaman) tetap di-scroll di kolomnya.
+      if (matchMedia('(min-width: 1024px)').matches && h / w < 1.8) k = Math.min(k, (innerHeight - 110) / h);
+      setBox({ k: Math.max(0.1, k), w, h });
     };
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(outer.current!);
     ro.observe(inner.current!);
-    return () => ro.disconnect();
+    addEventListener('resize', fit);
+    return () => { ro.disconnect(); removeEventListener('resize', fit); };
   }, []);
 
   const k = zoom ?? box.k;
@@ -33,7 +38,7 @@ export default function FitPreview({ children }: { children: ReactNode }) {
 
   return (
     // min-w-0: tanpa ini kolom grid/flex induk ikut melebar mengikuti isi, sehingga skala tidak pernah mengecil
-    <div className="w-full min-w-0">
+    <div className="w-full min-w-0" data-preview-pane>
       {/* Desktop: slider zoom */}
       <div className="mb-2 hidden items-center justify-end gap-2 text-sm text-gray-700 md:flex">
         <ZoomOut size={16} aria-hidden="true" />
