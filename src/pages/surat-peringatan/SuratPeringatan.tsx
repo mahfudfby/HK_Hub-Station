@@ -12,6 +12,7 @@ import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, signSpace, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { FitLine, Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts } from '../../shared/components/LetterStyles';
 import { useBgRemoved } from '../../shared/lib/removeBg';
+import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 
 // Surat Peringatan (Teguran Pelanggaran): Surat peringatan / teguran atas pelanggaran karyawan (SP-1/2/3).
 // Menu berdiri sendiri (file, form & penyimpanan terpisah). Bahan bersama: kop & 20 template surat (LetterStyles),
@@ -39,7 +40,7 @@ type Form = {
 };
 
 const STORAGE_KEY = 'surat-peringatan:v1';
-const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+const NO_FMT = '{n3}/SP/{rom}/{yyyy}';
 const today = () => new Date().toISOString().slice(0, 10);
 
 
@@ -47,7 +48,7 @@ const DEFAULT: Form = {
   gaya: 'klasik', paper: 'A4', landscape: false, skala: 100, posisi: {},
   logo: '', instansi: 'PT NAMA PERUSAHAAN ANDA', subKop: 'Bidang usaha / unit kerja',
   alamat: 'Jl. Alamat Perusahaan No. 1, Kota, Provinsi 12345', kontak: 'Telp. (021) 000-0000 • email@perusahaan.co.id • www.perusahaan.co.id',
-  judul: "SURAT PERINGATAN PERTAMA (SP-1)", nomor: `001/SP/${ROMAN[new Date().getMonth()]}/${new Date().getFullYear()}`, kota: 'Jakarta', tanggal: today(),
+  judul: "SURAT PERINGATAN PERTAMA (SP-1)", nomor: randomDocNo(NO_FMT), kota: 'Jakarta', tanggal: today(),
   pembuka: "Surat peringatan ini diberikan kepada:",
   karyawan: [{ label: "Nama", value: "Nama karyawan" }, { label: "NIK", value: "0000000001" }, { label: "Jabatan", value: "Staf" }, { label: "Divisi / bagian", value: "" }],
   dasar: "Berdasarkan hasil evaluasi dan pemeriksaan, yang bersangkutan telah melakukan pelanggaran sebagai berikut:",
@@ -221,7 +222,7 @@ export default function SuratPeringatan() {
   const [f, setF] = useState<Form>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      return saved ? { ...DEFAULT, ...saved } : DEFAULT;
+      return saved ? { ...DEFAULT, ...saved, nomor: orRandomNo(saved.nomor, NO_FMT) } : DEFAULT;
     } catch {
       return DEFAULT;
     }
@@ -246,7 +247,7 @@ export default function SuratPeringatan() {
   const setSigner = (i: number, p: Partial<Signer>) => set('penandaLain', f.penandaLain.map((s, j) => (j === i ? { ...s, ...p } : s)));
   const reset = () => {
     if (!confirm('Kembalikan semua isian ke bawaan?')) return;
-    setF(DEFAULT);
+    setF({ ...DEFAULT, nomor: randomDocNo(NO_FMT) });
     notify('info', 'Semua isian dikembalikan ke bawaan.');
   };
 

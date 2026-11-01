@@ -10,7 +10,7 @@ import BgToggle from '../../shared/components/BgToggle';
 import { TextSizeSlider, useFitScale, ScaleBox } from '../../shared/components/TextScale';
 import { PaperPicker, PAPERS, paperOf, orient, mmToPx } from '../../shared/components/LetterKit';
 import { useBgRemoved } from '../../shared/lib/removeBg';
-import { ADDRESS_TEMPLATES, DEFAULT_FUELS, PLATE_REGIONS, GENERIC_LOGOS, buildPlate, randomRegionCode, svgToDataUri, GAYA_NOTA, GAYA_NOTA_KEY } from './SPBU.templates';
+import { ADDRESS_TEMPLATES, DEFAULT_FUELS, PLATE_REGIONS, GENERIC_LOGOS, buildPlate, randomRegionCode, svgToDataUri, GAYA_NOTA, GAYA_NOTA_KEY, DEFAULT_FOOTER_TEXT, FOOTER_PRESETS } from './SPBU.templates';
 import { useGoogleFonts, cssFamily, fontsReady } from '../../shared/lib/fonts';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -29,7 +29,6 @@ const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
 const LOGO_MAX_WIDTH = 204;
 // Logo bawaan bila stasiun belum punya logo: logo generik bawaan aplikasi (bukan logo merek dagang pihak lain)
 const FALLBACK_LOGO_URL = svgToDataUri(GENERIC_LOGOS.find((l) => l.id === 'pompa')!.svg);
-const LOCKED_FOOTER_TEXT = " TERIMAKASIH ATAS KUNJUNGAN ANDA \n____________________________\n____________________________\n____________________________\n____________________________\n____________________________\n"; 
 
 // --- KONSTANTA DUKUNGAN BARU ---
 const TRAKTEER_LINK = "https://drive.google.com/file/d/1dOBzvlBYWjHvPdpKzRNNTYqqoPTwQq0Y/view?usp=sharing";
@@ -136,7 +135,7 @@ const initialTransactionData = {
 const initialSpbuConfig = {
     name: 'SPBU PERTAMINA 00.000.00',
     address: 'ALAMAT SPBU LENGKAP',
-    footerNote: LOCKED_FOOTER_TEXT,
+    footerNote: DEFAULT_FOOTER_TEXT,
     receiptWidth: 275, 
     id: generateId(),
     logoBase64: null,
@@ -194,24 +193,27 @@ const TransactionInput = React.memo(({ label, name, value, inputType = 'text', d
 const INK = '#000';
 const PAPER = '#fff';
 const SEP_CHAR = { dash: '-', eq: '=', dot: '.', star: '*' };
+const B = `1px solid ${INK}`;
 
 const GayaNotaReceipt = ({ g, spbu, trans, logoSrc, priceLiter, volume, total, k }) => {
     const fs = g.size;
-    const sep = () => SEP_CHAR[g.sep]
+    const sep = () => g.sep === 'none' ? <div style={{ height: 8 }} />
+        : SEP_CHAR[g.sep]
         ? <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', lineHeight: 1.1, margin: '2px 0', letterSpacing: 0 }}>{SEP_CHAR[g.sep].repeat(120)}</div>
         : g.sep === 'double'
-            ? <div style={{ borderTop: `1px solid ${INK}`, borderBottom: `1px solid ${INK}`, height: 4, margin: '5px 0' }} />
+            ? <div style={{ borderTop: B, borderBottom: B, height: 4, margin: '5px 0' }} />
             : <div style={{ borderTop: `${g.sep === 'solid' ? 2 : 1}px ${g.sep === 'dashline' ? 'dashed' : 'solid'} ${INK}`, margin: '5px 0' }} />;
 
+    const side = g.header === 'left' || g.header === 'right';
     const logo = (
         <img src={logoSrc} alt="Logo SPBU" crossOrigin="anonymous"
-            style={{ display: 'block', height: 'auto', maxWidth: g.header === 'left' ? '100%' : `min(100%, ${LOGO_MAX_WIDTH}px)` }}
+            style={{ display: 'block', height: 'auto', maxWidth: side ? '100%' : `min(100%, ${LOGO_MAX_WIDTH}px)` }}
             onError={(e) => { e.target.onerror = null; e.target.src = FALLBACK_LOGO_URL; }} />
     );
     const titleStyle = {
         display: 'block', fontSize: fs + 3, fontWeight: 700, margin: '1px 0',
         ...(g.title === 'invert' && { background: INK, color: PAPER, padding: '2px 4px' }),
-        ...(g.title === 'box' && { border: `2px solid ${INK}`, padding: '2px 4px' }),
+        ...(g.title === 'box' && { border: `2px solid ${g.header === 'invert' ? PAPER : INK}`, padding: '2px 4px' }),
         ...(g.title === 'spaced' && { letterSpacing: 3, textTransform: 'uppercase' }),
     };
     const nameAddr = (
@@ -220,8 +222,25 @@ const GayaNotaReceipt = ({ g, spbu, trans, logoSrc, priceLiter, volume, total, k
             {(spbu.address || '').split('\n').map((line, i) => <p key={`addr-${i}`} style={{ fontSize: fs - 1 }}>{line}</p>)}
         </div>
     );
+    const header = side ? (
+        <div style={{ display: 'flex', flexDirection: g.header === 'right' ? 'row-reverse' : 'row', alignItems: 'center', marginBottom: 4, textAlign: g.header === 'right' ? 'left' : 'inherit' }}>
+            <div style={{ width: '36%', flexShrink: 0, [g.header === 'right' ? 'marginLeft' : 'marginRight']: 6 }}>{logo}</div>
+            <div style={{ flexGrow: 1, minWidth: 0 }}>{nameAddr}</div>
+        </div>
+    ) : g.header === 'invert' ? (
+        // Kepala blok hitam; logo tetap di kotak putih agar terbaca di kertas thermal
+        <div style={{ background: INK, color: PAPER, textAlign: 'center', padding: 6, marginBottom: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}><div style={{ background: PAPER, padding: 3 }}>{logo}</div></div>
+            {nameAddr}
+        </div>
+    ) : (
+        <div style={{ textAlign: 'center', marginBottom: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>{logo}</div>
+            {nameAddr}
+        </div>
+    );
 
-    const row = ([label, value], i, rows) => {
+    const row = ([label, value], i) => {
         if (g.rows === 'stack') return (
             <div key={label} style={{ marginBottom: 3 }}>
                 <p style={{ fontSize: fs - 3 }}>{label}</p>
@@ -229,10 +248,26 @@ const GayaNotaReceipt = ({ g, spbu, trans, logoSrc, priceLiter, volume, total, k
             </div>
         );
         if (g.rows === 'table') return (
-            <div key={label} style={{ display: 'flex', borderTop: i ? `1px solid ${INK}` : 'none' }}>
-                <span style={{ width: '45%', flexShrink: 0, padding: '1px 4px', borderRight: `1px solid ${INK}` }}>{label}</span>
+            <div key={label} style={{ display: 'flex', borderTop: i ? B : 'none' }}>
+                <span style={{ width: '45%', flexShrink: 0, padding: '1px 4px', borderRight: B }}>{label}</span>
                 <span style={{ flexGrow: 1, padding: '1px 4px', textAlign: 'right' }}>{value}</span>
             </div>
+        );
+        if (g.rows === 'grid2') return ( // sel 2 kolom: label kecil di atas nilai
+            <div key={label} style={{ width: '50%', padding: '2px 4px', borderTop: i > 1 ? B : 'none', borderLeft: i % 2 ? B : 'none', minWidth: 0, overflowWrap: 'anywhere' }}>
+                <p style={{ fontSize: fs - 3 }}>{label}</p>
+                <p style={{ fontWeight: 700 }}>{value}</p>
+            </div>
+        );
+        if (g.rows === 'leader') return ( // Harga ........ Rp. 10.000 (titik teks, aman html2canvas)
+            <div key={label} style={{ display: 'flex', alignItems: 'baseline' }}>
+                <span style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>{label}</span>
+                <span style={{ flexGrow: 1, minWidth: 8, overflow: 'hidden', whiteSpace: 'nowrap', letterSpacing: 0, margin: '0 2px' }}>{'.'.repeat(80)}</span>
+                <span style={{ flexShrink: 0, whiteSpace: 'nowrap', fontWeight: 700 }}>{value}</span>
+            </div>
+        );
+        if (g.rows === 'left') return (
+            <p key={label}><span>{label}: </span><span style={{ fontWeight: 700 }}>{value}</span></p>
         );
         return (
             <div key={label} style={{ display: 'flex' }}>
@@ -243,18 +278,53 @@ const GayaNotaReceipt = ({ g, spbu, trans, logoSrc, priceLiter, volume, total, k
         );
     };
     const group = (rows) => (
-        <div style={g.rows === 'table' ? { border: `1px solid ${INK}` } : undefined}>{rows.map(row)}</div>
+        <div style={g.rows === 'table' ? { border: B } : g.rows === 'grid2' ? { display: 'flex', flexWrap: 'wrap', border: B } : undefined}>{rows.map(row)}</div>
     );
 
+    const meta = [['Shift', trans.shift], ['No.Trans', trans.noTrans], ['Tanggal', trans.date], ['Jam', trans.time]];
+    const metaBlock = g.meta === 'grid' ? (
+        <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+            {meta.map(([label, value], i) => (
+                <div key={label} style={{ width: '50%', textAlign: i % 2 ? 'right' : 'left', marginBottom: 2 }}>
+                    <p style={{ fontSize: fs - 2 }}>{label}:</p>
+                    <p style={{ fontWeight: 700 }}>{value}</p>
+                </div>
+            ))}
+        </div>
+    ) : g.meta === 'boxes' ? (
+        <div style={{ display: 'flex', flexWrap: 'wrap', border: B, textAlign: 'center' }}>
+            {meta.map(([label, value], i) => (
+                <div key={label} style={{ width: '50%', padding: '2px 0', borderTop: i > 1 ? B : 'none', borderLeft: i % 2 ? B : 'none' }}>
+                    <p style={{ fontSize: fs - 3 }}>{label}</p>
+                    <p style={{ fontWeight: 700 }}>{value}</p>
+                </div>
+            ))}
+        </div>
+    ) : g.meta === 'line' ? (
+        <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>No. {trans.noTrans}</span><span>Shift {trans.shift}</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}><span>{trans.date}</span><span>{trans.time}</span></div>
+        </div>
+    ) : group(meta);
+
+    const volumeText = `(L) ${volume.toFixed(2)}`;
     const totalValue = `Rp. ${formatRupiah(total)}`;
-    const totalBlock = g.total === 'big' ? (
+    const heroBox = (label, value) => (
+        <div style={{ border: `2px solid ${INK}`, padding: '2px 4px', margin: '4px 0', textAlign: 'center' }}>
+            <p style={{ fontSize: fs - 2, letterSpacing: 2, textTransform: 'uppercase' }}>{label}</p>
+            <p style={{ fontSize: fs + 8, fontWeight: 700, lineHeight: 1.1, overflowWrap: 'anywhere' }}>{value}</p>
+        </div>
+    );
+    const totalBlock = g.total === 'hero' ? (
+        <>{heroBox('Volume (Liter)', volume.toFixed(2))}{heroBox('Total Harga', totalValue)}</>
+    ) : g.total === 'big' ? (
         <div style={{ textAlign: 'center', margin: '4px 0' }}>
             <p style={{ fontSize: fs - 2, letterSpacing: 2, textTransform: 'uppercase' }}>Total Harga</p>
-            <p style={{ fontSize: fs + 10, fontWeight: 700, lineHeight: 1.1 }}>{totalValue}</p>
+            <p style={{ fontSize: fs + 10, fontWeight: 700, lineHeight: 1.1, overflowWrap: 'anywhere' }}>{totalValue}</p>
         </div>
     ) : (
         <div style={{
-            display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: fs + 1, margin: '3px 0',
+            display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', fontWeight: 700, fontSize: fs + 1, margin: '3px 0',
             ...(g.total === 'invert' && { background: INK, color: PAPER, padding: '3px 4px' }),
             ...(g.total === 'box' && { border: `2px solid ${INK}`, padding: '3px 4px' }),
         }}>
@@ -262,47 +332,34 @@ const GayaNotaReceipt = ({ g, spbu, trans, logoSrc, priceLiter, volume, total, k
         </div>
     );
 
-    const footerLines = (spbu.footerNote || '').split('\n');
+    const footer = spbu.footerNote || '';
+    const footerLines = footer.split('\n');
     return (
         <div id="receipt-preview" className="text-left"
             style={{ width: `${spbu.receiptWidth || 275}px`, height: spbu.receiptHeight, padding: 8, background: PAPER, color: INK, fontFamily: cssFamily(g.font.family, g.font.fallback), fontSize: fs, lineHeight: 1.25, textTransform: g.upper ? 'uppercase' : 'none' }}><ScaleBox k={k}>
-            {g.header === 'left' ? (
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
-                    <div style={{ width: '36%', flexShrink: 0, marginRight: 6 }}>{logo}</div>
-                    <div style={{ flexGrow: 1, minWidth: 0 }}>{nameAddr}</div>
-                </div>
-            ) : (
-                <div style={{ textAlign: 'center', marginBottom: 4 }}>
-                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>{logo}</div>
-                    {nameAddr}
-                </div>
-            )}
+            {header}
             {sep()}
-            {g.meta === 'grid' ? (
-                <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-                    {[['Shift', trans.shift, 'left'], ['No.Trans', trans.noTrans, 'right'], ['Tanggal', trans.date, 'left'], ['Jam', trans.time, 'right']].map(([label, value, align]) => (
-                        <div key={label} style={{ width: '50%', textAlign: align, marginBottom: 2 }}>
-                            <p style={{ fontSize: fs - 2 }}>{label}:</p>
-                            <p style={{ fontWeight: 700 }}>{value}</p>
-                        </div>
-                    ))}
-                </div>
-            ) : group([['Shift', trans.shift], ['No.Trans', trans.noTrans], ['Tanggal', trans.date], ['Jam', trans.time]])}
+            {metaBlock}
             {sep()}
             {group([
                 ['Pulau/Pompa', trans.islandPump],
                 ['Nama Produk', trans.productName],
                 ['Harga/Liter', `Rp. ${formatRupiah(priceLiter)}`],
-                ['Volume', `(L) ${volume.toFixed(2)}`],
+                ...(g.total === 'hero' ? [] : [['Volume', volumeText]]),
             ])}
             {totalBlock}
             {group([['Operator', trans.operator], ['Nopol', trans.nopol]])}
-            {sep()}
-            <div style={{ textAlign: 'center', marginTop: 6, overflow: 'hidden', fontWeight: g.footer === 'bold' ? 700 : 400 }}>
-                {footerLines.map((line, i) => (
-                    <p key={`footer-${i}`} style={{ whiteSpace: 'pre-wrap', ...(g.footer === 'invert' && i === 0 && { background: INK, color: PAPER, fontWeight: 700, padding: '2px 0' }) }}>{line || ' '}</p>
-                ))}
-            </div>
+            {footer.trim() && <>
+                {sep()}
+                <div style={{
+                    textAlign: 'center', marginTop: 6, overflow: 'hidden', fontWeight: g.footer === 'bold' ? 700 : 400, fontSize: g.footer === 'small' ? fs - 2 : fs,
+                    ...(g.footer === 'box' && { border: `2px solid ${INK}`, padding: '4px' }),
+                }}>
+                    {footerLines.map((line, i) => (
+                        <p key={`footer-${i}`} style={{ whiteSpace: 'pre-wrap', ...(g.footer === 'invert' && i === 0 && { background: INK, color: PAPER, fontWeight: 700, padding: '2px 0' }) }}>{line || ' '}</p>
+                    ))}
+                </div>
+            </>}
         </ScaleBox></div>
     );
 };
@@ -430,8 +487,8 @@ const App = () => {
         if (uiState === 'new') return; // draft template baru tidak boleh ditimpa
         const selected = spbuList.find(s => s.id === selectedSpbuId);
         if (selected) {
-            // Selalu timpa footer dengan teks terkunci saat memilih/memuat
-            setCurrentSpbu({ ...selected, footerNote: LOCKED_FOOTER_TEXT });
+            // Data lama tanpa footerNote memakai footer bawaan; string kosong tetap kosong
+            setCurrentSpbu({ ...selected, footerNote: selected.footerNote ?? DEFAULT_FOOTER_TEXT });
         } else {
             // Default jika tidak ada data atau template baru
             setCurrentSpbu(initialSpbuConfig);
@@ -442,7 +499,7 @@ const App = () => {
     // --- EFFECT: DRAFT TEMPLATE BARU (juga saat reload langsung di /spbu/baru) ---
     useEffect(() => {
         if (uiState !== 'new') return;
-        setCurrentSpbu({ ...initialSpbuConfig, id: generateId(), name: 'SPBU BARU', logoBase64: null, footerNote: LOCKED_FOOTER_TEXT, receiptWidth: 275 });
+        setCurrentSpbu({ ...initialSpbuConfig, id: generateId(), name: 'SPBU BARU', logoBase64: null, footerNote: DEFAULT_FOOTER_TEXT, receiptWidth: 275 });
     }, [uiState]);
 
     // --- EFFECT: GUARD /spbu/edit tanpa template terpilih -> kembali ke /spbu ---
@@ -525,9 +582,6 @@ const App = () => {
 
     const handleSpbuChange = useCallback((e) => {
         const { name, value } = e.target;
-        
-        if (name === 'footerNote') return;
-        
         setCurrentSpbu(prev => ({
             ...prev,
             [name]: name === 'receiptWidth' ? (parseInt(value) || 275) : value,
@@ -675,7 +729,7 @@ const App = () => {
             const spbuToSave = {
                 ...currentSpbu,
                 fuels: cleanFuels,
-                footerNote: LOCKED_FOOTER_TEXT,
+                footerNote: currentSpbu.footerNote ?? DEFAULT_FOOTER_TEXT,
                 // Jika ID sudah ada di list, gunakan yang itu. Jika tidak, generate baru.
                 id: currentSpbu.id && spbuList.find(s => s.id === currentSpbu.id) ? currentSpbu.id : generateId()
             }; 
@@ -855,10 +909,10 @@ const App = () => {
 
                 <div className="border-t border-b border-dashed border-black my-1 h-0"></div>
                 
-                {/* Footer */}
-                <div className="text-center mt-2 text-base whitespace-pre-line leading-tight font-bold">
+                {/* Footer (bisa dikosongkan di Data User) */}
+                {(spbu.footerNote || '').trim() && <div className="text-center mt-2 text-base whitespace-pre-line leading-tight font-bold">
                     {footerLines}
-                </div>
+                </div>}
             </ScaleBox></div>
         );
     }, [transactionData, currentSpbu, calculatedVolume, finalPrice, logoShown.src, gaya, k, receiptW, receiptH]);
@@ -1217,7 +1271,27 @@ const App = () => {
                             <AutoTextarea name="address" rows={2} value={currentSpbu.address} onChange={handleSpbuChange}
                                 className="w-full p-2 border rounded-lg" disabled={isProcessing || isAiGenerating} />
                         </div>
-                        
+
+                        {/* Footer Nota (tersimpan di Data User; tampil di semua gaya nota) */}
+                        <div id="footer-nota">
+                            <label htmlFor="footer-preset" className="text-sm block">Footer Siap Pakai</label>
+                            <select id="footer-preset" value="" disabled={isProcessing || isAiGenerating}
+                                onChange={(e) => { const p = FOOTER_PRESETS[parseInt(e.target.value)]; if (p) setCurrentSpbu(prev => ({ ...prev, footerNote: p.value })); }}
+                                className="w-full p-2 min-h-[44px] border rounded-lg bg-white mb-2 text-sm">
+                                <option value="" disabled>Pilih kalimat footer...</option>
+                                {FOOTER_PRESETS.map((p, i) => <option key={p.label} value={i}>{p.label}</option>)}
+                            </select>
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                                <label htmlFor="footer-note" className="text-sm">Footer Nota (Enter = baris baru)</label>
+                                <button type="button" onClick={() => setCurrentSpbu(prev => ({ ...prev, footerNote: '' }))}
+                                    disabled={!currentSpbu.footerNote || isProcessing || isAiGenerating}
+                                    className="px-3 min-h-[44px] text-sm text-red-700 rounded-lg hover:bg-red-50 transition disabled:opacity-40">Kosongkan</button>
+                            </div>
+                            <AutoTextarea id="footer-note" name="footerNote" rows={2} value={currentSpbu.footerNote ?? ''} onChange={handleSpbuChange}
+                                placeholder="Kosong = nota tanpa footer"
+                                className="w-full p-2 border rounded-lg" disabled={isProcessing || isAiGenerating} />
+                        </div>
+
                         <div>
                             <label className="text-sm font-medium text-gray-700 block mb-1">Lebar Nota (px) - Default: 275</label>
                             <input type="number" name="receiptWidth" value={currentSpbu.receiptWidth || ''} onChange={handleSpbuChange}

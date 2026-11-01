@@ -10,6 +10,7 @@ import { Toast, type ToastState } from './Feedback';
 import { ExportButton, Field, ImageUpload, inputCls, mmToPx, orient, paperOf, PaperPicker, useLetterExport, type Notify } from './LetterKit';
 import { useBgRemoved } from '../lib/removeBg';
 import { num, rupiah } from '../lib/money';
+import { orRandomNo, randomDocNo } from '../lib/docNumber';
 import { cssFamily, useGoogleFonts, type WebFont } from '../lib/fonts';
 import { TextSizeSlider, useFitScale } from './TextScale';
 
@@ -70,12 +71,13 @@ const nowLocal = () => {
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
   return d.toISOString().slice(0, 16);
 };
+const NO_FMT = 'TRX-{yy}{mm}{dd}-{n4}'; // nomor nota acak sesuai pola, tidak pernah kosong
 const DEFAULT: Nota = {
   toko: 'TOKO ANDA',
   alamat: 'Jl. Contoh No. 1, Kota',
   telp: '0812-0000-0000',
   logo: '',
-  nomor: 'TRX-0001',
+  nomor: randomDocNo(NO_FMT), // diganti nomor baru saat editor dibuka
   waktu: nowLocal(),
   kasir: 'Kasir 1',
   pelanggan: '',
@@ -125,8 +127,9 @@ const fmtWaktu = (v: string) => {
 };
 
 // ---------------- Tampilan nota ----------------
-// Template: hanya tampilan yang berubah; isi & urutan nota sama. Thermal hanya mencetak hitam: pakai #000/#fff saja.
-type Sep = 'dash' | 'eq' | 'dot' | 'solid' | 'double' | 'star' | 'thick';
+// Template: isi nota sama, tata letak tiap bagian (kepala, info transaksi, barang, total, bayar, kaki) berbeda.
+// Thermal hanya mencetak hitam: pakai #000/#fff/abu saja; CSS aman html2canvas (tanpa gradient/transform/shadow).
+type Sep = 'dash' | 'eq' | 'dot' | 'solid' | 'double' | 'star' | 'thick' | 'space';
 type Tpl = {
   id: string;
   name: string;
@@ -135,14 +138,20 @@ type Tpl = {
   web?: WebFont; // Google Font untuk isi
   headFont?: string; // font khusus nama toko
   headWeb?: WebFont;
-  size?: number; // koreksi ukuran font (±1) untuk font yang terlalu lebar/sempit
-  head: 'center' | 'left' | 'invert' | 'box' | 'double' | 'spaced';
+  size?: number; // koreksi ukuran font (±px)
+  lh?: number; // tinggi baris
+  upper?: boolean; // seluruh nota huruf kapital
+  head: 'center' | 'left' | 'logoLeft' | 'split' | 'invert' | 'box' | 'double' | 'spaced' | 'huge';
   sep: Sep;
-  items: 'two' | 'one' | 'cols';
+  meta: 'table' | 'colon' | 'center' | 'pair' | 'box';
+  metaBottom?: boolean; // info No/Tgl di bawah, bukan di atas
+  items: 'two' | 'one' | 'cols' | 'num' | 'dots' | 'block';
+  box?: boolean; // daftar barang dalam kotak
   nameBold?: boolean;
-  total: 'plain' | 'invert' | 'box' | 'big' | 'double';
-  meta: 'table' | 'colon' | 'center';
-  foot: 'plain' | 'box' | 'sep' | 'invert';
+  sumRight?: boolean; // rincian total rata kanan (kolom sempit)
+  total: 'plain' | 'invert' | 'box' | 'big' | 'double' | 'center';
+  pay: 'rows' | 'cols' | 'box';
+  foot: 'plain' | 'box' | 'sep' | 'invert' | 'code' | 'left';
 };
 const COUSINE = 'Cousine, "Courier New", monospace';
 const ARIMO = 'Arimo, Arial, sans-serif';
@@ -152,46 +161,41 @@ const mono = (family: string, weights?: number[]) => ({ font: cssFamily(family, 
 const ONLY400 = [400];
 
 export const TEMPLATES: Tpl[] = [
-  { id: 'klasik', name: 'Klasik', desc: 'Cousine, garis putus', font: COUSINE, head: 'center', sep: 'dash', items: 'two', total: 'plain', meta: 'table', foot: 'plain' },
-  { id: 'minimarket', name: 'Minimarket', desc: 'Sans, judul & total blok hitam', font: ARIMO, head: 'invert', sep: 'dash', items: 'two', total: 'invert', meta: 'table', foot: 'plain' },
-  { id: 'kafe', name: 'Kafe', desc: 'Space Mono, garis =', ...mono('Space Mono'), head: 'spaced', sep: 'eq', items: 'one', total: 'double', meta: 'colon', foot: 'box' },
-  { id: 'restoran', name: 'Restoran', desc: 'Serif, kolom harga, garis ganda', font: TINOS, head: 'box', sep: 'double', items: 'cols', nameBold: true, total: 'box', meta: 'table', foot: 'sep' },
-  { id: 'modern', name: 'Modern', desc: 'IBM Plex Mono, logo kiri', ...mono('IBM Plex Mono'), head: 'left', sep: 'solid', items: 'two', total: 'big', meta: 'colon', foot: 'plain' },
-  { id: 'retro', name: 'Retro', desc: 'Courier Prime, bintang', ...mono('Courier Prime'), head: 'double', sep: 'star', items: 'two', total: 'box', meta: 'colon', foot: 'box' },
-  { id: 'teknik', name: 'Teknik', desc: 'JetBrains Mono, kolom, titik', ...mono('JetBrains Mono'), head: 'center', sep: 'dot', items: 'cols', total: 'invert', meta: 'table', foot: 'plain' },
-  { id: 'ringkas', name: 'Ringkas', desc: 'Roboto Mono, item satu baris', ...mono('Roboto Mono'), head: 'center', sep: 'solid', items: 'one', total: 'plain', meta: 'center', foot: 'plain' },
-  { id: 'butik', name: 'Butik', desc: 'Carlito, huruf renggang', font: CARLITO, head: 'spaced', sep: 'dot', items: 'two', nameBold: true, total: 'double', meta: 'center', foot: 'sep' },
-  { id: 'grosir', name: 'Grosir', desc: 'Judul Oswald, total besar', font: ARIMO, headFont: cssFamily('Oswald'), headWeb: { family: 'Oswald', weights: [700] }, head: 'invert', sep: 'thick', items: 'cols', total: 'big', meta: 'table', foot: 'plain' },
-  { id: 'apotek', name: 'Apotek', desc: 'Source Code Pro, kotak', ...mono('Source Code Pro'), head: 'box', sep: 'dash', items: 'cols', total: 'box', meta: 'colon', foot: 'box' },
-  { id: 'bengkel', name: 'Bengkel', desc: 'Share Tech Mono, logo kiri', ...mono('Share Tech Mono', ONLY400), size: 1, head: 'left', sep: 'eq', items: 'one', total: 'invert', meta: 'table', foot: 'sep' },
-  { id: 'warung', name: 'Warung', desc: 'Ubuntu Mono, bintang', ...mono('Ubuntu Mono'), size: 1, head: 'center', sep: 'star', items: 'two', nameBold: true, total: 'big', meta: 'table', foot: 'sep' },
-  { id: 'bakery', name: 'Bakery', desc: 'Roboto Condensed, garis titik', font: cssFamily('Roboto Condensed'), web: { family: 'Roboto Condensed' }, size: 1, head: 'double', sep: 'dot', items: 'one', total: 'double', meta: 'center', foot: 'box' },
-  { id: 'pustaka', name: 'Pustaka', desc: 'PT Mono, judul kotak', ...mono('PT Mono', ONLY400), head: 'box', sep: 'eq', items: 'two', total: 'plain', meta: 'colon', foot: 'sep' },
-  { id: 'elektronik', name: 'Elektronik', desc: 'Overpass Mono, garis ganda', ...mono('Overpass Mono'), head: 'left', sep: 'double', items: 'cols', total: 'invert', meta: 'table', foot: 'plain' },
-  { id: 'fashion', name: 'Fashion', desc: 'Fira Mono, renggang, garis tebal', ...mono('Fira Mono'), head: 'spaced', sep: 'thick', items: 'one', total: 'box', meta: 'center', foot: 'plain' },
-  { id: 'laundry', name: 'Laundry', desc: 'Inconsolata, judul blok hitam', ...mono('Inconsolata'), size: 1, head: 'invert', sep: 'dot', items: 'two', total: 'double', meta: 'colon', foot: 'box' },
-  { id: 'pasar', name: 'Pasar', desc: 'Anonymous Pro, total besar', ...mono('Anonymous Pro'), head: 'double', sep: 'dash', items: 'cols', nameBold: true, total: 'big', meta: 'table', foot: 'sep' },
-  { id: 'kontras', name: 'Kontras', desc: 'Judul condensed, serba hitam', font: ARIMO, headFont: cssFamily('Roboto Condensed'), headWeb: { family: 'Roboto Condensed', weights: [700] }, head: 'invert', sep: 'thick', items: 'two', nameBold: true, total: 'invert', meta: 'colon', foot: 'invert' },
+  { id: 'klasik', name: 'Klasik', desc: 'Mono, tengah, garis putus, barang 2 baris', font: COUSINE, head: 'center', sep: 'dash', meta: 'table', items: 'two', total: 'plain', pay: 'rows', foot: 'plain' },
+  { id: 'minimarket', name: 'Struk Minimarket', desc: 'Kepala blok hitam, barang 1 baris, bar TOTAL, barcode', font: ARIMO, head: 'invert', sep: 'dash', meta: 'pair', items: 'one', sumRight: true, total: 'invert', pay: 'cols', foot: 'code' },
+  { id: 'kafe', name: 'Kafe', desc: 'Renggang, tanpa garis, titik penuntun, total tengah', ...mono('Space Mono'), head: 'spaced', sep: 'space', meta: 'center', metaBottom: true, items: 'dots', total: 'center', pay: 'rows', foot: 'box' },
+  { id: 'restoran', name: 'Restoran', desc: 'Serif, garis ganda, tabel Qty|Item|Total', font: TINOS, head: 'double', sep: 'double', meta: 'table', items: 'cols', nameBold: true, sumRight: true, total: 'double', pay: 'rows', foot: 'sep' },
+  { id: 'modern', name: 'Modern', desc: 'Nama kiri + telp kanan, total besar, info di bawah', ...mono('IBM Plex Mono'), head: 'split', sep: 'solid', meta: 'colon', metaBottom: true, items: 'two', sumRight: true, total: 'big', pay: 'cols', foot: 'left' },
+  { id: 'retro', name: 'Retro', desc: 'Kapital, bintang ****, barang bernomor, kotak', ...mono('Courier Prime'), upper: true, head: 'box', sep: 'star', meta: 'colon', items: 'num', total: 'box', pay: 'rows', foot: 'box' },
+  { id: 'teknik', name: 'Teknik', desc: 'Rata kiri, tabel dalam kotak, bar TOTAL', ...mono('JetBrains Mono'), head: 'left', sep: 'dot', meta: 'box', items: 'cols', box: true, total: 'invert', pay: 'box', foot: 'plain' },
+  { id: 'ringkas', name: 'Ringkas', desc: 'Rapat, kecil, tanpa garis, barang 1 baris', ...mono('Roboto Mono'), size: -1, lh: 1.2, head: 'center', sep: 'space', meta: 'pair', items: 'one', total: 'plain', pay: 'rows', foot: 'plain' },
+  { id: 'butik', name: 'Butik', desc: 'Sans renggang, titik penuntun, bayar 2 kolom', font: CARLITO, size: 1, head: 'spaced', sep: 'dot', meta: 'center', items: 'dots', nameBold: true, sumRight: true, total: 'center', pay: 'cols', foot: 'sep' },
+  { id: 'grosir', name: 'Toko Bangunan', desc: 'Huruf besar, nama raksasa, tabel kotak', font: ARIMO, size: 2, headFont: cssFamily('Oswald'), headWeb: { family: 'Oswald', weights: [700] }, head: 'huge', sep: 'thick', meta: 'pair', items: 'cols', box: true, total: 'big', pay: 'box', foot: 'invert' },
+  { id: 'apotek', name: 'Apotek', desc: 'Logo kiri, barang blok Qty/Harga/Jml, info bawah', ...mono('Source Code Pro'), head: 'logoLeft', sep: 'dash', meta: 'table', metaBottom: true, items: 'block', sumRight: true, total: 'double', pay: 'rows', foot: 'box' },
+  { id: 'bengkel', name: 'Bengkel', desc: 'Kapital, rata kiri, garis ====, bernomor', ...mono('Share Tech Mono', ONLY400), size: 1, upper: true, head: 'left', sep: 'eq', meta: 'colon', metaBottom: true, items: 'num', total: 'invert', pay: 'cols', foot: 'sep' },
+  { id: 'warung', name: 'Warung', desc: 'Nama raksasa, bintang, bernomor, total tengah', ...mono('Ubuntu Mono'), size: 1, head: 'huge', sep: 'star', meta: 'center', metaBottom: true, items: 'num', nameBold: true, total: 'center', pay: 'rows', foot: 'plain' },
+  { id: 'bakery', name: 'Bakery', desc: 'Condensed, garis bawah ganda, barang dalam kotak', font: cssFamily('Roboto Condensed'), web: { family: 'Roboto Condensed' }, size: 1, head: 'double', sep: 'dot', meta: 'center', items: 'one', box: true, sumRight: true, total: 'double', pay: 'cols', foot: 'box' },
+  { id: 'pustaka', name: 'Pustaka', desc: 'Kepala kotak, barang blok, barcode', ...mono('PT Mono', ONLY400), head: 'box', sep: 'eq', meta: 'colon', items: 'block', total: 'plain', pay: 'box', foot: 'code' },
+  { id: 'elektronik', name: 'Elektronik', desc: 'Logo kiri, tabel, bar TOTAL, kaki rata kiri', ...mono('Overpass Mono'), head: 'logoLeft', sep: 'double', meta: 'table', items: 'cols', sumRight: true, total: 'invert', pay: 'cols', foot: 'left' },
+  { id: 'fashion', name: 'Fashion', desc: 'Kapital renggang, garis tebal, info di bawah', ...mono('Fira Mono'), upper: true, head: 'spaced', sep: 'thick', meta: 'pair', metaBottom: true, items: 'one', total: 'box', pay: 'rows', foot: 'plain' },
+  { id: 'laundry', name: 'Laundry', desc: 'Kepala hitam, bernomor dalam kotak', ...mono('Inconsolata'), size: 1, head: 'invert', sep: 'dot', meta: 'colon', items: 'num', box: true, total: 'double', pay: 'box', foot: 'box' },
+  { id: 'pasar', name: 'Pasar', desc: 'Nama kiri + telp kanan, titik penuntun, total besar', ...mono('Anonymous Pro'), head: 'split', sep: 'dash', meta: 'table', items: 'dots', nameBold: true, total: 'big', pay: 'rows', foot: 'sep' },
+  { id: 'kontras', name: 'Kontras', desc: 'Serba blok hitam, info kotak, barang blok', font: ARIMO, headFont: cssFamily('Roboto Condensed'), headWeb: { family: 'Roboto Condensed', weights: [700] }, head: 'invert', sep: 'thick', meta: 'box', items: 'block', box: true, total: 'invert', pay: 'cols', foot: 'invert' },
 ];
 console.assert(TEMPLATES.length === 20 && new Set(TEMPLATES.map((t) => t.id)).size === 20 && TEMPLATES[0].id === DEFAULT.template, 'ThermalNota templates');
+// tiap template harus beda tata letak (bukan hanya font)
+console.assert(new Set(TEMPLATES.map((t) => [t.head, t.sep, t.meta, !!t.metaBottom, t.items, !!t.box, t.total, t.pay, t.foot].join())).size === 20, 'ThermalNota layouts unique');
 const tplOf = (id: string) => TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0];
 
 const SEP_BORDER: Partial<Record<Sep, string>> = { dash: '1px dashed #000', dot: '2px dotted #000', solid: '1px solid #000', double: '3px double #000', thick: '2px solid #000' };
 const Line = ({ k }: { k: Sep }) =>
-  SEP_BORDER[k]
-    ? <div style={{ borderTop: SEP_BORDER[k], margin: '4px 0' }} />
-    : <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', lineHeight: 1, margin: '3px 0' }}>{(k === 'eq' ? '=' : '*').repeat(90)}</div>;
+  k === 'space' ? <div style={{ height: 8 }} />
+    : SEP_BORDER[k] ? <div style={{ borderTop: SEP_BORDER[k], margin: '4px 0' }} />
+      : <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', lineHeight: 1, margin: '3px 0' }}>{(k === 'eq' ? '=' : '*').repeat(90)}</div>;
 const Row = ({ l, r, bold }: { l: string; r: string; bold?: boolean }) => (
   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, fontWeight: bold ? 700 : 400 }}>
     <span style={{ minWidth: 0 }}>{l}</span>
-    <span style={{ whiteSpace: 'nowrap' }}>{r}</span>
-  </div>
-);
-const Cols = ({ a, b, c, bold }: { a: string; b: string; c: string; bold?: boolean }) => (
-  <div style={{ display: 'flex', gap: 4, fontWeight: bold ? 700 : 400 }}>
-    <span style={{ width: '4ch', flexShrink: 0 }}>{a}</span>
-    <span style={{ flex: 1, textAlign: 'right', whiteSpace: 'nowrap' }}>{b}</span>
-    <span style={{ flex: 1, textAlign: 'right', whiteSpace: 'nowrap' }}>{c}</span>
+    <span style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>{r}</span>
   </div>
 );
 const BAR: Record<string, CSSProperties> = {
@@ -199,96 +203,213 @@ const BAR: Record<string, CSSProperties> = {
   box: { border: '2px solid #000', padding: '2px 4px' },
   double: { borderTop: '3px double #000', borderBottom: '3px double #000', padding: '2px 0' },
 };
+// Barcode hiasan dari nomor nota (bukan kode standar): batang hitam/putih selang-seling, lebar 1–3 dari bit karakter
+const Barcode = ({ v, h }: { v: string; h: number }) => {
+  const w = [2, 1, 2, ...Array.from(v).flatMap((ch) => [0, 1, 2, 3].map((b) => (((ch.charCodeAt(0) >> b) & 1) ? 3 : 1))), 2, 1, 2];
+  return (
+    <div style={{ display: 'flex', height: h, width: '80%', margin: '4px auto 1px' }}>
+      {w.map((x, i) => <div key={i} style={{ flex: x, background: i % 2 ? '#fff' : '#000' }} />)}
+    </div>
+  );
+};
 
 function Receipt({ n, T, k }: { n: Nota; T: Layout; k: number }) {
   const c = calc(n);
   const t = tplOf(n.template);
   const base = T.font + (t.size ?? 0);
-  const f = base * k; // lebar nota tetap, hanya huruf yang ikut skala
+  const fs = (d: number) => (base + d) * k; // lebar nota tetap, hanya huruf yang ikut skala
   const logoW = Math.min(T.logoW * k, T.px - 2 * T.pad[1]); // logo tidak boleh lebih lebar dari area isi
   const line = <Line k={t.sep} />;
-  const nameStyle: CSSProperties = {
-    fontWeight: 700, fontSize: (base + 2) * k, fontFamily: t.headFont,
-    ...(t.head === 'invert' || t.head === 'box' ? { ...BAR[t.head], marginBottom: 3 } : {}),
-    ...(t.head === 'double' ? { display: 'inline-block', borderBottom: '3px double #000', paddingBottom: 1, marginBottom: 3 } : {}),
-    ...(t.head === 'spaced' ? { letterSpacing: 2 } : {}),
-  };
-  const name = <div style={nameStyle}>{t.head === 'spaced' ? n.toko.toUpperCase() : n.toko}</div>;
+  const logo = (st: CSSProperties) => n.logo ? <img src={n.logo} alt="Logo" style={{ objectFit: 'contain', maxHeight: logoW * 0.4, maxWidth: logoW, ...st }} /> : null;
+  const big = t.head === 'huge';
+  const name = (
+    <div style={{
+      fontWeight: 700, fontFamily: t.headFont, fontSize: fs(big ? 9 : t.head === 'split' ? 3 : 2), lineHeight: big ? 1.05 : 1.2,
+      ...(t.head === 'spaced' || big ? { letterSpacing: big ? 1 : 2, textTransform: 'uppercase' } : {}),
+      ...(t.head === 'double' ? { display: 'inline-block', borderBottom: '3px double #000', paddingBottom: 1, marginBottom: 3 } : {}),
+    }}>{n.toko}</div>
+  );
   const info = (
     <>
       {n.alamat && <div style={{ whiteSpace: 'pre-line' }}>{n.alamat}</div>}
       {n.telp && <div>Telp. {n.telp}</div>}
     </>
   );
-  const meta: [string, string][] = [['No', n.nomor], ['Tgl', fmtWaktu(n.waktu)]];
-  if (n.kasir) meta.push(['Kasir', n.kasir]);
-  if (n.pelanggan) meta.push(['Plg', n.pelanggan]);
-  const nameCls: CSSProperties = { fontWeight: t.nameBold ? 700 : 400 };
-  return (
-    <div style={{ width: T.px, height: T.h, overflow: T.h ? 'hidden' : undefined, boxSizing: 'border-box', padding: `${T.pad[0]}px ${T.pad[1]}px ${T.pad[2]}px`, background: '#fff', color: '#000', fontFamily: t.font, fontSize: f, lineHeight: 1.35, wordBreak: 'break-word' }}>
-      {t.head === 'left' ? (
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          {n.logo && <img src={n.logo} alt="Logo" style={{ flexShrink: 0, maxHeight: logoW * 0.4, maxWidth: logoW * 0.35, objectFit: 'contain' }} />}
-          <div style={{ minWidth: 0 }}>{name}{info}</div>
+  const header =
+    t.head === 'logoLeft' ? (
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        {logo({ flexShrink: 0, maxWidth: logoW * 0.35 })}
+        <div style={{ minWidth: 0 }}>{name}{info}</div>
+      </div>
+    ) : t.head === 'split' ? (
+      <div>
+        {logo({ display: 'block', maxWidth: logoW * 0.5, marginBottom: 2 })}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 6 }}>
+          <div style={{ minWidth: 0 }}>{name}</div>
+          {n.telp && <div style={{ fontSize: fs(-1), whiteSpace: 'nowrap', fontWeight: 700 }}>{n.telp}</div>}
         </div>
-      ) : (
-        <div style={{ textAlign: 'center' }}>
-          {n.logo && <img src={n.logo} alt="Logo" style={{ display: 'block', margin: '0 auto 4px', maxHeight: logoW * 0.4, maxWidth: logoW, objectFit: 'contain' }} />}
-          {name}
-          {info}
+        {n.alamat && <div style={{ whiteSpace: 'pre-line', fontSize: fs(-1), borderTop: '1px solid #000', marginTop: 2, paddingTop: 1 }}>{n.alamat}</div>}
+      </div>
+    ) : t.head === 'left' ? (
+      <div>{logo({ display: 'block', marginBottom: 4 })}{name}{info}</div>
+    ) : (
+      <div style={{ textAlign: 'center' }}>
+        {logo({ display: 'block', margin: '0 auto 4px' })}
+        <div style={t.head === 'invert' ? { ...BAR.invert, padding: '5px 4px' } : t.head === 'box' ? { ...BAR.box, padding: '4px' } : undefined}>{name}{info}</div>
+      </div>
+    );
+
+  const metaRows: [string, string][] = [['No', n.nomor], ['Tgl', fmtWaktu(n.waktu)]];
+  if (n.kasir) metaRows.push(['Kasir', n.kasir]);
+  if (n.pelanggan) metaRows.push(['Plg', n.pelanggan]);
+  const meta =
+    t.meta === 'pair' ? (
+      <>
+        <Row l={n.nomor} r={fmtWaktu(n.waktu)} />
+        {(n.kasir || n.pelanggan) && <Row l={n.kasir} r={n.pelanggan} />}
+      </>
+    ) : t.meta === 'center' ? (
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontWeight: 700 }}>No. {n.nomor}</div>
+        <div>{fmtWaktu(n.waktu)}{n.kasir && ` • ${n.kasir}`}</div>
+        {n.pelanggan && <div>Pelanggan: {n.pelanggan}</div>}
+      </div>
+    ) : t.meta === 'colon' ? (
+      metaRows.map(([l, r]) => <div key={l} style={{ display: 'flex' }}><span style={{ width: '5.5ch', flexShrink: 0 }}>{l}</span><span>: {r}</span></div>)
+    ) : (
+      <div style={t.meta === 'box' ? { border: '1px solid #000', padding: '2px 4px', margin: '2px 0' } : undefined}>
+        {metaRows.map(([l, r]) => <Row key={l} l={l} r={r} />)}
+      </div>
+    );
+
+  const nb: CSSProperties = { fontWeight: t.nameBold ? 700 : 400 };
+  const small: CSSProperties = { fontSize: fs(-1), color: '#333' };
+  const items = (
+    <div style={t.box ? { border: '1px solid #000', padding: '3px 4px' } : undefined}>
+      {t.items === 'cols' && (
+        <div style={{ display: 'flex', gap: 4, fontWeight: 700, borderBottom: '1px solid #000', paddingBottom: 1, marginBottom: 2 }}>
+          <span style={{ width: '3.5ch', flexShrink: 0 }}>Qty</span><span style={{ flex: 1 }}>Item</span><span>Total</span>
         </div>
       )}
-      {line}
-      {meta.map(([l, r]) =>
-        t.meta === 'table' ? <Row key={l} l={l} r={r} />
-          : t.meta === 'center' ? <div key={l} style={{ textAlign: 'center' }}>{l}: {r}</div>
-            : <div key={l} style={{ display: 'flex' }}><span style={{ width: '5.5ch', flexShrink: 0 }}>{l}</span><span>: {r}</span></div>)}
-      {line}
-      {t.items === 'cols' && <Cols a="Qty" b="Harga" c="Jumlah" bold />}
-      {n.items.map((it, i) => (
-        <div key={i} style={{ marginBottom: 2 }}>
-          {t.items === 'one' ? (
-            <Row l={`${it.qty}x ${it.nama} @${rupiah(num(it.harga))}`} r={rupiah(c.lines[i])} />
-          ) : (
-            <>
-              <div style={nameCls}>{it.nama}</div>
-              {t.items === 'cols'
-                ? <Cols a={it.qty} b={rupiah(num(it.harga))} c={rupiah(c.lines[i])} />
-                : <Row l={`  ${it.qty} x ${rupiah(num(it.harga))}`} r={rupiah(c.lines[i])} />}
-            </>
-          )}
+      {n.items.map((it, i) => {
+        const harga = rupiah(num(it.harga));
+        const jml = rupiah(c.lines[i]);
+        return (
+          <div key={i} style={{ marginBottom: t.items === 'block' ? 4 : 2 }}>
+            {t.items === 'one' ? <Row l={`${it.qty}x ${it.nama}`} r={jml} />
+              : t.items === 'cols' ? (
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <span style={{ width: '3.5ch', flexShrink: 0 }}>{it.qty}</span>
+                  <span style={{ flex: 1, minWidth: 0 }}><span style={nb}>{it.nama}</span><div style={small}>@ {harga}</div></span>
+                  <span style={{ whiteSpace: 'nowrap' }}>{jml}</span>
+                </div>
+              ) : t.items === 'num' ? (
+                <>
+                  <div style={nb}>{i + 1}. {it.nama}</div>
+                  <div style={{ textAlign: 'right' }}>{it.qty} x {harga} = {jml}</div>
+                </>
+              ) : t.items === 'dots' ? (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3 }}>
+                    <span style={{ ...nb, minWidth: 0 }}>{it.nama}</span>
+                    <span style={{ flex: 1, minWidth: 8, borderBottom: '2px dotted #000', marginBottom: '0.3em' }} />
+                    <span style={{ whiteSpace: 'nowrap' }}>{jml}</span>
+                  </div>
+                  <div style={small}>{it.qty} x {harga}</div>
+                </>
+              ) : t.items === 'block' ? (
+                <>
+                  <div style={{ fontWeight: 700, textTransform: 'uppercase' }}>{it.nama}</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1.5fr', gap: 2 }}>
+                    {([['Qty', it.qty], ['Harga', harga], ['Jumlah', jml]] as const).map(([l, v], j) => (
+                      <div key={l} style={{ textAlign: j ? 'right' : 'left' }}><div style={small}>{l}</div><div style={{ fontWeight: j === 2 ? 700 : 400 }}>{v}</div></div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={nb}>{it.nama}</div>
+                  <Row l={`  ${it.qty} x ${harga}`} r={jml} />
+                </>
+              )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const sums = (
+    <div style={t.sumRight ? { marginLeft: '30%' } : undefined}>
+      <Row l="TOTAL" r={rupiah(c.total)} bold />
+      {c.pajak > 0 && <Row l={`Pajak ${n.pajak}%`} r={rupiah(c.pajak)} />}
+      {c.biaya > 0 && <Row l={n.biayaLabel || 'Biaya lain'} r={rupiah(c.biaya)} />}
+      {c.diskon > 0 && <Row l={n.diskonMode === '%' ? `Diskon ${n.diskon}%` : 'Diskon'} r={`-${rupiah(c.diskon)}`} />}
+    </div>
+  );
+
+  const grand = rupiah(c.bayarTotal);
+  const total =
+    t.total === 'big' ? (
+      <div style={{ fontWeight: 700 }}>
+        <div>TOTAL PEMBAYARAN</div>
+        <div style={{ fontSize: fs(7), lineHeight: 1.15, textAlign: 'right' }}>Rp {grand}</div>
+      </div>
+    ) : t.total === 'center' ? (
+      <div style={{ textAlign: 'center', fontWeight: 700 }}>
+        <div style={{ letterSpacing: 2 }}>TOTAL PEMBAYARAN</div>
+        <div style={{ fontSize: fs(8), lineHeight: 1.15 }}>Rp {grand}</div>
+      </div>
+    ) : (
+      <div style={{ fontSize: fs(2), ...BAR[t.total] }}><Row l="TOTAL PEMBAYARAN" r={grand} bold /></div>
+    );
+
+  const payRows: [string, string][] = n.metode === 'Tunai'
+    ? [['Metode Bayar', 'Tunai'], ['Tunai', rupiah(c.bayar)], ['Kembali', rupiah(Math.max(0, c.kembali))]]
+    : [['Metode Bayar', n.metode], [n.nonTunai || 'Non-Tunai', grand]];
+  const pay = t.pay === 'cols' ? (
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${payRows.length}, 1fr)`, textAlign: 'center' }}>
+      {payRows.map(([l, r], i) => (
+        <div key={l} style={{ borderLeft: i ? '1px solid #000' : undefined, padding: '0 2px', minWidth: 0 }}>
+          <div style={small}>{i ? l : 'Metode'}</div><div style={{ fontWeight: 700 }}>{r}</div>
         </div>
       ))}
+    </div>
+  ) : (
+    <div style={t.pay === 'box' ? { border: '1px solid #000', padding: '2px 4px' } : undefined}>
+      {payRows.map(([l, r]) => <Row key={l} l={l} r={r} />)}
+    </div>
+  );
+
+  const foot = n.footer && (
+    t.foot === 'code' ? (
+      <div style={{ textAlign: 'center' }}>
+        <Barcode v={n.nomor} h={fs(16)} />
+        <div style={{ letterSpacing: 2, marginBottom: 4 }}>{n.nomor}</div>
+        <div style={{ whiteSpace: 'pre-line' }}>{n.footer}</div>
+      </div>
+    ) : (
+      <div style={{
+        whiteSpace: 'pre-line', textAlign: t.foot === 'left' ? 'left' : 'center',
+        ...(t.foot === 'left' ? { fontSize: fs(-1) } : t.foot === 'box' ? { border: '1px solid #000', padding: 3 } : BAR[t.foot]),
+      }}>{n.footer}</div>
+    )
+  );
+
+  return (
+    <div style={{ width: T.px, height: T.h, overflow: T.h ? 'hidden' : undefined, boxSizing: 'border-box', padding: `${T.pad[0]}px ${T.pad[1]}px ${T.pad[2]}px`, background: '#fff', color: '#000', fontFamily: t.font, fontSize: fs(0), lineHeight: t.lh ?? 1.35, wordBreak: 'break-word', textTransform: t.upper ? 'uppercase' : undefined }}>
+      {header}
       {line}
-      <Row l="TOTAL" r={rupiah(c.total)} bold />
-      {(c.pajak > 0 || c.biaya > 0 || c.diskon > 0) && (
-        <>
-          {c.pajak > 0 && <Row l={`Pajak ${n.pajak}%`} r={rupiah(c.pajak)} />}
-          {c.biaya > 0 && <Row l={n.biayaLabel || 'Biaya lain'} r={rupiah(c.biaya)} />}
-          {c.diskon > 0 && <Row l={n.diskonMode === '%' ? `Diskon ${n.diskon}%` : 'Diskon'} r={`-${rupiah(c.diskon)}`} />}
-        </>
-      )}
+      {!t.metaBottom && <>{meta}{line}</>}
+      {items}
       {line}
-      {t.total === 'big' ? (
-        <div style={{ fontWeight: 700 }}>
-          <div>TOTAL PEMBAYARAN</div>
-          <div style={{ fontSize: (base + 6) * k, lineHeight: 1.2, textAlign: 'right' }}>{rupiah(c.bayarTotal)}</div>
-        </div>
-      ) : (
-        <div style={{ fontSize: (base + 2) * k, ...BAR[t.total] }}><Row l="TOTAL PEMBAYARAN" r={rupiah(c.bayarTotal)} bold /></div>
-      )}
+      {sums}
       {line}
-      <Row l="Metode Bayar" r={n.metode} />
-      {n.metode === 'Tunai' ? (
-        <>
-          <Row l="Tunai" r={rupiah(c.bayar)} />
-          <Row l="Kembali" r={rupiah(Math.max(0, c.kembali))} />
-        </>
-      ) : (
-        <Row l={n.nonTunai || 'Non-Tunai'} r={rupiah(c.bayarTotal)} />
-      )}
+      {total}
       {line}
-      {n.footer && <div style={{ textAlign: 'center', whiteSpace: 'pre-line', ...(t.foot === 'box' ? { border: '1px solid #000', padding: 3 } : BAR[t.foot]) }}>{n.footer}</div>}
+      {pay}
+      {line}
+      {t.metaBottom && <>{meta}{line}</>}
+      {foot}
       {n.footer && t.foot === 'sep' && line}
     </div>
   );
@@ -303,16 +424,16 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
   const [n, setN] = useState<Nota>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      const def = { ...DEFAULT, paper: `T${mm}` };
+      const def = { ...DEFAULT, paper: `T${mm}`, nomor: randomDocNo(NO_FMT) };
       if (!saved) return def;
       if (!saved.diskonMode) saved.diskonMode = 'Rp'; // simpanan lama: diskon selalu nominal
       if (saved.metode && saved.metode !== 'Tunai' && saved.metode !== 'Non-Tunai') { // simpanan lama: QRIS/Debit/Transfer
         saved.nonTunai = saved.metode === 'Transfer' ? 'Transfer Bank' : saved.metode;
         saved.metode = 'Non-Tunai';
       }
-      return { ...def, ...saved };
+      return { ...def, ...saved, nomor: orRandomNo(saved.nomor, NO_FMT) };
     } catch {
-      return { ...DEFAULT, paper: `T${mm}` };
+      return { ...DEFAULT, paper: `T${mm}`, nomor: randomDocNo(NO_FMT) };
     }
   });
   const [logoBg, setLogoBg] = useState(false);
@@ -342,7 +463,7 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
     (page) => (T.roll ? { w: T.paper.w, h: Math.ceil((T.paper.w * page.offsetHeight) / T.px) } : T.paper), T.roll ? 2 : 3);
   const transaksiBaru = () => {
     const m = n.nomor.match(/^(.*?)(\d+)$/);
-    const nomor = m ? `${m[1]}${String(Number(m[2]) + 1).padStart(m[2].length, '0')}` : n.nomor;
+    const nomor = m ? `${m[1]}${String(Number(m[2]) + 1).padStart(m[2].length, '0')}` : randomDocNo(NO_FMT);
     setN((p) => ({ ...p, nomor, waktu: nowLocal(), pelanggan: '', items: [{ nama: '', qty: '1', harga: '' }], diskon: '', biaya: '', bayar: '' }));
     notify('info', `Transaksi baru ${nomor}.`);
   };

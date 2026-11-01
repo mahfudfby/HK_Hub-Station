@@ -12,6 +12,7 @@ import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, signSpace, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { FitLine, Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts } from '../../shared/components/LetterStyles';
 import { useBgRemoved } from '../../shared/lib/removeBg';
+import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 
 // Surat Penugasan Perusahaan: Surat tugas / penugasan karyawan dari perusahaan.
 // Menu berdiri sendiri (file, form & penyimpanan terpisah). Bahan bersama: kop & 20 template surat (LetterStyles),
@@ -37,7 +38,7 @@ type Form = {
 };
 
 const STORAGE_KEY = 'surat-tugas:v1';
-const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+const NO_FMT = '{n3}/ST/{rom}/{yyyy}';
 const today = () => new Date().toISOString().slice(0, 10);
 const PETUGAS_COLS: Col[] = [{ label: "Nama", w: "38%", align: "left" }, { label: "NIK / NIP", w: "24%", align: "left" }, { label: "Jabatan", w: "auto", align: "left" }];
 
@@ -45,7 +46,7 @@ const DEFAULT: Form = {
   gaya: 'klasik', paper: 'A4', landscape: false, skala: 100, posisi: {},
   logo: '', instansi: 'PT NAMA PERUSAHAAN ANDA', subKop: 'Bidang usaha / unit kerja',
   alamat: 'Jl. Alamat Perusahaan No. 1, Kota, Provinsi 12345', kontak: 'Telp. (021) 000-0000 • email@perusahaan.co.id • www.perusahaan.co.id',
-  judul: "SURAT TUGAS", nomor: `001/ST/${ROMAN[new Date().getMonth()]}/${new Date().getFullYear()}`, kota: 'Jakarta', tanggal: today(),
+  judul: "SURAT TUGAS", nomor: randomDocNo(NO_FMT), kota: 'Jakarta', tanggal: today(),
   pembuka: "Yang bertanda tangan di bawah ini, dengan ini memberikan tugas kepada:",
   petugas: [["Nama karyawan", "0000000001", "Staf"]],
   tugas: [{ label: "Keperluan", value: "Uraian tugas yang harus dilaksanakan" }, { label: "Tempat tujuan", value: "Kota / lokasi tujuan" }, { label: "Tanggal berangkat", value: "" }, { label: "Tanggal kembali", value: "" }, { label: "Biaya", value: "Ditanggung perusahaan" }],
@@ -215,7 +216,7 @@ export default function SuratTugas() {
   const [f, setF] = useState<Form>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      return saved ? { ...DEFAULT, ...saved } : DEFAULT;
+      return saved ? { ...DEFAULT, ...saved, nomor: orRandomNo(saved.nomor, NO_FMT) } : DEFAULT;
     } catch {
       return DEFAULT;
     }
@@ -240,7 +241,7 @@ export default function SuratTugas() {
   const setSigner = (i: number, p: Partial<Signer>) => set('penandaLain', f.penandaLain.map((s, j) => (j === i ? { ...s, ...p } : s)));
   const reset = () => {
     if (!confirm('Kembalikan semua isian ke bawaan?')) return;
-    setF(DEFAULT);
+    setF({ ...DEFAULT, nomor: randomDocNo(NO_FMT) });
     notify('info', 'Semua isian dikembalikan ke bawaan.');
   };
 

@@ -11,6 +11,7 @@ import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { ExportButton, Field, ImageUpload, inputCls, mmToPx, signSpace, PAPERS, PAPER_GROUPS, paperOf, orient, useLetterExport, type Notify, type Paper } from '../../shared/components/LetterKit';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { num, rupiah } from '../../shared/lib/money';
+import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { cssFamily, useGoogleFonts, type WebFont } from '../../shared/lib/fonts';
 
 // Custom Invoices Toko Online: nota pesanan gaya marketplace untuk toko online milik pengguna.
@@ -74,11 +75,12 @@ type Nota = {
 const STORAGE_KEY = 'toko-online:v1';
 const today = () => new Date().toISOString().slice(0, 10);
 const blankItem = (): Item => ({ produk: '', variasi: '', harga: '', qty: '1' });
+const NO_FMT = '{yyyy}{n4}{A3}';
 const DEFAULT: Nota = {
   gaya: 'marketplace', font: '', paper: 'A4', landscape: false, accent: '#E4572E', skala: 100, posisi: {},
   logo: '', logoTeks: 'TOKO ANDA', judul: 'Nota Pesanan',
   pembeli: 'Nama Pembeli', penjual: 'nama_toko_anda', alamat: 'Alamat lengkap pembeli, Kecamatan, Kota, Provinsi, Kode Pos', hp: '0812xxxxxxxx',
-  noPesanan: `${new Date().getFullYear()}0001ABC`, tanggal: today(), metode: 'Transfer Bank', kurir: 'Reguler',
+  noPesanan: randomDocNo(NO_FMT), tanggal: today(), metode: 'Transfer Bank', kurir: 'Reguler',
   items: [
     { produk: 'Contoh produk pertama', variasi: 'Merah, L', harga: '45000', qty: '2' },
     { produk: 'Contoh produk kedua dengan nama yang cukup panjang', variasi: 'Isi 6', harga: '12500', qty: '3' },
@@ -263,7 +265,7 @@ export default function InvoiceTokoOnline() {
   const [n, setN] = useState<Nota>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      return saved ? { ...DEFAULT, ...saved } : DEFAULT;
+      return saved ? { ...DEFAULT, ...saved, noPesanan: orRandomNo(saved.noPesanan, NO_FMT) } : DEFAULT;
     } catch {
       return DEFAULT;
     }
@@ -288,7 +290,7 @@ export default function InvoiceTokoOnline() {
   const setItem = (i: number, patch: Partial<Item>) => set('items', n.items.map((it, j) => (j === i ? { ...it, ...patch } : it)));
   const reset = () => {
     if (!confirm('Kembalikan semua isian ke bawaan?')) return;
-    setN(DEFAULT);
+    setN({ ...DEFAULT, noPesanan: randomDocNo(NO_FMT) });
     notify('info', 'Semua isian dikembalikan ke bawaan.');
   };
 
