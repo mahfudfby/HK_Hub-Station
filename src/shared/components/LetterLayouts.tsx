@@ -241,14 +241,17 @@ function Signs({ d, k, align = 'right', grid, date }: { d: LayoutDoc; k: number;
       </div>
     );
   }
-  const group = others.length ? (
+  // 3+ penanda tangan: blok lebih ramping agar tetap satu baris di kolom sempit
+  const w = d.signers.length >= 3 ? 110 : 170;
+  const mainEl = <div style={align === 'right' && !others.length ? { marginLeft: 'auto' } : undefined}>{when}<SignBlock s={main} k={k} align={align} width={w} /></div>;
+  // Tanpa label bersama: semua tanda tangan sejajar langsung (jarak rata kiri–tengah–kanan)
+  const group = !others.length ? null : label ? (
     <div>
       {label}
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: g }}>{others.map((s, i) => <SignBlock key={i} s={s} k={k} />)}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: g }}>{others.map((s, i) => <SignBlock key={i} s={s} k={k} width={w} />)}</div>
     </div>
-  ) : null;
-  const mainEl = <div style={align === 'right' ? { marginLeft: 'auto' } : undefined}>{when}<SignBlock s={main} k={k} align={align} /></div>;
-  if (align === 'center') return <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: g }}>{mainEl}{group}</div>;
+  ) : <>{others.map((s, i) => <SignBlock key={i} s={s} k={k} width={w} />)}</>;
+  if (align === 'center') return <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: g }}>{mainEl}<div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: g * 2 }}>{group}</div></div>;
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-end', gap: g }}>
       {align === 'left' ? <>{mainEl}{group}</> : <>{group}{mainEl}</>}

@@ -59,7 +59,7 @@ const makeDefault = (): Form => ({
   ttdHeading: 'Hormat kami,', ttd: '',
   rtNama: 'H. Asep Suryana', ttdRt: '', stempelRt: '',
   rwNama: 'Drs. Dedi Kurniawan', ttdRw: '', stempelRw: '',
-  pakaiRt: true, pakaiRw: true, pakaiOrtu: true,
+  pakaiRt: true, pakaiRw: false, pakaiOrtu: false, // bawaan: satu tanda tangan, Ketua RT
 });
 
 // Data User: identitas kop RT/RW, orang tua & pengurus RT/RW beserta gambar (bukan isi surat)
