@@ -199,3 +199,8 @@ html.dark body { background: #121212; color: #e6e6e6; }
 
 /* Kolom nomor terkunci (NumberFormatInput) selalu memakai satu baris penuh di grid form */
 .grid > :has(.nfi) { grid-column: 1 / -1; }
+
+/* Desktop: kolom pratinjau tetap diam saat panel alat/formulir di-scroll (semua menu) */
+@media (min-width: 1024px) {
+  .grid > :is([data-preview-pane], :has([data-preview-pane])) { position: sticky; top: 1rem; align-self: start; max-height: calc(100vh - 2rem); overflow-y: auto; }
+}
