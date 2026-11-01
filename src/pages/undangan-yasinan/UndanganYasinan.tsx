@@ -32,21 +32,49 @@ const DOA = {
 const HARI = ['3 Hari', '7 Hari', '40 Hari', '100 Hari', '1000 Hari', 'Haul ke-1'];
 const isoDay = (offsetDays = 0) => new Date(Date.now() + offsetDays * 864e5).toISOString().slice(0, 10);
 
+// Tujuan undangan siap pakai: mengisi subjudul sampul, acara, kalimat pembuka & penutup (semua tetap bisa diedit)
+const UNDANG = 'Dengan memohon rahmat dan ridha Allah SWT, kami mengharap kehadiran Bapak/Ibu/Saudara untuk';
+const TUTUP = 'Atas kehadiran dan doanya kami ucapkan terima kasih. Jazakumullah khairan katsiran.';
+const TUJUAN = [
+  { id: 'kirim-doa', label: 'Kirim Doa', subjudul: 'Kirim Doa', acara: 'Kirim doa, tahlil & doa bersama untuk almarhum/ah',
+    pembuka: `${UNDANG} bersama-sama mengirimkan doa bagi keluarga kami yang telah berpulang ke rahmatullah, dalam rangka:`,
+    penutup: `Merupakan suatu kehormatan bagi kami apabila Bapak/Ibu/Saudara berkenan hadir dan turut mengirimkan doa, semoga almarhum/ah diampuni segala dosanya, diterima amal ibadahnya, dan ditempatkan di tempat terbaik di sisi Allah SWT. ${TUTUP}` },
+  { id: 'yasin-tahlil', label: 'Yasinan & Tahlilan', subjudul: 'Tahlil & Yasin', acara: 'Pembacaan Surat Yasin, Tahlil & Doa bersama',
+    pembuka: `${UNDANG} bersama-sama membaca Surat Yasin dan Tahlil serta mendoakan keluarga kami yang telah berpulang ke rahmatullah, dalam rangka:`,
+    penutup: `Merupakan suatu kehormatan bagi kami apabila Bapak/Ibu/Saudara berkenan hadir dan turut mendoakan. ${TUTUP}` },
+  { id: 'tahlil', label: 'Tahlilan', subjudul: 'Tahlilan', acara: 'Tahlil & Doa bersama',
+    pembuka: `${UNDANG} bersama-sama membaca tahlil dan mendoakan keluarga kami yang telah berpulang ke rahmatullah, dalam rangka:`,
+    penutup: `Besar harapan kami Bapak/Ibu/Saudara berkenan hadir untuk bersama-sama bertahlil dan mendoakan. ${TUTUP}` },
+  { id: 'yasinan', label: 'Yasinan', subjudul: 'Yasinan', acara: 'Pembacaan Surat Yasin & Doa bersama',
+    pembuka: `${UNDANG} bersama-sama membaca Surat Yasin dan mendoakan keluarga kami yang telah berpulang ke rahmatullah, dalam rangka:`,
+    penutup: `Besar harapan kami Bapak/Ibu/Saudara berkenan hadir untuk bersama-sama membaca Surat Yasin dan mendoakan. ${TUTUP}` },
+  { id: 'khataman', label: "Khataman Al-Qur'an", subjudul: "Khataman Al-Qur'an", acara: "Khataman Al-Qur'an, Tahlil & Doa bersama",
+    pembuka: `${UNDANG} bersama-sama mengkhatamkan Al-Qur'an dan menghadiahkan pahalanya bagi keluarga kami yang telah berpulang ke rahmatullah, dalam rangka:`,
+    penutup: `Semoga bacaan Al-Qur'an dan doa kita menjadi penerang dan rahmat bagi almarhum/ah. ${TUTUP}` },
+  { id: 'pengajian', label: 'Pengajian & Doa Bersama', subjudul: 'Pengajian & Doa Bersama', acara: 'Pengajian, Tausiyah & Doa bersama',
+    pembuka: `${UNDANG} menghadiri pengajian dan doa bersama untuk keluarga kami yang telah berpulang ke rahmatullah, dalam rangka:`,
+    penutup: `Merupakan suatu kehormatan bagi kami apabila Bapak/Ibu/Saudara berkenan hadir dan turut mendoakan. ${TUTUP}` },
+  { id: 'haul', label: 'Haul', subjudul: 'Haul', acara: 'Peringatan Haul, Tahlil & Doa bersama',
+    pembuka: `${UNDANG} menghadiri peringatan haul dan bersama-sama mendoakan keluarga kami yang telah mendahului kita, dalam rangka:`,
+    penutup: `Semoga Allah SWT melimpahkan ampunan dan rahmat-Nya kepada almarhum/ah. ${TUTUP}` },
+] as const;
+const DEF_TUJUAN = TUJUAN[0];
+
 const makeDefault = (): Form => ({
   gaya: TEMPLATES[0].id, paper: 'A4', landscape: true, skala: 100, posisi: {},
   logo: '', ttd: '',
   jk: 'L', nama: 'Bapak H. Ahmad Sudirman', nasab: 'Kartorejo', wafat: isoDay(-39), hari: '40 Hari',
-  judul: 'UNDANGAN', subjudul: 'Tahlil & Yasin',
+  judul: 'UNDANGAN', subjudul: DEF_TUJUAN.subjudul,
   kepada: '', diTempat: 'di Tempat', catatan: 'Mohon maaf apabila ada kesalahan dalam penulisan nama dan gelar.',
   doaArab: DOA.L, doaArti: 'Ya Allah, ampunilah dia, rahmatilah dia, sejahterakanlah dia, dan maafkanlah dia.',
   turut: 'Ketua RT 03 / RW 05\nTakmir Masjid Al-Ikhlas\nKeluarga Besar Bani Kartorejo',
   alamat: 'Jl. Melati No. 12, RT 03/RW 05, Kel. Sukamaju, Kec. Cibeunying Kidul, Bandung',
   salam: "Assalamu'alaikum Wr. Wb.",
-  pembuka: 'Dengan memohon rahmat dan ridha Allah SWT, kami mengharap kehadiran Bapak/Ibu/Saudara untuk bersama-sama membaca Surat Yasin dan Tahlil serta mendoakan keluarga kami yang telah berpulang ke rahmatullah, dalam rangka:',
+  pembuka: DEF_TUJUAN.pembuka,
   pengantar: 'Insya Allah akan dilaksanakan pada:',
   tanggal: isoDay(), waktu: "Ba'da Isya (pukul 19.30 WIB) s/d selesai",
-  tempat: 'Kediaman keluarga\nJl. Melati No. 12, RT 03/RW 05, Bandung', acara: 'Pembacaan Surat Yasin, Tahlil & Doa bersama',
-  penutup: 'Merupakan suatu kehormatan bagi kami apabila Bapak/Ibu/Saudara berkenan hadir dan turut mendoakan. Atas kehadiran dan doanya kami ucapkan terima kasih. Jazakumullah khairan katsiran.',
+  tempat: 'Kediaman keluarga\nJl. Melati No. 12, RT 03/RW 05, Bandung', acara: DEF_TUJUAN.acara,
+  penutup: DEF_TUJUAN.penutup,
   wassalam: "Wassalamu'alaikum Wr. Wb.",
   ttdHeading: 'Kami yang berduka,', keluarga: 'Keluarga Besar Alm. H. Ahmad Sudirman',
   anggota: 'Ibu Hj. Siti Aminah (istri)\nBudi Santoso & keluarga\nDewi Lestari & keluarga\nAndi Prasetyo & keluarga',
@@ -139,7 +167,7 @@ export default function UndanganYasinan() {
     <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
         <Link to="/" className="inline-block mb-3 text-sm font-medium text-blue-700">&larr; Kembali ke HK Hub Station</Link>
-        <h1 className="text-2xl font-bold text-center mb-4">Undangan Yasinan & Tahlilan (Lipat 3)</h1>
+        <h1 className="text-2xl font-bold text-center mb-4">Undangan Kirim Doa, Yasinan & Tahlilan (Lipat 3)</h1>
         <ModeTabs canvas={canvas} onChange={setCanvas} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
@@ -174,7 +202,16 @@ export default function UndanganYasinan() {
 
             <section className="space-y-3">
               <h2 className="font-bold">Sampul, Penerima & Doa</h2>
-              <div className="grid sm:grid-cols-2 gap-2">{ta('judul', 'Judul sampul')}{ta('subjudul', 'Subjudul sampul')}</div>
+              <Field label="Tujuan undangan (mengisi teks di bawah, tetap bisa diubah)">
+                <select className={inputCls} value="" onChange={(e) => {
+                  const p = TUJUAN.find((x) => x.id === e.target.value);
+                  if (p) setF((v) => ({ ...v, subjudul: p.subjudul, acara: p.acara, pembuka: p.pembuka, penutup: p.penutup }));
+                }}>
+                  <option value="">Pilih tujuan: {TUJUAN.map((x) => x.label).join(', ')}…</option>
+                  {TUJUAN.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
+                </select>
+              </Field>
+              <div className="grid sm:grid-cols-2 gap-2">{ta('judul', 'Judul sampul')}{ta('subjudul', 'Tujuan / subjudul sampul (bebas)')}</div>
               {ta('kepada', 'Kepada Yth. (kosongkan = kotak putih di sampul ditulis bolpoin)', 2)}
               {ta('catatan', 'Catatan kecil (mis. mohon maaf salah nama/gelar)', 2)}
               {ta('doaArab', 'Doa (teks Arab)', 2)}

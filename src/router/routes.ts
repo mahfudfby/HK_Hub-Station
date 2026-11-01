@@ -210,7 +210,7 @@ export const routes = [
     path: '/undangan-yasinan/*',
     cat: 'warga',
     component: lazy(() => import('../pages/undangan-yasinan')),
-    title: 'Undangan Yasinan & Tahlilan (Lipat 3)',
-    desc: 'Undangan tahlil & Yasin lipat 3 untuk peringatan 3/7/40/100/1000 hari atau haul, sisi luar & dalam siap cetak bolak-balik.',
+    title: 'Undangan Kirim Doa, Yasinan & Tahlilan (Lipat 3)',
+    desc: 'Undangan kirim doa, tahlil, Yasin, khataman atau haul lipat 3 dalam 1 halaman, dengan kotak penerima untuk ditulis tangan (siap fotokopi).',
   },
 ];
