@@ -11,6 +11,17 @@ const UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/ima
 
 export type UploadResult = { url: string; publicId: string };
 
+// Folder kategori galeri ditentukan dari KOLOM FORM tempat gambar diunggah (bukan nama file):
+// kolom logo → logo, kolom stempel/cap → stempel, kolom tanda tangan (ttd…, signature) → tanda-tangan.
+// api/cloudinary-list.ts membaca folder ini untuk mengelompokkan galeri.
+export function galleryFolder(fieldKey: string, source: string): string {
+  const k = fieldKey.toLowerCase();
+  const kategori = /logo/.test(k) ? 'logo' : /stempel|cap/.test(k) ? 'stempel' : /ttd|sign|tanda/.test(k) ? 'tanda-tangan' : 'lainnya';
+  return `hk-hub-station/${kategori}/${source}`;
+}
+console.assert(galleryFolder('ttdRt', 'data-user') === 'hk-hub-station/tanda-tangan/data-user' && galleryFolder('managerSignature', 'x') === 'hk-hub-station/tanda-tangan/x'
+  && galleryFolder('stempelRt', 'x') === 'hk-hub-station/stempel/x' && galleryFolder('logoBase64', 'x') === 'hk-hub-station/logo/x' && galleryFolder('foto', 'x') === 'hk-hub-station/lainnya/x', 'galleryFolder');
+
 async function uploadSigned(file: Blob, folder: string): Promise<UploadResult> {
   const timestamp = Math.floor(Date.now() / 1000);
   const signRes = await fetch('/api/cloudinary-sign', {

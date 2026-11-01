@@ -7,7 +7,7 @@ import AutoTextarea from '../../shared/components/AutoTextarea';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import QrisCard from '../../shared/components/QrisCard';
-import { uploadImage } from '../../shared/lib/cloudinary';
+import { galleryFolder, uploadImage } from '../../shared/lib/cloudinary';
 import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import { printImage } from '../../shared/lib/printImage';
 import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
@@ -911,7 +911,7 @@ export default function SlipGaji() {
       const { dataUrl, blob } = await resizeImage(file, maxW, maxH);
       setter(dataUrl); // pratinjau instan (lokal)
       try {
-        const { url } = await uploadImage(blob, `hk-hub-station/slip-gaji/${folder}`); // Cloudinary = penyimpanan utama
+        const { url } = await uploadImage(blob, galleryFolder(folder, 'slip-gaji')); // Cloudinary = penyimpanan utama
         setter(url);
         pushToast('success', `${label} berhasil diunggah ke Cloudinary.`);
       } catch (cloudErr) {
