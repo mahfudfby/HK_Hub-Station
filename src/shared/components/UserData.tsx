@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import FormSection from './FormSection';
 import { galleryFolder, uploadImage } from '../lib/cloudinary';
-import SharedGallery, { IMAGE_LABEL as LABEL } from './SharedGallery';
+import SharedGallery, { GaleriLipat, IMAGE_LABEL as LABEL } from './SharedGallery';
 
 // "Data User": simpan data umum (nama usaha, alamat, logo, tanda tangan) dengan nama, lalu pakai lagi dari dropdown
 // supaya pengguna cukup mengisi data transaksi. Terpisah dari Template bawaan (gaya): ganti template, Data User tetap menempel.
@@ -143,10 +143,9 @@ export default function UserData({ storageKey, keys, data, onApply }: {
       </div>
       {/* Galeri Foto per kategori (Logo / Tanda tangan / Stempel / Lainnya), selalu tampil */}
       {keys.some((k) => /logo|foto|ttd|sign|stempel/i.test(k)) && (
-        <div className="space-y-2 rounded-xl border border-gray-200 bg-white p-3">
-          <p className="text-sm font-bold text-gray-800">Galeri Foto</p>
+        <GaleriLipat className="rounded-xl border border-gray-200 bg-white p-3">
           <SharedGallery showEmpty keys={keys} data={data} onApply={onApply} onPicked={setMsg} />
-        </div>
+        </GaleriLipat>
       )}
       {msg && <p className={`text-xs ${msg.includes('terhapus dari Cloudinary') ? 'font-bold text-red-700' : 'text-gray-700'}`} role="status">{msg}</p>}
     </FormSection>

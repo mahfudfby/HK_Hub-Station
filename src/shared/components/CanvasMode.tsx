@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FileText, Palette } from 'lucide-react';
 import FormSection from './FormSection';
+import { GaleriLipat } from './SharedGallery';
 
 // Setiap menu punya dua halaman:
 // - "Isi Formulir": isian + preview dokumen
@@ -52,10 +53,7 @@ export function CanvasPanel({ tampilan, galeri, unduh }: { tampilan?: ReactNode;
         </FormSection>
       )}
       {galeri && (
-        <section className="space-y-2">
-          <h2 className="font-bold">Galeri Foto</h2>
-          {galeri}
-        </section>
+        <GaleriLipat>{galeri}</GaleriLipat>
       )}
     </>
   );

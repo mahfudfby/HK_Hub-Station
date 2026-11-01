@@ -8,7 +8,7 @@ import { Toast } from '../../shared/components/Feedback';
 import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
 import BgToggle from '../../shared/components/BgToggle';
-import SharedGallery from '../../shared/components/SharedGallery';
+import SharedGallery, { GaleriLipat } from '../../shared/components/SharedGallery';
 import { TextSizeSlider, useFitScale, ScaleBox } from '../../shared/components/TextScale';
 import { PaperPicker, PAPERS, paperOf, orient, mmToPx } from '../../shared/components/LetterKit';
 import { useBgRemoved } from '../../shared/lib/removeBg';
@@ -399,6 +399,7 @@ const App = () => {
     const [logoBg, setLogoBg] = useState(true); // Hapus BG logo aktif dari awal
     const [isAiGenerating, setIsAiGenerating] = useState(false);
     const [isLibReady, setIsLibReady] = useState(false);
+    const [galeriLogo, setGaleriLogo] = useState({ url: '', b64: '' }); // logo terpasang dari galeri bersama
     const [canvas, setCanvas] = useCanvasMode();
     // Gaya Nota = tampilan visual struk (lokal per perangkat), terpisah dari Template SPBU di Firestore
     const [gayaNota, setGayaNota] = useState(() => { try { return localStorage.getItem(GAYA_NOTA_KEY) || 'klasik'; } catch { return 'klasik'; } });
@@ -638,8 +639,10 @@ const App = () => {
             const gray = await resizeToBase64(src, LOGO_MAX_WIDTH);
             setCurrentSpbu(prev => ({ ...prev, logoBase64: gray }));
             displayFeedback('Logo dipilih. Jangan lupa klik Simpan.', 'success');
+            return gray;
         } catch {
             displayFeedback('Logo gagal dimuat.', 'error');
+            return null;
         }
     };
 
@@ -1146,7 +1149,19 @@ const App = () => {
                     </>
                 )}
                 <p className="text-sm font-medium text-gray-700 mt-3 mb-1">Galeri Bersama (Cloudinary)</p>
-                <SharedGallery showEmpty keys={['logo']} data={{ logo: currentSpbu.logoBase64 }} onApply={(u) => u.logo && handleReuseLogo(u.logo)} />
+                {/* Logo galeri diubah jadi hitam-putih, jadi link asalnya dicatat agar galeri tahu foto mana yang terpasang (klik lagi = lepas) */}
+                <SharedGallery showEmpty keys={['logo']}
+                    data={{ logo: galeriLogo.b64 && galeriLogo.b64 === currentSpbu.logoBase64 ? galeriLogo.url : currentSpbu.logoBase64 }}
+                    onApply={async (u) => {
+                        if (u.logo) {
+                            const b64 = await handleReuseLogo(u.logo);
+                            if (b64) setGaleriLogo({ url: u.logo, b64 });
+                        } else {
+                            setCurrentSpbu(prev => ({ ...prev, logoBase64: null }));
+                            setGaleriLogo({ url: '', b64: '' });
+                            displayFeedback('Logo dilepas.', 'info');
+                        }
+                    }} />
             </div>
         </>
     );
@@ -1309,10 +1324,7 @@ const App = () => {
                         </div>
 
                         {/* Galeri Foto per kategori juga di form Edit Data User (sama dengan di Edit Canvas) */}
-                        <div className="space-y-2 rounded-xl border border-gray-200 p-3">
-                            <p className="text-sm font-bold text-gray-800">Galeri Foto</p>
-                            {galeriIsi}
-                        </div>
+                        <GaleriLipat className="rounded-xl border border-gray-200 p-3">{galeriIsi}</GaleriLipat>
 
                         <div>
                             <label className="text-sm block">Template Alamat</label>
