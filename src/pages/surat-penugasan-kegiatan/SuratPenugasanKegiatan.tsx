@@ -321,7 +321,7 @@ export default function SuratPenugasanKegiatan() {
   return (
     <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        <Link to="/" className="inline-block mb-3 text-sm font-medium text-blue-700">&larr; Kembali ke HK Hub Station</Link>
+        <Link to="/" className="btn-home mb-3">&larr; HK-HUB Menu Utama</Link>
         <h1 className="text-2xl font-bold text-center mb-4">Surat Penugasan Kegiatan</h1>
         <ModeTabs canvas={canvas} onChange={setCanvas} />
 

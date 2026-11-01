@@ -1022,7 +1022,7 @@ export default function SlipGaji() {
       <ToastStack toasts={toasts} onClose={removeToast} />
 
       <div className="max-w-7xl mx-auto">
-        <Link to="/" className="inline-block mb-3 text-sm font-medium text-blue-700 hover:text-blue-900">&larr; Kembali ke HK Hub Station</Link>
+        <Link to="/" className="btn-home mb-3">&larr; HK-HUB Menu Utama</Link>
         <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
           Aplikasi Pembuat Slip Gaji Terintegrasi (BPJS &amp; PPh 21)
         </h1>

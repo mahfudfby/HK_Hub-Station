@@ -1,20 +1,20 @@
 // Vercel Serverless Function — daftar gambar HK Hub di Cloudinary (galeri bersama untuk semua pengguna).
 // Gambar yang dihapus pemilik di Cloudinary otomatis hilang dari daftar ini.
-// Env wajib di Vercel: CLOUDINARY_API_SECRET. Hanya gambar di folder hk-hub-station/** yang ikut:
-// akun Cloudinary ini dipakai bersama situs portofolio, jadi gambar di folder akar sengaja tidak ditampilkan.
+// Env wajib di Vercel: CLOUDINARY_API_SECRET. Akun ini khusus HK Hub, jadi SEMUA gambar ikut ditampilkan;
+// kategori ditebak dari nama folder + nama file (mis. hk-hub-station/data-user/logo, stempel_rt.png).
 const CLOUD = process.env.VITE_CLOUDINARY_CLOUD_NAME || 'tdja56xe';
 const KEY = process.env.VITE_CLOUDINARY_API_KEY || '493779522596543';
-const ROOT = 'hk-hub-station';
 const MAX_PAGES = 6; // 6 × 500 = 3000 gambar
 
-// Kategori dari nama folder: data-user/logo, slip-gaji/ttd-manager, dst.
-export function kindOf(folder: string): string {
-  const f = folder.toLowerCase();
+// Kategori dari jalur folder/nama file: data-user/logo, slip-gaji/ttd-manager, stempel_rt, dst.
+export function kindOf(path: string): string {
+  const f = path.toLowerCase();
   if (/logo/.test(f)) return 'logo';
   if (/stempel|cap\b/.test(f)) return 'stempel';
   if (/ttd|sign|tanda/.test(f)) return 'ttd';
   return '';
 }
+console.assert(kindOf('hk-hub-station/data-user/logo/x') === 'logo' && kindOf('Stempel RT') === 'stempel' && kindOf('hk-hub-station/slip-gaji/ttd-manager') === 'ttd' && kindOf('hk-hub-station/foto') === '', 'kindOf');
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
@@ -41,11 +41,11 @@ export default async function handler(req: any, res: any) {
       const pidFolder = pid.includes('/') ? pid.slice(0, pid.lastIndexOf('/')) : '';
       // asset_folder kosong (unggahan lama masuk akar): pakai jalur di public_id bila ada
       const folder = String(x.asset_folder || x.folder || pidFolder);
-      return { x, folder };
+      const name = String(x.display_name || pid.slice(pid.lastIndexOf('/') + 1));
+      return { x, folder, name };
     })
-    .filter(({ folder }) => folder === ROOT || folder.startsWith(ROOT + '/'))
     .sort((a, b) => String(b.x.created_at).localeCompare(String(a.x.created_at)))
-    .map(({ x, folder }) => ({ url: x.secure_url, kind: kindOf(folder.slice(ROOT.length + 1)), folder }));
+    .map(({ x, folder, name }) => ({ url: x.secure_url, kind: kindOf(`${folder}/${name}`), folder }));
   // Cache di edge 60 dtk: batasi kuota Admin API; gambar terhapus hilang paling lambat 1 menit
   res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=60');
   res.status(200).json({ images });

@@ -236,7 +236,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
     <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-          <Link to="/" className="text-sm font-medium text-blue-700">&larr; Kembali ke HK Hub Station</Link>
+          <Link to="/" className="btn-home">&larr; HK-HUB Menu Utama</Link>
           <div className="text-sm text-gray-600">Login sebagai {user.email}</div>
         </div>
         <h1 className="text-2xl font-bold text-center mb-4">Surat Keterangan Sehat</h1>

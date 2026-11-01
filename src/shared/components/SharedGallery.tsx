@@ -7,9 +7,9 @@ export type SharedImage = { url: string; kind: string; folder?: string }; // kin
 export const IMAGE_LABEL: Record<string, string> = { logo: 'Logo', ttd: 'Tanda tangan', stempel: 'Stempel', managerSignature: 'Tanda tangan manajer', signature: 'Tanda tangan' };
 
 const CATS = [
-  { kind: 'logo', label: 'Logo' },
-  { kind: 'ttd', label: 'Tanda tangan' },
   { kind: 'stempel', label: 'Stempel' },
+  { kind: 'logo', label: 'Logo' },
+  { kind: 'ttd', label: 'Tanda Tangan' },
   { kind: '', label: 'Lainnya' },
 ];
 // Kategori sebuah kolom gambar menu: ttdRt/ttdRw/managerSignature → ttd, stempelRt → stempel, dst.
@@ -37,6 +37,7 @@ export default function SharedGallery({ keys, data, onApply, onPicked, showEmpty
   const [shared, setShared] = useState<SharedImage[] | null>(null);
   const imageKeys = keys.filter(isImageKey);
   const [target, setTarget] = useState(''); // '' = otomatis sesuai kategori gambar
+  const [ciut, setCiut] = useState<Record<string, boolean>>({}); // kategori yang diciutkan
   useEffect(() => {
     let on = true;
     if (imageKeys.length) loadShared().then((v) => on && setShared(v));
@@ -65,10 +66,17 @@ export default function SharedGallery({ keys, data, onApply, onPicked, showEmpty
           ))}
         </div>
       )}
-      {groups.map((g) => (
-        <div key={g.kind || 'lain'}>
-          <p className="text-xs font-bold text-gray-700">{g.label} ({g.imgs.length})</p>
-          <div className="mt-1 flex gap-2 overflow-x-auto pb-1">
+      {groups.map((g) => {
+        const id = g.kind || 'lain';
+        const buka = !ciut[id];
+        return (
+        <div key={id} className="rounded-lg border border-gray-200">
+          <button type="button" aria-expanded={buka} aria-controls={`galeri-${id}`} onClick={() => setCiut((c) => ({ ...c, [id]: buka }))}
+            className="flex min-h-[44px] w-full items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 text-left text-sm font-bold text-gray-700 hover:bg-gray-100">
+            <span>{g.label} ({g.imgs.length})</span>
+            <span aria-hidden="true" className={`transition-transform ${buka ? 'rotate-180' : ''}`}>▾</span>
+          </button>
+          {buka && <div id={`galeri-${id}`} className="flex flex-wrap gap-2 p-2">
             {g.imgs.map((img) => {
               const k = keyFor(g.kind);
               return (
@@ -79,9 +87,10 @@ export default function SharedGallery({ keys, data, onApply, onPicked, showEmpty
                 </button>
               );
             })}
-          </div>
+          </div>}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
