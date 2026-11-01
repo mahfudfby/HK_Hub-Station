@@ -1,28 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AutoTextarea from '../../shared/components/AutoTextarea';
-import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
+import FitPreview from '../../shared/components/FitPreview';
 import PositionPad, { getOffset, type Offsets } from '../../shared/components/PositionPad';
 import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/CanvasMode';
 import SharedGallery from '../../shared/components/SharedGallery';
 import UserData from '../../shared/components/UserData';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, PaperPicker, exportPage, inputCls, letterPage, type ExportKind, type Notify, type Paper } from '../../shared/components/LetterKit';
+import { ExportButton, Field, ImageUpload, PaperPicker, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { useBgRemoved } from '../../shared/lib/removeBg';
-import { fontsReady } from '../../shared/lib/fonts';
-import { saveFile } from '../../shared/lib/saveFile';
-import { isStaleChunkError, reloadForNewVersion } from '../../shared/lib/staleChunk';
-import { Sisi, useTplFonts, type Isi } from './Lipat3';
+import { Lembar, useTplFonts, type Isi } from './Lipat3';
 import { TEMPLATES, getTpl } from './templates';
 
-// Undangan Yasinan & Tahlilan lipat 3 (A4 landscape → 3 panel ±99 mm). Dua sisi: luar & dalam.
+// Undangan Yasinan & Tahlilan lipat 3 dalam 1 halaman. Kertas landscape = 3 kolom tegak; kertas vertikal = 3 baris mendatar.
 // Menu berdiri sendiri; 20 template sendiri (templates.ts), bukan LetterLayouts karena bentuknya brosur lipat.
 
 // ============================================================
 // SECTION: Data
 // ============================================================
-type Side = 'luar' | 'dalam';
 type Form = Omit<Isi, 'foto' | 'fotoOff' | 'ttd' | 'ttdOff'> & {
   gaya: string; paper: string; landscape: boolean; skala: number; posisi: Offsets;
   logo: string; ttd: string; // logo = foto almarhum/ah (slot gambar bersama Galeri/Data User)
@@ -60,29 +56,6 @@ const DEFAULT = makeDefault();
 // Data User: identitas almarhum/ah & keluarga + gambar (bisa dipakai ulang untuk 3/7/40/100 hari), bukan template/kertas
 const USER_KEYS = ['logo', 'ttd', 'posisi', 'jk', 'nama', 'nasab', 'wafat', 'keluarga', 'anggota', 'ttdHeading', 'alamat', 'tempat', 'turut'] as const;
 
-// PDF berisi 2 halaman (sisi luar lalu sisi dalam) untuk cetak bolak-balik. Sisi tersembunyi dimunculkan di klon html2canvas.
-async function exportPdfBoth(pages: HTMLElement[], fileName: string, paper: Paper, scale = 3) {
-  await fontsReady();
-  const { default: html2canvas } = await import('html2canvas');
-  const { jsPDF } = await import('jspdf');
-  const orientation = paper.w > paper.h ? 'landscape' : 'portrait';
-  const pdf = new jsPDF({ unit: 'mm', format: [paper.w, paper.h], orientation });
-  for (const [i, page] of pages.entries()) {
-    const width = page.offsetWidth;
-    const height = page.offsetHeight;
-    if (page.scrollHeight > height + 1) throw new Error('isi melebihi 1 halaman. Kurangi isinya atau pilih kertas lebih besar.');
-    const canvas = await html2canvas(page, {
-      scale, width, height, windowWidth: 1280, backgroundColor: '#fff', useCORS: true,
-      onclone: (doc) => {
-        unfitPreview(doc);
-        doc.querySelectorAll<HTMLElement>('[data-sisi]').forEach((el) => (el.style.visibility = 'visible'));
-      },
-    });
-    if (i) pdf.addPage([paper.w, paper.h], orientation);
-    pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, paper.w, paper.h);
-  }
-  saveFile(pdf.output('blob'), `${fileName}.pdf`);
-}
 
 
 // ============================================================
@@ -124,54 +97,21 @@ export default function UndanganYasinan() {
     notify('info', 'Semua isian dikembalikan ke bawaan.');
   };
 
-  const [side, setSide] = useState<Side>('luar');
-  const luarRef = useRef<HTMLDivElement>(null);
-  const dalamRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
   const t = getTpl(f.gaya);
   useTplFonts(t);
   const pg = letterPage(f.paper, f.landscape);
-  const deps = [f, foto.src, ttd.src, side];
-  const kL = useFitScale(f.skala / 100, () => luarRef.current?.firstElementChild as HTMLElement, true, deps);
-  const kD = useFitScale(f.skala / 100, () => dalamRef.current?.firstElementChild as HTMLElement, true, deps);
+  const k = useFitScale(f.skala / 100, () => pageRef.current?.firstElementChild as HTMLElement, true, [f, foto.src, ttd.src]);
   const pad = 16 * pg.f * 0.86; // margin fisik tetap, tidak ikut slider teks
   const isi: Isi = { ...f, foto: foto.src, fotoOff: getOffset(f.posisi, 'logo'), ttd: ttd.src, ttdOff: getOffset(f.posisi, 'ttd') };
   const fileName = `undangan-yasinan-${(f.nama || 'undangan').replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase()}`;
-
-  const [exporting, setExporting] = useState<'' | ExportKind>('');
-  const run = async (kind: ExportKind) => {
-    setExporting(kind);
-    notify('loading', kind === 'Print' ? 'Menyiapkan cetakan…' : `Membuat file ${kind}…`);
-    const name = kind === 'PDF' ? fileName : `${fileName}-${side}`;
-    try {
-      if (kind === 'PDF') await exportPdfBoth([luarRef.current!, dalamRef.current!], name, pg.paper);
-      else await exportPage((side === 'luar' ? luarRef : dalamRef).current!, kind, name, pg.paper);
-      notify('success', kind === 'Print' ? 'Jendela cetak dibuka.' : `${name}.${kind.toLowerCase()} berhasil diunduh.`);
-    } catch (err: any) {
-      if (isStaleChunkError(err) && reloadForNewVersion()) {
-        notify('info', 'Aplikasi baru saja diperbarui. Memuat ulang… lalu tekan Unduh sekali lagi.');
-        return;
-      }
-      notify('error', `Gagal ${kind === 'Print' ? 'mencetak' : `membuat ${kind}`}: ${err?.message || 'proses render gagal.'}`);
-    } finally {
-      setExporting('');
-    }
-  };
+  const { exporting, run } = useLetterExport(() => pageRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
 
   const [geser, setGeser] = useState('logo');
   const [canvas, setCanvas] = useCanvasMode();
-  const sideToggle = (
-    <div className="flex gap-2" role="radiogroup" aria-label="Sisi kertas">
-      {(['luar', 'dalam'] as const).map((s) => (
-        <button key={s} type="button" role="radio" aria-checked={side === s} onClick={() => setSide(s)}
-          className={`flex-1 px-3 rounded-lg border text-sm font-medium min-h-[44px] ${side === s ? 'bg-emerald-700 border-emerald-700 text-white' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
-          {s === 'luar' ? 'Sisi Luar (sampul)' : 'Sisi Dalam (isi)'}
-        </button>
-      ))}
-    </div>
-  );
   const tampilan = (
     <>
-      <TextSizeSlider value={f.skala} effective={Math.min(kL, kD)} onChange={(v) => set('skala', v)} />
+      <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <PositionPad targets={[{ id: 'logo', label: 'Foto almarhum/ah' }, { id: 'ttd', label: 'Tanda tangan' }]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
       <Field label="Template undangan">
@@ -180,7 +120,7 @@ export default function UndanganYasinan() {
         </select>
       </Field>
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
-      <p className="text-xs text-gray-600">Kertas dibagi 3 panel sama lebar. Cetak bolak-balik (balik di sisi pendek), lalu lipat mengikuti garis titik-titik.</p>
+      <p className="text-xs text-gray-600">Satu halaman dibagi 3 panel. Landscape: 3 kolom tegak. Vertikal: 3 baris mendatar (isi ditata melebar). Lipat mengikuti garis titik-titik.</p>
     </>
   );
   const unduh = (
@@ -189,7 +129,6 @@ export default function UndanganYasinan() {
       <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
       <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
       <button onClick={reset} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
-      <p className="w-full text-xs text-gray-600">PDF berisi 2 halaman (luar + dalam). PNG & Print memakai sisi yang sedang tampil.</p>
     </>
   );
   const ta = (key: keyof Form, label: string, rows = 1) => (
@@ -234,11 +173,11 @@ export default function UndanganYasinan() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="font-bold">Sisi Luar</h2>
+              <h2 className="font-bold">Sampul, Penerima & Doa</h2>
               <div className="grid sm:grid-cols-2 gap-2">{ta('judul', 'Judul sampul')}{ta('subjudul', 'Subjudul sampul')}</div>
               {ta('kepada', 'Kepada Yth. (kosongkan untuk titik-titik ditulis tangan)', 2)}
               {ta('diTempat', 'Baris "di Tempat"')}
-              {ta('catatan', 'Catatan di panel penerima', 2)}
+              {ta('catatan', 'Catatan kecil (mis. mohon maaf salah nama/gelar)', 2)}
               {ta('doaArab', 'Doa (teks Arab)', 2)}
               {ta('doaArti', 'Arti doa', 2)}
               {ta('turut', 'Turut mengundang (satu per baris)', 3)}
@@ -246,7 +185,7 @@ export default function UndanganYasinan() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="font-bold">Sisi Dalam</h2>
+              <h2 className="font-bold">Isi Undangan</h2>
               {ta('salam', 'Salam pembuka')}
               {ta('pembuka', 'Kalimat pembuka', 3)}
               {ta('pengantar', 'Pengantar waktu & tempat')}
@@ -264,20 +203,11 @@ export default function UndanganYasinan() {
             </>)}
           </div>
 
-          <div className="space-y-3 min-w-0">
-            {sideToggle}
-            <FitPreview>
-              <div className="relative w-max shadow-lg">
-                {(['luar', 'dalam'] as const).map((s) => (
-                  // Sisi lain tetap ditata (tersembunyi) agar ukurannya terukur & bisa ikut PDF 2 halaman
-                  <div key={s} ref={s === 'luar' ? luarRef : dalamRef} data-sisi={s} aria-hidden={side !== s}
-                    style={side === s ? undefined : { position: 'absolute', top: 0, left: 0, visibility: 'hidden' }}>
-                    <Sisi t={t} d={isi} sisi={s} k={(s === 'luar' ? kL : kD) * pg.f * 0.86} pad={pad} W={pg.W} H={pg.H} />
-                  </div>
-                ))}
-              </div>
-            </FitPreview>
-          </div>
+          <FitPreview>
+            <div ref={pageRef} className="w-max shadow-lg">
+              <Lembar t={t} d={isi} k={k * pg.f * 0.86} pad={pad} W={pg.W} H={pg.H} />
+            </div>
+          </FitPreview>
         </div>
 
       </div>
