@@ -35,6 +35,7 @@ type Form = {
   ttdHeading: string; ttd: string;
   rtNama: string; ttdRt: string; stempelRt: string;
   rwNama: string; ttdRw: string; stempelRw: string;
+  pakaiRt: boolean; pakaiRw: boolean; pakaiOrtu: boolean; // tanda tangan yang ditampilkan (bebas: 1, 2 atau 3)
 };
 
 const STORAGE_KEY = 'surat-izin-sekolah:v1';
@@ -58,6 +59,7 @@ const makeDefault = (): Form => ({
   ttdHeading: 'Hormat kami,', ttd: '',
   rtNama: 'H. Asep Suryana', ttdRt: '', stempelRt: '',
   rwNama: 'Drs. Dedi Kurniawan', ttdRw: '', stempelRw: '',
+  pakaiRt: true, pakaiRw: true, pakaiOrtu: true,
 });
 
 // Data User: identitas kop RT/RW, orang tua & pengurus RT/RW beserta gambar (bukan isi surat)
@@ -106,10 +108,10 @@ function buildDoc(f: Form): LayoutDoc {
     ),
     // "Mengetahui," ditulis di heading agar tampil di semua tata letak
     signers: [
-      { heading: `Mengetahui,\nKetua RT ${f.rt}`, name: f.rtNama, ttd: f.ttdRt, stempel: f.stempelRt, ttdOffset: getOffset(f.posisi, 'ttdRt'), stempelOffset: getOffset(f.posisi, 'stempelRt') },
-      { heading: `Mengetahui,\nKetua RW ${f.rw}`, name: f.rwNama, ttd: f.ttdRw, stempel: f.stempelRw, ttdOffset: getOffset(f.posisi, 'ttdRw'), stempelOffset: getOffset(f.posisi, 'stempelRw') },
-      { heading: f.ttdHeading, role: 'Orang Tua/Wali Siswa', name: f.ortuNama, ttd: f.ttd, ttdOffset: getOffset(f.posisi, 'ttd'), main: true },
-    ],
+      f.pakaiRt && { heading: `Mengetahui,\nKetua RT ${f.rt}`, name: f.rtNama, ttd: f.ttdRt, stempel: f.stempelRt, ttdOffset: getOffset(f.posisi, 'ttdRt'), stempelOffset: getOffset(f.posisi, 'stempelRt') },
+      f.pakaiRw && { heading: `Mengetahui,\nKetua RW ${f.rw}`, name: f.rwNama, ttd: f.ttdRw, stempel: f.stempelRw, ttdOffset: getOffset(f.posisi, 'ttdRw'), stempelOffset: getOffset(f.posisi, 'stempelRw') },
+      f.pakaiOrtu && { heading: f.ttdHeading, role: 'Orang Tua/Wali Siswa', name: f.ortuNama, ttd: f.ttd, ttdOffset: getOffset(f.posisi, 'ttd'), main: true },
+    ].filter((x): x is Exclude<typeof x, false> => !!x),
   };
 }
 
@@ -275,14 +277,32 @@ export default function SuratIzinSekolah() {
 
             <section className="space-y-3">
               <h2 className="font-bold">Penanda Tangan</h2>
-              {text('ttdHeading', 'Salam penutup orang tua')}
-              <ImageUpload label="Tanda tangan orang tua/wali" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
-              {text('rtNama', `Nama Ketua RT ${f.rt}`)}
-              <ImageUpload label="Tanda tangan Ketua RT" value={f.ttdRt} onChange={(v) => set('ttdRt', v)} notify={notify} {...bgFor('ttdRt', ttdRt)} />
-              <ImageUpload label="Stempel RT" value={f.stempelRt} onChange={(v) => set('stempelRt', v)} notify={notify} {...bgFor('stempelRt', stempelRt)} />
-              {text('rwNama', `Nama Ketua RW ${f.rw}`)}
-              <ImageUpload label="Tanda tangan Ketua RW" value={f.ttdRw} onChange={(v) => set('ttdRw', v)} notify={notify} {...bgFor('ttdRw', ttdRw)} />
-              <ImageUpload label="Stempel RW" value={f.stempelRw} onChange={(v) => set('stempelRw', v)} notify={notify} {...bgFor('stempelRw', stempelRw)} />
+              <p className="text-sm text-gray-700">Tampilkan tanda tangan (boleh ketiganya, dua, atau salah satu):</p>
+              <div className="flex flex-wrap gap-x-4">
+                {([['pakaiRt', `Ketua RT ${f.rt}`], ['pakaiRw', `Ketua RW ${f.rw}`], ['pakaiOrtu', 'Orang Tua/Wali']] as const).map(([key, label]) => (
+                  <button key={key} type="button" role="switch" aria-checked={f[key]} onClick={() => set(key, !f[key])}
+                    className="flex items-center gap-2 min-h-[44px] text-sm font-medium text-gray-700">
+                    <span className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${f[key] ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                      <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${f[key] ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+                    </span>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {f.pakaiOrtu && <>
+                {text('ttdHeading', 'Salam penutup orang tua')}
+                <ImageUpload label="Tanda tangan orang tua/wali" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
+              </>}
+              {f.pakaiRt && <>
+                {text('rtNama', `Nama Ketua RT ${f.rt}`)}
+                <ImageUpload label="Tanda tangan Ketua RT" value={f.ttdRt} onChange={(v) => set('ttdRt', v)} notify={notify} {...bgFor('ttdRt', ttdRt)} />
+                <ImageUpload label="Stempel RT" value={f.stempelRt} onChange={(v) => set('stempelRt', v)} notify={notify} {...bgFor('stempelRt', stempelRt)} />
+              </>}
+              {f.pakaiRw && <>
+                {text('rwNama', `Nama Ketua RW ${f.rw}`)}
+                <ImageUpload label="Tanda tangan Ketua RW" value={f.ttdRw} onChange={(v) => set('ttdRw', v)} notify={notify} {...bgFor('ttdRw', ttdRw)} />
+                <ImageUpload label="Stempel RW" value={f.stempelRw} onChange={(v) => set('stempelRw', v)} notify={notify} {...bgFor('stempelRw', stempelRw)} />
+              </>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </section>
             </>)}
