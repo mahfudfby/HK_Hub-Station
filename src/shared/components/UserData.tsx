@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import FormSection from './FormSection';
-import { uploadImage } from '../lib/cloudinary';
+import { galleryFolder, uploadImage } from '../lib/cloudinary';
 import SharedGallery, { IMAGE_LABEL as LABEL } from './SharedGallery';
 
 // "Data User": simpan data umum (nama usaha, alamat, logo, tanda tangan) dengan nama, lalu pakai lagi dari dropdown
@@ -86,7 +86,7 @@ export default function UserData({ storageKey, keys, data, onApply }: {
       for (const k of imgs) {
         try {
           const blob = await (await fetch(picked[k] as string)).blob();
-          urls[k] = (await uploadImage(blob, `hk-hub-station/data-user/${k}`)).url; // subfolder = jenis gambar, dipakai galeri
+          urls[k] = (await uploadImage(blob, galleryFolder(k, 'data-user'))).url; // folder kategori dari kolom form, dipakai galeri
         } catch {
           failed++; // tetap disimpan di perangkat sebagai cadangan
         }
