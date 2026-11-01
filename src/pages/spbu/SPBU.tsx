@@ -2,6 +2,7 @@
 import AutoTextarea from '../../shared/components/AutoTextarea';
 import { firebaseConfig } from '../../shared/lib/firebase';
 import QrisCard from '../../shared/components/QrisCard';
+import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/CanvasMode';
 import { Toast } from '../../shared/components/Feedback';
 import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
@@ -333,6 +334,7 @@ const App = () => {
     const [logoBg, setLogoBg] = useState(false);
     const [isAiGenerating, setIsAiGenerating] = useState(false);
     const [isLibReady, setIsLibReady] = useState(false);
+    const [canvas, setCanvas] = useCanvasMode();
     // Gaya Nota = tampilan visual struk (lokal per perangkat), terpisah dari Template SPBU di Firestore
     const [gayaNota, setGayaNota] = useState(() => { try { return localStorage.getItem(GAYA_NOTA_KEY) || 'klasik'; } catch { return 'klasik'; } });
     const pilihGayaNota = (id) => { setGayaNota(id); try { localStorage.setItem(GAYA_NOTA_KEY, id); } catch { /* mode privat */ } };
@@ -951,6 +953,86 @@ const App = () => {
         );
     }
 
+    // Halaman Edit Canvas: ukuran teks, gaya nota, galeri logo, unduh/cetak (+ preview yang sama)
+    const previewCard = (
+        <div className="mb-6 p-4 bg-white rounded-xl shadow-2xl border-t-4 border-indigo-600">
+            <h2 className="text-xl font-bold mb-3 text-indigo-700">{canvas ? 'Preview' : '3. Preview'}</h2>
+            <div className="bg-gray-100 border border-dashed p-4">
+                <FitPreview>{ReceiptPreviewComponent()}</FitPreview>
+            </div>
+        </div>
+    );
+    const tampilan = (
+        <>
+            <TextSizeSlider value={skala} onChange={pilihSkala} effective={k} />
+            <div>
+                <label htmlFor="gaya-nota" className="block text-sm font-semibold text-gray-700 mb-1">Gaya Nota</label>
+                <select id="gaya-nota" aria-label="Gaya nota" value={gaya.id} onChange={(e) => pilihGayaNota(e.target.value)}
+                    className="w-full p-2 border rounded-lg bg-white">
+                    {GAYA_NOTA.map((g, i) => (
+                        <option key={g.id} value={g.id}>{i + 1}. {g.name} — {g.desc}</option>
+                    ))}
+                </select>
+            </div>
+        </>
+    );
+    const unduh = (
+        <>
+                <button onClick={handleExportImage} disabled={!isLibReady || isProcessing || isAiGenerating}
+                    className={`flex-1 min-w-[140px] p-3 rounded-xl font-bold flex justify-center items-center space-x-1 transition ${!isLibReady || isProcessing || isAiGenerating ? 'bg-green-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white`}>
+                    {isProcessing || !isLibReady ? <div className="spinner mr-2"></div> : 
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>}
+                    <span>Export PNG</span>
+                </button>
+                <button onClick={handlePrintReceipt} disabled={!isLibReady || isProcessing || isAiGenerating}
+                    className={`flex-1 min-w-[140px] p-3 rounded-xl font-bold flex justify-center items-center space-x-1 transition ${!isLibReady || isProcessing || isAiGenerating ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}>
+                    {isProcessing || !isLibReady ? <div className="spinner mr-2"></div> : 
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m0 0h6m-6 0v2a2 2 0 002 2h2a2 2 0 002-2v-2" /></svg>}
+                    <span>Cetak 58mm</span>
+                </button>
+        </>
+    );
+    // Logo hanya tersimpan lewat Simpan Data User, jadi galeri aktif saat sedang Edit Data User / Buat Baru
+    const galeri = uiState === 'view' ? (
+        <p className="text-xs text-gray-600">Untuk mengganti logo, klik <b>Edit Data User</b> atau <b>Buat Baru</b> di Isi Formulir, lalu pilih logo di sini dan klik Simpan Data User.</p>
+    ) : (
+        <>
+            {/* Logo Generik */}
+            <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">Logo Generik (bebas pakai)</label>
+                <div className="grid grid-cols-3 gap-2">
+                    {GENERIC_LOGOS.map(logo => (
+                        <button key={logo.id} type="button" onClick={() => handleGenericLogo(logo)} disabled={isProcessing || isAiGenerating}
+                            aria-label={`Pilih logo ${logo.label}`}
+                            className="border rounded-lg p-1 bg-white hover:border-indigo-500 hover:shadow transition disabled:opacity-50">
+                            <img src={svgToDataUri(logo.svg)} alt={logo.label} className="w-full h-auto" />
+                        </button>
+                    ))}
+                </div>
+                {reusableLogos.length > 0 && (
+                    <>
+                        <p className="text-sm font-medium text-gray-700 mt-3 mb-1">Logo Upload (pakai ulang, hitam-putih)</p>
+                        <div className="grid grid-cols-3 gap-2">
+                            {reusableLogos.map((src, i) => (
+                                <div key={i} className="relative">
+                                    <button type="button" onClick={() => handleReuseLogo(src)} disabled={isProcessing || isAiGenerating}
+                                        aria-label={`Pakai logo upload ${i + 1}`}
+                                        className="w-full h-16 border rounded-lg p-1 bg-white flex items-center justify-center hover:border-indigo-500 transition disabled:opacity-50">
+                                        <img src={src} alt="" className="max-h-full max-w-full object-contain" />
+                                    </button>
+                                    {savedLogos.includes(src) && (
+                                        <button type="button" onClick={() => forgetLogo(src)} aria-label={`Hapus logo upload ${i + 1} dari daftar`} title="Hapus dari daftar"
+                                            className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-red-600 text-white text-sm font-bold leading-none flex items-center justify-center">&times;</button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                )}
+            </div>
+        </>
+    );
+
     return (
         <div className="min-h-screen bg-gray-50 flex justify-center p-4 sm:p-8 font-sans">
             <style jsx="true">{`
@@ -991,6 +1073,26 @@ const App = () => {
                 {/* Feedback Message */}
                 <Toast toast={feedback} onClose={clearFeedback} />
                 
+                <ModeTabs canvas={canvas} onChange={setCanvas} />
+
+                {canvas ? (<>
+                    <div className="mb-6 p-4 bg-white rounded-xl shadow-lg space-y-6">
+                        <CanvasPanel tampilan={tampilan} unduh={unduh} galeri={galeri} />
+                        {/* BAGIAN BARU: Petunjuk Cetak */}
+                        <div className="mt-6 pt-4 border-t border-gray-200 text-sm space-y-2 text-gray-700">
+                            <p className="font-extrabold text-lg text-indigo-700">*** SARAN CETAK YANG BAIK ***</p>
+                            <p>1. Ekspor nota menggunakan tombol **Export PNG** di atas.</p>
+                            <p>2. Unduh Aplikasi **RawBT** atau Aplikasi Sejenis (Cari di Youtube: *Cara Cetak Gambar di Printer Thermal 58mm Bluetooth / Kabel*).</p>
+                            
+                            <p className="font-extrabold text-red-600 mt-4">***** CATATAN PENTING *****</p>
+                            <p className="text-base font-semibold">
+                                Atur Ukuran **Lebar Nota (px)** pada Data User SPBU (Bagian 1) dan otak-atik sendiri karena setiap HP Beda Settingan LEBAR NOTA-nya.
+                            </p>
+                        </div>
+                        {/* AKHIR BAGIAN BARU */}
+                    </div>
+                    {previewCard}
+                </>) : (<>
                 {/* --- Bagian 1: Pilih SPBU --- */}
                 <div className="mb-6 p-4 bg-white rounded-xl shadow-lg">
                     <h2 className="text-xl font-bold mb-3 text-indigo-700">1. Pilih Data User SPBU</h2>
@@ -1081,40 +1183,6 @@ const App = () => {
                                     <button onClick={handleClearLogo} className="text-xs text-red-600 hover:underline" disabled={isProcessing || isAiGenerating}>Hapus Logo</button>
                                 )}
                             </div>
-                        </div>
-
-                        {/* Logo Generik */}
-                        <div>
-                            <label className="text-sm font-medium text-gray-700 block mb-1">Logo Generik (bebas pakai)</label>
-                            <div className="grid grid-cols-3 gap-2">
-                                {GENERIC_LOGOS.map(logo => (
-                                    <button key={logo.id} type="button" onClick={() => handleGenericLogo(logo)} disabled={isProcessing || isAiGenerating}
-                                        aria-label={`Pilih logo ${logo.label}`}
-                                        className="border rounded-lg p-1 bg-white hover:border-indigo-500 hover:shadow transition disabled:opacity-50">
-                                        <img src={svgToDataUri(logo.svg)} alt={logo.label} className="w-full h-auto" />
-                                    </button>
-                                ))}
-                            </div>
-                            {reusableLogos.length > 0 && (
-                                <>
-                                    <p className="text-sm font-medium text-gray-700 mt-3 mb-1">Logo Upload (pakai ulang, hitam-putih)</p>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {reusableLogos.map((src, i) => (
-                                            <div key={i} className="relative">
-                                                <button type="button" onClick={() => handleReuseLogo(src)} disabled={isProcessing || isAiGenerating}
-                                                    aria-label={`Pakai logo upload ${i + 1}`}
-                                                    className="w-full h-16 border rounded-lg p-1 bg-white flex items-center justify-center hover:border-indigo-500 transition disabled:opacity-50">
-                                                    <img src={src} alt="" className="max-h-full max-w-full object-contain" />
-                                                </button>
-                                                {savedLogos.includes(src) && (
-                                                    <button type="button" onClick={() => forgetLogo(src)} aria-label={`Hapus logo upload ${i + 1} dari daftar`} title="Hapus dari daftar"
-                                                        className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-red-600 text-white text-sm font-bold leading-none flex items-center justify-center">&times;</button>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </>
-                            )}
                         </div>
 
                         <div>
@@ -1266,79 +1334,10 @@ const App = () => {
                             </p>
                         </div>
 
-                        {/* Bagian Preview & Aksi */}
-                        <div className="mb-6 p-4 bg-white rounded-xl shadow-2xl border-t-4 border-indigo-600">
-                            <h2 className="text-xl font-bold mb-3 text-indigo-700">3. Preview & Aksi</h2>
-                            {/* Desktop: tombol di atas preview; ponsel: di bawah */}
-                            <div className="hidden lg:flex space-x-3 mb-4">
-                                <button onClick={handleExportImage} disabled={!isLibReady || isProcessing || isAiGenerating}
-                                    className={`flex-1 p-3 rounded-xl font-bold flex justify-center items-center space-x-1 transition ${!isLibReady || isProcessing || isAiGenerating ? 'bg-green-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white`}>
-                                    {isProcessing || !isLibReady ? <div className="spinner mr-2"></div> : 
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>}
-                                    <span>Export PNG</span>
-                                </button>
-                                <button onClick={handlePrintReceipt} disabled={!isLibReady || isProcessing || isAiGenerating}
-                                    className={`flex-1 p-3 rounded-xl font-bold flex justify-center items-center space-x-1 transition ${!isLibReady || isProcessing || isAiGenerating ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}>
-                                    {isProcessing || !isLibReady ? <div className="spinner mr-2"></div> : 
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m0 0h6m-6 0v2a2 2 0 002 2h2a2 2 0 002-2v-2" /></svg>}
-                                    <span>Cetak 58mm</span>
-                                </button>
-                            </div>
-                            <div className="hidden lg:block"><div className="mb-3"><TextSizeSlider value={skala} onChange={pilihSkala} effective={k} /></div></div>
-                            <div className="hidden lg:block">
-                            <label htmlFor="gaya-nota"className="block text-sm font-semibold text-gray-700 mb-1">Gaya Nota</label>
-                            <select id="gaya-nota" aria-label="Gaya nota" value={gaya.id} onChange={(e) => pilihGayaNota(e.target.value)}
-                                className="w-full p-2 border rounded-lg bg-white mb-4">
-                                {GAYA_NOTA.map((g, i) => (
-                                    <option key={g.id} value={g.id}>{i + 1}. {g.name} — {g.desc}</option>
-                                ))}
-                            </select>
-                            </div>
-                            <div className="bg-gray-100 border border-dashed p-4">
-                                <FitPreview>{ReceiptPreviewComponent()}</FitPreview>
-                            </div>
-                            {/* Ponsel: ukuran teks & pilihan di paling bawah, dekat tombol unduh */}
-                            <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">
-                              <TextSizeSlider value={skala} onChange={pilihSkala} effective={k} />
-                              <label htmlFor="gaya-nota-hp"className="block text-sm font-semibold text-gray-700 mb-1">Gaya Nota</label>
-                              <select id="gaya-nota-hp" aria-label="Gaya nota" value={gaya.id} onChange={(e) => pilihGayaNota(e.target.value)}
-                                  className="w-full p-2 border rounded-lg bg-white mb-4">
-                                  {GAYA_NOTA.map((g, i) => (
-                                      <option key={g.id} value={g.id}>{i + 1}. {g.name} — {g.desc}</option>
-                                  ))}
-                              </select>
-                            </div>
-
-                            <div className="lg:hidden flex space-x-3 mt-4">
-                                <button onClick={handleExportImage} disabled={!isLibReady || isProcessing || isAiGenerating}
-                                    className={`flex-1 p-3 rounded-xl font-bold flex justify-center items-center space-x-1 transition ${!isLibReady || isProcessing || isAiGenerating ? 'bg-green-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white`}>
-                                    {isProcessing || !isLibReady ? <div className="spinner mr-2"></div> : 
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>}
-                                    <span>Export PNG</span>
-                                </button>
-                                <button onClick={handlePrintReceipt} disabled={!isLibReady || isProcessing || isAiGenerating}
-                                    className={`flex-1 p-3 rounded-xl font-bold flex justify-center items-center space-x-1 transition ${!isLibReady || isProcessing || isAiGenerating ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}>
-                                    {isProcessing || !isLibReady ? <div className="spinner mr-2"></div> : 
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m0 0h6m-6 0v2a2 2 0 002 2h2a2 2 0 002-2v-2" /></svg>}
-                                    <span>Cetak 58mm</span>
-                                </button>
-                            </div>
-                            
-                            {/* BAGIAN BARU: Petunjuk Cetak */}
-                            <div className="mt-6 pt-4 border-t border-gray-200 text-sm space-y-2 text-gray-700">
-                                <p className="font-extrabold text-lg text-indigo-700">*** SARAN CETAK YANG BAIK ***</p>
-                                <p>1. Ekspor nota menggunakan tombol **Export PNG** di atas.</p>
-                                <p>2. Unduh Aplikasi **RawBT** atau Aplikasi Sejenis (Cari di Youtube: *Cara Cetak Gambar di Printer Thermal 58mm Bluetooth / Kabel*).</p>
-                                
-                                <p className="font-extrabold text-red-600 mt-4">***** CATATAN PENTING *****</p>
-                                <p className="text-base font-semibold">
-                                    Atur Ukuran **Lebar Nota (px)** pada Data User SPBU (Bagian 1) dan otak-atik sendiri karena setiap HP Beda Settingan LEBAR NOTA-nya.
-                                </p>
-                            </div>
-                            {/* AKHIR BAGIAN BARU */}
-                        </div>
+                        {previewCard}
                     </>
                 )}
+                </>)}
             </div>
         </div>
     );

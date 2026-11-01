@@ -15,10 +15,13 @@ import {
 import { FitLine, Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts } from '../../shared/components/LetterStyles';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import PositionPad, { fxOf, getOffset, type Offsets } from '../../shared/components/PositionPad';
+import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/CanvasMode';
+import SharedGallery from '../../shared/components/SharedGallery';
 
 // Surat keterangan dokter: hanya untuk akun admin (login lewat tombol mengambang / halaman /login).
 
 const STORAGE_KEY = 'surat-dokter:v1';
+const USER_KEYS = ['posisi', 'nama', 'sip', 'str', 'alamat1', 'alamat2', 'telp', 'judul', 'pembuka', 'penutup', 'catatan', 'kota', 'jabatan', 'ttd', 'stempel', 'logo'] as const;
 
 type Row = { label: string; value: string };
 type Form = {
@@ -256,11 +259,25 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
     <ExportButton kind={kind} color={color} exporting={exporting} disabled={logo.busy || ttd.busy || stempel.busy} onRun={run} />
   );
 
-  // Analog geser tanda tangan/stempel: desktop di atas form, ponsel di kotak bawah
   const [geser, setGeser] = useState('ttd');
-  const posPad = (
-    <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
-      active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
+  const [canvas, setCanvas] = useCanvasMode();
+  const tampilan = (
+    <>
+      <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
+      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
+        active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
+      <StylePicker value={f.gaya} onChange={(v) => set('gaya', v)} />
+      <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
+    </>
+  );
+  const unduh = (
+    <>
+      {exportBtn('PDF', 'bg-red-600')}
+      {exportBtn('PNG', 'bg-blue-600')}
+      {exportBtn('Print', 'bg-slate-700')}
+      <button onClick={resetPasien} className="px-5 py-2 rounded-lg bg-white border font-semibold">Kosongkan Data Pasien</button>
+      <button onClick={resetAll} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
+    </>
   );
   return (
     <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
@@ -272,24 +289,15 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
           </div>
         </div>
         <h1 className="text-2xl font-bold text-center mb-4">Surat Keterangan Dokter</h1>
-        {/* Desktop: tombol unduh di atas; ponsel: di paling bawah */}
-        <div className="hidden lg:flex flex-wrap justify-center gap-3 mb-6">
-          {exportBtn('PDF', 'bg-red-600')}
-          {exportBtn('PNG', 'bg-blue-600')}
-          {exportBtn('Print', 'bg-slate-700')}
-          <button onClick={resetPasien} className="px-5 py-2 rounded-lg bg-white border font-semibold">Kosongkan Data Pasien</button>
-          <button onClick={resetAll} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
-        </div>
+        <ModeTabs canvas={canvas} onChange={setCanvas} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          <div className="bg-white rounded-2xl shadow p-5 space-y-6">
-            <UserData storageKey="data-user:surat-dokter" keys={['posisi', 'nama', 'sip', 'str', 'alamat1', 'alamat2', 'telp', 'judul', 'pembuka', 'penutup', 'catatan', 'kota', 'jabatan', 'ttd', 'stempel', 'logo']} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
-            <div className="hidden lg:block"><TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} /></div>
-            <div className="hidden lg:block">{posPad}</div>
-            <div className="hidden lg:block">
-            <StylePicker value={f.gaya} onChange={(v) => set('gaya', v)} />
-            <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
-            </div>
+          <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
+            {canvas ? (
+              <CanvasPanel tampilan={tampilan} unduh={unduh}
+                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+            ) : (<>
+            <UserData storageKey="data-user:surat-dokter" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
             <section className="space-y-3">
               <h2 className="font-bold">Data Pasien</h2>
               {f.rows.map((r, i) => (
@@ -380,6 +388,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
                 <Field label="Catatan kaki"><AutoTextarea className={inputCls} value={f.catatan} onChange={(e) => set('catatan', e.target.value)} /></Field>
               </div>
             </details>
+            </>)}
           </div>
 
           <FitPreview>
@@ -387,23 +396,6 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
               <Letter f={{ ...f, logo: logo.src, ttd: ttd.src, stempel: stempel.src }} k={k * pg.f} W={pg.W} H={pg.H} pf={pg.f} />
             </div>
           </FitPreview>
-        </div>
-
-        {/* Ponsel: ukuran teks & pilihan di paling bawah, dekat tombol unduh */}
-        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">
-          <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
-          {posPad}
-          <StylePicker value={f.gaya} onChange={(v) => set('gaya', v)} />
-            <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
-        </div>
-
-        {/* Tombol unduh di paling bawah */}
-        <div className="lg:hidden flex flex-wrap justify-center gap-3 mt-6 mb-20">
-          {exportBtn('PDF', 'bg-red-600')}
-          {exportBtn('PNG', 'bg-blue-600')}
-          {exportBtn('Print', 'bg-slate-700')}
-          <button onClick={resetPasien} className="px-5 py-2 rounded-lg bg-white border font-semibold">Kosongkan Data Pasien</button>
-          <button onClick={resetAll} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
         </div>
       </div>
     </div>

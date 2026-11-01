@@ -4,6 +4,8 @@ import AutoTextarea from './AutoTextarea';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import FitPreview from './FitPreview';
+import { CanvasPanel, ModeTabs, useCanvasMode } from './CanvasMode';
+import SharedGallery from './SharedGallery';
 import { Toast, type ToastState } from './Feedback';
 import { ExportButton, Field, ImageUpload, inputCls, useLetterExport, type Notify } from './LetterKit';
 import { useBgRemoved } from '../lib/removeBg';
@@ -330,31 +332,42 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
     </Field>
   );
 
+  const [canvas, setCanvas] = useCanvasMode();
+  const userKeys = ['toko', 'alamat', 'telp', 'logo', 'kasir', 'pajak', 'footer', 'metode', 'nonTunai'] as const;
+  const tampilan = (
+    <>
+      <TextSizeSlider value={n.skala} onChange={(v) => set('skala', v)} effective={k} />
+      <Field label="Template nota">
+        <select className={inputCls} value={tpl.id} onChange={(e) => set('template', e.target.value)}>
+          {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
+        </select>
+      </Field>
+    </>
+  );
+  const unduh = (
+    <>
+      <p className="w-full text-sm text-gray-600">Cetak ke printer thermal Bluetooth: unduh PNG lalu buka dengan aplikasi RawBT.</p>
+      <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={logo.busy} onRun={run} />
+      <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={logo.busy} onRun={run} />
+      <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={logo.busy} onRun={run} />
+      <button onClick={transaksiBaru} className="px-5 py-2 rounded-lg bg-white border font-semibold">Transaksi Baru</button>
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
       <div className="max-w-6xl mx-auto">
         <Link to="/" className="inline-block mb-3 text-sm font-medium text-blue-700">&larr; Kembali ke HK Hub Station</Link>
         <h1 className="text-2xl font-bold text-center mb-4">Nota Pembelian {mm}mm</h1>
-        {/* Desktop: tombol unduh di atas; ponsel: di paling bawah */}
-        <p className="hidden lg:block mb-2 text-center text-sm text-gray-600">Cetak ke printer thermal Bluetooth: unduh PNG lalu buka dengan aplikasi RawBT.</p>
-        <div className="hidden lg:flex flex-wrap justify-center gap-3 mb-6">
-          <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={logo.busy} onRun={run} />
-          <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={logo.busy} onRun={run} />
-          <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={logo.busy} onRun={run} />
-          <button onClick={transaksiBaru} className="px-5 py-2 rounded-lg bg-white border font-semibold">Transaksi Baru</button>
-        </div>
+        <ModeTabs canvas={canvas} onChange={setCanvas} />
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
-            <UserData storageKey={`data-user:nota-${mm}`} keys={['toko', 'alamat', 'telp', 'logo', 'kasir', 'pajak', 'footer', 'metode', 'nonTunai']} data={n} onApply={(u) => setN((p) => ({ ...p, ...u }))} />
-            <div className="hidden lg:block"><TextSizeSlider value={n.skala} onChange={(v) => set('skala', v)} effective={k} /></div>
-            <div className="hidden lg:block">
-            <Field label="Template nota">
-              <select className={inputCls} value={tpl.id} onChange={(e) => set('template', e.target.value)}>
-                {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
-              </select>
-            </Field>
-            </div>
+            {canvas ? (
+              <CanvasPanel tampilan={tampilan} unduh={unduh}
+                galeri={<SharedGallery showEmpty keys={userKeys} data={n} onApply={(u) => setN((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+            ) : (<>
+            <UserData storageKey={`data-user:nota-${mm}`} keys={userKeys} data={n} onApply={(u) => setN((p) => ({ ...p, ...u }))} />
             <section className="space-y-3">
               <h2 className="font-bold">Toko</h2>
               <ImageUpload label="Upload logo (tampil di atas nota)" value={n.logo} onChange={(v) => set('logo', v)} notify={notify}
@@ -419,6 +432,7 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
               </div>
               {txt('footer', 'Pesan bawah nota', 2)}
             </section>
+            </>)}
           </div>
 
           <div className="bg-white rounded-2xl shadow p-4 min-w-0">
@@ -431,24 +445,6 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
           </div>
         </div>
 
-        {/* Ponsel: ukuran teks & pilihan di paling bawah, dekat tombol unduh */}
-        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">
-          <TextSizeSlider value={n.skala} onChange={(v) => set('skala', v)} effective={k} />
-          <Field label="Template nota">
-            <select className={inputCls} value={tpl.id} onChange={(e) => set('template', e.target.value)}>
-              {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
-            </select>
-          </Field>
-        </div>
-
-        {/* Tombol unduh di paling bawah */}
-        <p className="lg:hidden mt-6 text-center text-sm text-gray-600">Cetak ke printer thermal Bluetooth: unduh PNG lalu buka dengan aplikasi RawBT.</p>
-        <div className="lg:hidden flex flex-wrap justify-center gap-3 mt-3 mb-20">
-          <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={logo.busy} onRun={run} />
-          <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={logo.busy} onRun={run} />
-          <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={logo.busy} onRun={run} />
-          <button onClick={transaksiBaru} className="px-5 py-2 rounded-lg bg-white border font-semibold">Transaksi Baru</button>
-        </div>
       </div>
       <Toast toast={toast} onClose={closeToast} />
     </div>

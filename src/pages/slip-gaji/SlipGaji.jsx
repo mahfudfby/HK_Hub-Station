@@ -1,4 +1,6 @@
 import UserData from '../../shared/components/UserData';
+import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/CanvasMode';
+import SharedGallery from '../../shared/components/SharedGallery';
 import NumberFormatInput from '../../shared/components/NumberFormatInput';
 import AutoTextarea from '../../shared/components/AutoTextarea';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -937,11 +939,40 @@ export default function SlipGaji() {
     }
   };
 
-  // Analog geser tanda tangan/stempel: desktop di atas form, ponsel di kotak bawah
+  const [canvas, setCanvas] = useCanvasMode();
   const [geser, setGeser] = useState('karyawan');
-  const posPad = (
-    <PositionPad targets={[{ id: 'karyawan', label: 'TTD Karyawan' }, { id: 'manager', label: 'TTD Manager' }]}
-      active={geser} onActive={setGeser} value={form.posisi} onChange={(v) => setForm((prev) => ({ ...prev, posisi: v }))} />
+  const userKeys = ['posisi', 'companyName', 'addressLine1', 'addressLine2', 'addressLine3', 'managerName', 'managerTitle', 'logo', 'managerSignature'];
+  const userData = { ...form, logo, managerSignature };
+  const applyUser = ({ logo: l, managerSignature: ms, ...rest }) => {
+    setForm((prev) => ({ ...prev, ...rest }));
+    if (l !== undefined) setLogo(l);
+    if (ms !== undefined) setManagerSignature(ms);
+  };
+  const tampilan = (
+    <>
+      <TextSizeSlider value={form.skala} onChange={(v) => setForm((prev) => ({ ...prev, skala: v }))} effective={k} />
+      <PositionPad targets={[{ id: 'karyawan', label: 'TTD Karyawan' }, { id: 'manager', label: 'TTD Manager' }]}
+        active={geser} onActive={setGeser} value={form.posisi} onChange={(v) => setForm((prev) => ({ ...prev, posisi: v }))} />
+      <TemplatePicker id="inputTemplateCanvas" value={tpl.id} onChange={handleChange} />
+    </>
+  );
+  const unduh = (
+    <>
+      <button
+        type="button" onClick={handleExport} disabled={exporting || printing || bgBusy}
+        className="slip-btn bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md inline-flex items-center gap-2"
+      >
+        {exporting ? <span className="slip-spinner" aria-hidden="true" /> : <IconDownload />}
+        {exporting ? 'Memproses... Harap tunggu.' : 'Export Slip Gaji sebagai PNG'}
+      </button>
+      <button
+        type="button" onClick={handlePrint} disabled={exporting || printing || bgBusy}
+        className="slip-btn bg-slate-700 hover:bg-slate-800 text-white font-semibold py-3 px-6 rounded-lg shadow-md inline-flex items-center gap-2"
+      >
+        {printing && <span className="slip-spinner" aria-hidden="true" />}
+        {printing ? 'Menyiapkan cetakan...' : 'Print'}
+      </button>
+    </>
   );
   // --- Render ---
   return (
@@ -953,50 +984,25 @@ export default function SlipGaji() {
         <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
           Aplikasi Pembuat Slip Gaji Terintegrasi (BPJS &amp; PPh 21)
         </h1>
-
-        {/* Desktop: tombol export di atas; ponsel: di paling bawah */}
-        <div className="hidden lg:block mb-6 p-4 bg-white shadow-lg rounded-lg">
-          <div className="flex flex-wrap justify-center gap-3">
-            <button
-              type="button" onClick={handleExport} disabled={exporting || printing || bgBusy}
-              className="slip-btn bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md inline-flex items-center gap-2"
-            >
-              {exporting ? <span className="slip-spinner" aria-hidden="true" /> : <IconDownload />}
-              {exporting ? 'Memproses... Harap tunggu.' : 'Export Slip Gaji sebagai PNG'}
-            </button>
-            <button
-              type="button" onClick={handlePrint} disabled={exporting || printing || bgBusy}
-              className="slip-btn bg-slate-700 hover:bg-slate-800 text-white font-semibold py-3 px-6 rounded-lg shadow-md inline-flex items-center gap-2"
-            >
-              {printing && <span className="slip-spinner" aria-hidden="true" />}
-              {printing ? 'Menyiapkan cetakan...' : 'Print'}
-            </button>
+        <ModeTabs canvas={canvas} onChange={setCanvas} />
+        {(exporting || printing || uploading) && (
+          <div className="slip-progress-track mb-4" role="progressbar" aria-label={exporting ? 'Memproses ekspor' : 'Memproses gambar'}>
+            <div className="slip-progress-fill" />
           </div>
-          {(exporting || printing || uploading) && (
-            <div className="slip-progress-track" role="progressbar" aria-label={exporting ? 'Memproses ekspor' : 'Memproses gambar'}>
-              <div className="slip-progress-fill" />
-            </div>
-          )}
-        </div>
+        )}
         <div className="max-w-md mx-auto"><QrisCard /></div>
 
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Render — Formulir */}
           <div className="slip-card bg-white p-6 md:p-8 shadow-lg rounded-xl h-fit">
+            {canvas ? (
+              <div className="space-y-6">
+                <CanvasPanel tampilan={tampilan} unduh={unduh}
+                  galeri={<SharedGallery showEmpty keys={userKeys} data={userData} onApply={applyUser} onPicked={(m) => pushToast('success', m)} />} />
+              </div>
+            ) : (<>
             <h2 className="text-xl font-semibold mb-6 border-b pb-2 text-gray-700">Formulir Input Data Slip Gaji</h2>
-            <div className="hidden lg:block"><div className="mb-4"><TextSizeSlider value={form.skala} onChange={(v) => setForm((prev) => ({ ...prev, skala: v }))} effective={k} /></div></div>
-            <div className="hidden lg:block">{posPad}</div>
-            <div className="hidden lg:block">
-            <TemplatePicker value={tpl.id} onChange={handleChange} />
-            </div>
-            <UserData storageKey="data-user:slip-gaji"
-              keys={['posisi', 'companyName', 'addressLine1', 'addressLine2', 'addressLine3', 'managerName', 'managerTitle', 'logo', 'managerSignature']}
-              data={{ ...form, logo, managerSignature }}
-              onApply={({ logo: l, managerSignature: ms, ...rest }) => {
-                setForm((prev) => ({ ...prev, ...rest }));
-                if (l !== undefined) setLogo(l);
-                if (ms !== undefined) setManagerSignature(ms);
-              }} />
+            <UserData storageKey="data-user:slip-gaji" keys={userKeys} data={userData} onApply={applyUser} />
             <CompanyForm form={form} onChange={handleChange} onLogoChange={handleLogoChange} logoBg={bgProps('logo', logoShown)} />
             <EmployeeForm form={form} onChange={handleChange} statusText={statusText} />
             <EarningsForm form={form} onChange={handleChange} />
@@ -1009,6 +1015,7 @@ export default function SlipGaji() {
               <TextField id="inputManagerTitle" label="Jabatan Penandatangan" name="managerTitle" value={form.managerTitle ?? ''} onChange={handleChange} placeholder="Direktur / Manager" />
               <FileField id="inputManagerSignatureFile" label="Tanda Tangan Direktur / Manager (Opsional)" onChange={handleManagerSignatureChange} {...bgProps('manager', managerShown)} />
             </div>
+            </>)}
           </div>
 
           {/* Render — Preview Slip */}
@@ -1019,37 +1026,6 @@ export default function SlipGaji() {
           </div>
         </div>
 
-        {/* Ponsel: ukuran teks & pilihan di paling bawah, dekat tombol unduh */}
-        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">
-          <TextSizeSlider value={form.skala} onChange={(v) => setForm((prev) => ({ ...prev, skala: v }))} effective={k} />
-          {posPad}
-          <TemplatePicker id="inputTemplateMobile" value={tpl.id} onChange={handleChange} />
-        </div>
-
-        {/* Render — Tombol Export (paling bawah) */}
-        <div className="lg:hidden mt-8 mb-20 p-4 bg-white shadow-lg rounded-lg">
-          <div className="flex flex-wrap justify-center gap-3">
-            <button
-              type="button" onClick={handleExport} disabled={exporting || printing || bgBusy}
-              className="slip-btn bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md inline-flex items-center gap-2"
-            >
-              {exporting ? <span className="slip-spinner" aria-hidden="true" /> : <IconDownload />}
-              {exporting ? 'Memproses... Harap tunggu.' : 'Export Slip Gaji sebagai PNG'}
-            </button>
-            <button
-              type="button" onClick={handlePrint} disabled={exporting || printing || bgBusy}
-              className="slip-btn bg-slate-700 hover:bg-slate-800 text-white font-semibold py-3 px-6 rounded-lg shadow-md inline-flex items-center gap-2"
-            >
-              {printing && <span className="slip-spinner" aria-hidden="true" />}
-              {printing ? 'Menyiapkan cetakan...' : 'Print'}
-            </button>
-          </div>
-          {(exporting || printing || uploading) && (
-            <div className="slip-progress-track" role="progressbar" aria-label={exporting ? 'Memproses ekspor' : 'Memproses gambar'}>
-              <div className="slip-progress-fill" />
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
