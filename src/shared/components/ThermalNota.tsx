@@ -7,7 +7,7 @@ import FitPreview from './FitPreview';
 import { CanvasPanel, ModeTabs, useCanvasMode } from './CanvasMode';
 import SharedGallery from './SharedGallery';
 import { Toast, type ToastState } from './Feedback';
-import { ExportButton, Field, ImageUpload, inputCls, useLetterExport, type Notify } from './LetterKit';
+import { ExportButton, Field, ImageUpload, inputCls, mmToPx, orient, paperOf, PaperPicker, useLetterExport, type Notify } from './LetterKit';
 import { useBgRemoved } from '../lib/removeBg';
 import { num, rupiah } from '../lib/money';
 import { cssFamily, useGoogleFonts, type WebFont } from '../lib/fonts';
@@ -22,6 +22,22 @@ export const THERMAL: Record<ThermalWidth, { px: number; font: number; logoW: nu
   58: { px: 192, font: 10, logoW: 120, pad: [8, 6, 14] },
   80: { px: 288, font: 13, logoW: 200, pad: [14, 16, 20] }, // 80mm: huruf lebih besar + margin putih lebih lega
 };
+
+// Tata letak nota per kertas. Thermal gulung 58/80 = persis THERMAL (lebar titik printer, RawBT).
+// Kertas lain: lebar = ukuran kertas @96 DPI, huruf/margin menurut sisi terpendek; h = tinggi halaman tetap (undefined = ikut isi).
+type Layout = { px: number; h?: number; font: number; logoW: number; pad: [number, number, number]; roll: boolean; paper: { w: number; h: number } };
+export function notaLayout(paperId: string, landscape: boolean, mm: ThermalWidth): Layout {
+  const def = paperOf(paperId, `T${mm}`);
+  const paper = orient(def, landscape);
+  if (def.roll && (def.w === 58 || def.w === 80)) return { ...THERMAL[def.w as ThermalWidth], roll: true, paper };
+  const px = mmToPx(paper.w);
+  const min = Math.min(paper.w, paper.h);
+  const size = min < 100 ? { font: 13, logoW: 200, pad: [14, 16, 20] as [number, number, number] }
+    : min < 160 ? { font: 14, logoW: 220, pad: [30, 40, 30] as [number, number, number] }
+      : { font: 15, logoW: 260, pad: [45, 60, 45] as [number, number, number] };
+  return { px, h: def.roll ? undefined : mmToPx(paper.h), ...size, roll: !!def.roll, paper };
+}
+console.assert(notaLayout('T58', false, 58).px === 192 && notaLayout('T80', false, 58).px === 288 && notaLayout('A4', true, 80).px === mmToPx(297) && notaLayout('xx', false, 80).px === 288, 'notaLayout');
 
 type Item = { nama: string; qty: string; harga: string };
 type Nota = {
@@ -45,6 +61,8 @@ type Nota = {
   footer: string;
   template: string; // id di TEMPLATES
   skala: number; // ukuran teks nota (%)
+  paper: string; // id di PAPERS; bawaan T58/T80 sesuai menu
+  landscape: boolean;
 };
 
 const nowLocal = () => {
@@ -76,6 +94,8 @@ const DEFAULT: Nota = {
   footer: 'Terima kasih atas kunjungan Anda\nBarang yang sudah dibeli tidak dapat ditukar/dikembalikan',
   template: 'klasik',
   skala: 100,
+  paper: 'T58', // diganti T80 di menu 80mm
+  landscape: false,
 };
 
 // total = jumlah harga produk; pajak % dari total; diskon % dari total atau nominal; bayarTotal = akhir
@@ -180,8 +200,7 @@ const BAR: Record<string, CSSProperties> = {
   double: { borderTop: '3px double #000', borderBottom: '3px double #000', padding: '2px 0' },
 };
 
-function Receipt({ n, mm, k }: { n: Nota; mm: ThermalWidth; k: number }) {
-  const T = THERMAL[mm];
+function Receipt({ n, T, k }: { n: Nota; T: Layout; k: number }) {
   const c = calc(n);
   const t = tplOf(n.template);
   const base = T.font + (t.size ?? 0);
@@ -206,7 +225,7 @@ function Receipt({ n, mm, k }: { n: Nota; mm: ThermalWidth; k: number }) {
   if (n.pelanggan) meta.push(['Plg', n.pelanggan]);
   const nameCls: CSSProperties = { fontWeight: t.nameBold ? 700 : 400 };
   return (
-    <div style={{ width: T.px, boxSizing: 'border-box', padding: `${T.pad[0]}px ${T.pad[1]}px ${T.pad[2]}px`, background: '#fff', color: '#000', fontFamily: t.font, fontSize: f, lineHeight: 1.35, wordBreak: 'break-word' }}>
+    <div style={{ width: T.px, height: T.h, overflow: T.h ? 'hidden' : undefined, boxSizing: 'border-box', padding: `${T.pad[0]}px ${T.pad[1]}px ${T.pad[2]}px`, background: '#fff', color: '#000', fontFamily: t.font, fontSize: f, lineHeight: 1.35, wordBreak: 'break-word' }}>
       {t.head === 'left' ? (
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           {n.logo && <img src={n.logo} alt="Logo" style={{ flexShrink: 0, maxHeight: logoW * 0.4, maxWidth: logoW * 0.35, objectFit: 'contain' }} />}
@@ -278,22 +297,22 @@ function Receipt({ n, mm, k }: { n: Nota; mm: ThermalWidth; k: number }) {
 // ---------------- Editor ----------------
 export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
   const STORAGE_KEY = `nota-${mm}mm:v1`;
-  const T = THERMAL[mm];
   const [toast, setToast] = useState<ToastState>(null);
   const notify = useCallback<Notify>((type, message) => setToast({ type, message }), []);
   const closeToast = useCallback(() => setToast(null), []);
   const [n, setN] = useState<Nota>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      if (!saved) return DEFAULT;
+      const def = { ...DEFAULT, paper: `T${mm}` };
+      if (!saved) return def;
       if (!saved.diskonMode) saved.diskonMode = 'Rp'; // simpanan lama: diskon selalu nominal
       if (saved.metode && saved.metode !== 'Tunai' && saved.metode !== 'Non-Tunai') { // simpanan lama: QRIS/Debit/Transfer
         saved.nonTunai = saved.metode === 'Transfer' ? 'Transfer Bank' : saved.metode;
         saved.metode = 'Non-Tunai';
       }
-      return { ...DEFAULT, ...saved };
+      return { ...def, ...saved };
     } catch {
-      return DEFAULT;
+      return { ...DEFAULT, paper: `T${mm}` };
     }
   });
   const [logoBg, setLogoBg] = useState(false);
@@ -301,8 +320,9 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
   const ref = useRef<HTMLDivElement>(null);
   const tpl = tplOf(n.template);
   useGoogleFonts([tpl.web, tpl.headWeb]);
-  // Kertas gulung: tinggi bebas, skala hanya diturunkan bila isi lebih lebar dari kertas
-  const k = useFitScale(n.skala / 100, () => ref.current?.firstElementChild as HTMLElement, false, [n, mm, logo.src]);
+  const T = notaLayout(n.paper, n.landscape, mm);
+  // Kertas gulung: tinggi bebas, skala hanya diturunkan bila isi lebih lebar dari kertas; kertas lembar: juga bila isi lebih tinggi
+  const k = useFitScale(n.skala / 100, () => ref.current?.firstElementChild as HTMLElement, !T.roll, [n, mm, logo.src]);
 
   useEffect(() => {
     try {
@@ -317,9 +337,9 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
   const c = calc(n);
 
   const fileName = `nota-${(n.nomor || 'transaksi').replace(/[^\w-]+/g, '-').toLowerCase()}`;
-  // Tinggi kertas mengikuti panjang nota
+  // Kertas gulung: tinggi mengikuti panjang nota; kertas lembar: ukuran halaman tetap
   const { exporting, run } = useLetterExport(() => ref.current!.firstElementChild as HTMLElement, fileName, notify,
-    (page) => ({ w: mm, h: Math.ceil((mm * page.offsetHeight) / T.px) }), 2);
+    (page) => (T.roll ? { w: T.paper.w, h: Math.ceil((T.paper.w * page.offsetHeight) / T.px) } : T.paper), T.roll ? 2 : 3);
   const transaksiBaru = () => {
     const m = n.nomor.match(/^(.*?)(\d+)$/);
     const nomor = m ? `${m[1]}${String(Number(m[2]) + 1).padStart(m[2].length, '0')}` : n.nomor;
@@ -336,6 +356,7 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
   const userKeys = ['toko', 'alamat', 'telp', 'logo', 'kasir', 'pajak', 'footer', 'metode', 'nonTunai'] as const;
   const tampilan = (
     <>
+      <PaperPicker paper={n.paper} landscape={n.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
       <TextSizeSlider value={n.skala} onChange={(v) => set('skala', v)} effective={k} />
       <Field label="Template nota">
         <select className={inputCls} value={tpl.id} onChange={(e) => set('template', e.target.value)}>
@@ -436,10 +457,10 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
           </div>
 
           <div className="bg-white rounded-2xl shadow p-4 min-w-0">
-            <p className="mb-2 text-xs text-gray-500 text-center">Lebar asli {mm}mm • PNG {T.px * 2}px untuk printer thermal</p>
+            <p className="mb-2 text-xs text-gray-500 text-center">{paperOf(n.paper, `T${mm}`).label}{T.roll ? ` • PNG ${T.px * 2}px untuk printer thermal` : ''}</p>
             <FitPreview>
               <div ref={ref} className="w-max shadow-md mx-auto">
-                <Receipt n={{ ...n, logo: logo.src }} mm={mm} k={k} />
+                <Receipt n={{ ...n, logo: logo.src }} T={T} k={k} />
               </div>
             </FitPreview>
           </div>

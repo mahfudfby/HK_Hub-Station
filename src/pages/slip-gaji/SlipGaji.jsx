@@ -14,6 +14,7 @@ import { isStaleChunkError, reloadForNewVersion } from '../../shared/lib/staleCh
 import PositionPad, { getOffset } from '../../shared/components/PositionPad';
 import BgToggle from '../../shared/components/BgToggle';
 import { ScaleBox, TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
+import { PaperPicker, PAPERS, paperOf, orient, mmToPx } from '../../shared/components/LetterKit';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { cssFamily, fontsReady, useGoogleFonts } from '../../shared/lib/fonts';
 import './SlipGaji.css';
@@ -52,8 +53,16 @@ const LOGO_MAX_HEIGHT = 60;
 const SIGNATURE_MAX_WIDTH = 120;
 const SIGNATURE_MAX_HEIGHT = 70;
 
-const SLIP_WIDTH = 912; // kertas dot-matrix continuous form 9,5" @96DPI (241 mm)
-const SLIP_HEIGHT = 528; // 5,5" @96DPI (140 mm, setengah lembar 9,5×11")
+// Bawaan: kertas dot-matrix continuous form 9,5×5,5" (CF95x55) = 912×528 px @96DPI. Kertas lain dipilih di Edit Canvas.
+const PAPER_KEY = 'slip-gaji:paper:v1';
+const loadPaper = () => {
+  try {
+    const v = JSON.parse(localStorage.getItem(PAPER_KEY) || 'null');
+    return v && PAPERS[v.id] ? { id: v.id, landscape: !!v.landscape } : { id: 'CF95x55', landscape: false };
+  } catch { return { id: 'CF95x55', landscape: false }; }
+};
+// Kertas sempit (A5 tegak, thermal): kolom ditumpuk (.slip-narrow) agar teks tidak dikecilkan habis-habisan
+const NARROW_PX = 600;
 
 // ============================================================
 // SECTION: Template slip (tata letak + font). font kosong = Arimo via .doc-font (tampilan asli).
@@ -753,7 +762,7 @@ function SlipTotals({ t, calc, A, dash }) {
   );
 }
 
-function SlipPreview({ slipRef, form, calc, logo, signature, managerSignature, t, k }) {
+function SlipPreview({ slipRef, form, calc, logo, signature, managerSignature, t, k, page }) {
   const A = t.accent || '#000';
   const dash = !!t.dash;
   const soft = t.soft || '#f3f4f6';
@@ -762,9 +771,9 @@ function SlipPreview({ slipRef, form, calc, logo, signature, managerSignature, t
     <div className="slip-scroll">
       <div
         id="slip-container" ref={slipRef}
-        className={`slip-box ${t.font ? '' : 'doc-font'} ${dash ? 'slip-dash' : ''} border border-gray-400`}
-        // Margin tepi kertas ±5mm atas/bawah, ±7mm kiri/kanan
-        style={{ padding: '18px 26px', ...(t.font ? { fontFamily: t.font } : {}) }}
+        className={`slip-box ${t.font ? '' : 'doc-font'} ${dash ? 'slip-dash' : ''} ${page.narrow ? 'slip-narrow' : ''} border border-gray-400`}
+        // Margin tepi kertas ±5mm atas/bawah, ±7mm kiri/kanan (thermal: tipis, printer sudah punya margin)
+        style={{ width: page.W, height: page.H ?? 'auto', padding: page.narrow ? '8px 8px' : '18px 26px', ...(t.font ? { fontFamily: t.font } : {}) }}
       >
         <ScaleBox k={k}>
         <div id="payslip-content" className="text-[10px] px-1">
@@ -836,7 +845,17 @@ export default function SlipGaji() {
 
   const calc = useMemo(() => computeSlip(form), [form]);
   const tpl = SLIP_TEMPLATES.find((x) => x.id === form.template) || SLIP_TEMPLATES[0];
-  const k = useFitScale(form.skala / 100, () => slipRef.current, true, [form, logoShown.src, signatureShown.src, managerShown.src]);
+  const [paperSel, setPaperSel] = useState(loadPaper);
+  const pilihPaper = (next) => {
+    setPaperSel(next);
+    try { localStorage.setItem(PAPER_KEY, JSON.stringify(next)); } catch { /* mode privat */ }
+  };
+  const paperDef = paperOf(paperSel.id, 'CF95x55');
+  const paperMm = orient(paperDef, paperSel.landscape);
+  const W = mmToPx(paperMm.w);
+  // roll (thermal gulung): tinggi mengikuti isi
+  const page = { W, H: paperDef.roll ? undefined : mmToPx(paperMm.h), narrow: W < NARROW_PX };
+  const k = useFitScale(form.skala / 100, () => slipRef.current, !paperDef.roll, [form, logoShown.src, signatureShown.src, managerShown.src, paperSel]);
   useGoogleFonts([tpl.gf]);
   const statusText = (STATUS_OPTIONS.find((o) => o.value === form.status) || STATUS_OPTIONS[0]).label;
 
@@ -893,14 +912,14 @@ export default function SlipGaji() {
     await fontsReady(); // font dokumen (termasuk Google Font template) wajib termuat agar tata letak sama di semua perangkat
     const { default: html2canvas } = await import('html2canvas');
     return html2canvas(slipRef.current, {
-      scale: 3, // tetap (bukan devicePixelRatio): hasil selalu 2736×1584 px
+      scale: 3, // tetap (bukan devicePixelRatio): ukuran hasil sama di semua perangkat (bawaan 2736×1584 px)
       windowWidth: 1280,
       onclone: unfitPreview,
       logging: false,
       useCORS: true,
       backgroundColor: '#ffffff',
-      width: SLIP_WIDTH,
-      height: SLIP_HEIGHT,
+      width: page.W,
+      height: slipRef.current.offsetHeight,
     });
   };
   const slipFileName = () => `slip_gaji_${form.name.replace(/\s/g, '_')}_${form.slipMonth.toUpperCase().replace(/\s/g, '_')}`;
@@ -911,7 +930,7 @@ export default function SlipGaji() {
     setPrinting(true);
     try {
       const canvas = await captureSlip();
-      await printImage(canvas.toDataURL('image/png'), slipFileName(), { w: '9.5in', h: '5.5in' });
+      await printImage(canvas.toDataURL('image/png'), slipFileName(), { w: `${paperMm.w}mm`, h: paperDef.roll ? undefined : `${paperMm.h}mm` });
       pushToast('success', 'Jendela cetak dibuka.');
     } catch (error) {
       if (isStaleChunkError(error) && reloadForNewVersion()) return pushToast('success', 'Aplikasi baru saja diperbarui. Memuat ulang… lalu coba lagi.');
@@ -950,6 +969,8 @@ export default function SlipGaji() {
   };
   const tampilan = (
     <>
+      <PaperPicker paper={paperSel.id} landscape={paperSel.landscape}
+        onPaper={(id) => pilihPaper({ ...paperSel, id })} onLandscape={(landscape) => pilihPaper({ ...paperSel, landscape })} />
       <TextSizeSlider value={form.skala} onChange={(v) => setForm((prev) => ({ ...prev, skala: v }))} effective={k} />
       <PositionPad targets={[{ id: 'karyawan', label: 'TTD Karyawan' }, { id: 'manager', label: 'TTD Manager' }]}
         active={geser} onActive={setGeser} value={form.posisi} onChange={(v) => setForm((prev) => ({ ...prev, posisi: v }))} />
@@ -1021,7 +1042,7 @@ export default function SlipGaji() {
           {/* Render — Preview Slip */}
           <div className="slip-card bg-white p-2 md:p-4 rounded-xl shadow-lg lg:col-span-1 min-w-0">
             <FitPreview>
-              <SlipPreview slipRef={slipRef} form={form} calc={calc} logo={logoShown.src} signature={signatureShown.src} managerSignature={managerShown.src} t={tpl} k={k} />
+              <SlipPreview slipRef={slipRef} form={form} calc={calc} logo={logoShown.src} signature={signatureShown.src} managerSignature={managerShown.src} t={tpl} k={k} page={page} />
             </FitPreview>
           </div>
         </div>

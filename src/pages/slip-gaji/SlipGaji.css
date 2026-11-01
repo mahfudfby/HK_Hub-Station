@@ -17,7 +17,7 @@
 .slip-box, .slip-box * { text-shadow: none; }
 
 /* ============================================================
-   SECTION: Slip container (dot-matrix 9,5" x 5,5" = 241 x 140 mm, ukuran terkunci)
+   SECTION: Slip container (bawaan dot-matrix 9,5" x 5,5" = 241 x 140 mm; ukuran dari kertas pilihan via style)
    ============================================================ */
 .slip-scroll { overflow-x: auto; padding-bottom: 4px; }
 .slip-box {
@@ -40,6 +40,11 @@
 /* Template dot-matrix: semua garis putus-putus, teks hitam penuh (abu-abu jadi titik acak di printer jarum) */
 .slip-box.slip-dash, .slip-box.slip-dash * { border-style: dashed !important; }
 .slip-box.slip-dash .text-gray-600, .slip-box.slip-dash .text-gray-700 { color: #000; }
+/* Kertas sempit (A5 tegak/thermal): blok dua kolom ditumpuk agar teks tetap terbaca */
+.slip-box.slip-narrow .grid-cols-2 { grid-template-columns: 1fr; }
+.slip-box.slip-narrow #payslip-content > .flex { flex-direction: column; }
+.slip-box.slip-narrow #payslip-content > .flex > * { width: auto !important; }
+.slip-box.slip-narrow #payslip-content > .flex > .border-r { border-right-width: 0; }
 
 /* ============================================================
    SECTION: Form (input-group, number input)
