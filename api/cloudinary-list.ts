@@ -39,7 +39,7 @@ export default async function handler(req: any, res: any) {
     const count: Record<string, number> = {};
     for (const x of all) {
       const pid = String(x.public_id || '');
-      const f = String(x.asset_folder ?? x.folder ?? (pid.includes('/') ? pid.slice(0, pid.lastIndexOf('/')) : '(root)'));
+      const f = String(x.asset_folder || x.folder || '(akar)') + ' | id:' + (pid.includes('/') ? pid.slice(0, pid.lastIndexOf('/')) : '-');
       count[f] = (count[f] || 0) + 1;
     }
     res.setHeader('Cache-Control', 'no-store');
@@ -48,7 +48,9 @@ export default async function handler(req: any, res: any) {
   const images = all
     .map((x: any) => {
       const pid = String(x.public_id || '');
-      const folder = String(x.asset_folder ?? x.folder ?? (pid.includes('/') ? pid.slice(0, pid.lastIndexOf('/')) : ''));
+      const pidFolder = pid.includes('/') ? pid.slice(0, pid.lastIndexOf('/')) : '';
+      // asset_folder kosong (unggahan lama masuk akar): pakai jalur di public_id bila ada
+      const folder = String(x.asset_folder || x.folder || pidFolder);
       return { x, folder };
     })
     .filter(({ folder }) => folder === ROOT || folder.startsWith(ROOT + '/'))

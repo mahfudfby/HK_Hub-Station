@@ -12,7 +12,8 @@ export default function handler(req: any, res: any) {
   if (!folder || typeof folder !== 'string' || !/^[\w\-/]{1,60}$/.test(folder)) return res.status(400).json({ error: 'folder tidak valid' });
   if (!ts || Math.abs(Date.now() / 1000 - ts) > 600) return res.status(400).json({ error: 'timestamp tidak valid' });
 
-  // Parameter ditandatangani urut abjad: folder, timestamp
-  const signature = createHash('sha1').update(`folder=${folder}&timestamp=${ts}${secret}`).digest('hex');
+  // Parameter ditandatangani urut abjad: asset_folder, folder, timestamp.
+  // asset_folder = folder di mode "dynamic folders" (akun ini); tanpa itu gambar masuk folder akar.
+  const signature = createHash('sha1').update(`asset_folder=${folder}&folder=${folder}&timestamp=${ts}${secret}`).digest('hex');
   res.status(200).json({ signature });
 }
