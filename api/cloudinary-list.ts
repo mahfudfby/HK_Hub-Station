@@ -2,8 +2,8 @@
 // Gambar yang dihapus pemilik di Cloudinary otomatis hilang dari daftar ini.
 // Env wajib di Vercel: CLOUDINARY_API_SECRET. Hanya gambar di folder hk-hub-station/** yang ikut:
 // akun Cloudinary ini dipakai bersama situs portofolio, jadi gambar di folder akar sengaja tidak ditampilkan.
-const CLOUD = process.env.VITE_CLOUDINARY_CLOUD_NAME || 'dl4pyan8v';
-const KEY = process.env.VITE_CLOUDINARY_API_KEY || '654582583389542';
+const CLOUD = process.env.VITE_CLOUDINARY_CLOUD_NAME || 'tdja56xe';
+const KEY = process.env.VITE_CLOUDINARY_API_KEY || '493779522596543';
 const ROOT = 'hk-hub-station';
 const MAX_PAGES = 6; // 6 × 500 = 3000 gambar
 

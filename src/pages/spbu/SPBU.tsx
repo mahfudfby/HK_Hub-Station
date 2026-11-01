@@ -977,6 +977,28 @@ const App = () => {
         }
     }, [isLibReady, isProcessing, generateCanvas, transactionData, displayFeedback]);
 
+    // PDF selebar kertas; tinggi mengikuti nota (roll thermal panjangnya bebas, kertas tetap = ukuran kertas)
+    const handleExportPdf = useCallback(async () => {
+        if (!isLibReady || isProcessing) return;
+        setIsProcessing(true);
+        displayFeedback('Membuat file PDF...', 'loading');
+        try {
+            const canvas = await generateCanvas();
+            const w = paperMm.w;
+            const h = (w * canvas.height) / canvas.width;
+            const { jsPDF } = await import('jspdf');
+            const pdf = new jsPDF({ unit: 'mm', format: [w, h], orientation: w > h ? 'landscape' : 'portrait' });
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, w, h);
+            saveFile(pdf.output('blob'), `Nota-${transactionData.noTrans}-${transactionData.nopol}.pdf`);
+            displayFeedback('PDF berhasil diexport!', 'success');
+        } catch (e) {
+            console.error('Export PDF Error:', e);
+            displayFeedback(`Gagal export PDF: ${e.message}`, 'error');
+        } finally {
+            setIsProcessing(false);
+        }
+    }, [isLibReady, isProcessing, generateCanvas, transactionData, displayFeedback, paperMm.w]);
+
     const handlePrintReceipt = useCallback(async () => {
         if (!isLibReady || isProcessing) return;
         setIsProcessing(true);
@@ -1073,6 +1095,12 @@ const App = () => {
                     {isProcessing || !isLibReady ? <div className="spinner mr-2"></div> : 
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>}
                     <span>Export PNG</span>
+                </button>
+                <button onClick={handleExportPdf} disabled={!isLibReady || isProcessing || isAiGenerating}
+                    className={`flex-1 min-w-[140px] p-3 rounded-xl font-bold flex justify-center items-center space-x-1 transition ${!isLibReady || isProcessing || isAiGenerating ? 'bg-red-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'} text-white`}>
+                    {isProcessing || !isLibReady ? <div className="spinner mr-2"></div> :
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
+                    <span>Export PDF</span>
                 </button>
                 <button onClick={handlePrintReceipt} disabled={!isLibReady || isProcessing || isAiGenerating}
                     className={`flex-1 min-w-[140px] p-3 rounded-xl font-bold flex justify-center items-center space-x-1 transition ${!isLibReady || isProcessing || isAiGenerating ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}>
