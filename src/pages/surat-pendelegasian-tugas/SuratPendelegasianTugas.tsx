@@ -172,8 +172,8 @@ export default function SuratPendelegasianTugas() {
     <>
       <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
-      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Ttd pemberi' }, { id: 'stempel', label: 'Stempel' }, { id: 'ttdPenerima', label: 'Ttd penerima' },
-        ...(f.mengetahui ? [{ id: 'ttdMengetahui', label: 'Ttd mengetahui' }] : [])]}
+      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: `TTD ${f.pemberiNama || 'pemberi delegasi'}` }, { id: 'stempel', label: 'Stempel' }, { id: 'ttdPenerima', label: `TTD ${f.penerimaNama || 'penerima delegasi'}` },
+        ...(f.mengetahui ? [{ id: 'ttdMengetahui', label: `TTD ${f.mengetahuiNama || 'mengetahui'}` }] : [])]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
       <LayoutPicker value={f.gaya} onChange={(v) => set('gaya', v)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
@@ -226,7 +226,7 @@ export default function SuratPendelegasianTugas() {
                 <Field label="Jabatan"><AutoTextarea className={inputCls} value={f.pemberiJabatan} onChange={(e) => set('pemberiJabatan', e.target.value)} /></Field>
               </div>
               <Field label="NIK (opsional)"><AutoTextarea className={inputCls} value={f.pemberiId} onChange={(e) => set('pemberiId', e.target.value)} /></Field>
-              <ImageUpload label="Tanda tangan pemberi" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
+              <ImageUpload label={`Tanda tangan — ${f.pemberiNama || 'pemberi delegasi'}`} value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel perusahaan" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
             </FormSection>
 
@@ -236,7 +236,7 @@ export default function SuratPendelegasianTugas() {
                 <Field label="Jabatan"><AutoTextarea className={inputCls} value={f.penerimaJabatan} onChange={(e) => set('penerimaJabatan', e.target.value)} /></Field>
               </div>
               <Field label="NIK (opsional)"><AutoTextarea className={inputCls} value={f.penerimaId} onChange={(e) => set('penerimaId', e.target.value)} /></Field>
-              <ImageUpload label="Tanda tangan penerima" value={f.ttdPenerima} onChange={(v) => set('ttdPenerima', v)} notify={notify} {...bgFor('ttdPenerima', ttdPenerima)} />
+              <ImageUpload label={`Tanda tangan — ${f.penerimaNama || 'penerima delegasi'}`} value={f.ttdPenerima} onChange={(v) => set('ttdPenerima', v)} notify={notify} {...bgFor('ttdPenerima', ttdPenerima)} />
             </FormSection>
 
             <FormSection title="Isi Pendelegasian">
@@ -261,7 +261,7 @@ export default function SuratPendelegasianTugas() {
                   <Field label="Nama atasan"><AutoTextarea className={inputCls} value={f.mengetahuiNama} onChange={(e) => set('mengetahuiNama', e.target.value)} /></Field>
                 </div>
                 <Field label="NIK (opsional)"><AutoTextarea className={inputCls} value={f.mengetahuiId} onChange={(e) => set('mengetahuiId', e.target.value)} /></Field>
-                <ImageUpload label="Tanda tangan atasan" value={f.ttdMengetahui} onChange={(v) => set('ttdMengetahui', v)} notify={notify} {...bgFor('ttdMengetahui', ttdMengetahui)} />
+                <ImageUpload label={`Tanda tangan — ${f.mengetahuiNama || 'atasan'}`} value={f.ttdMengetahui} onChange={(v) => set('ttdMengetahui', v)} notify={notify} {...bgFor('ttdMengetahui', ttdMengetahui)} />
               </>)}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </FormSection>

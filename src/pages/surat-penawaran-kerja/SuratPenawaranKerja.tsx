@@ -40,6 +40,7 @@ type Form = {
   benefit: string; percobaan: string; dokumen: string; batas: string; penutup: string;
   pakaiHrd: boolean; pakaiKandidat: boolean;
   ttdJabatan: string; ttdNama: string; ttdId: string; ttd: string; stempel: string;
+  ttdKandidat: string; // tanda tangan persetujuan kandidat (per dokumen)
 };
 
 const STORAGE_KEY = 'surat-penawaran-kerja:v1';
@@ -70,6 +71,7 @@ const makeDefault = (): Form => ({
   penutup: 'Apabila Saudara menerima penawaran ini, mohon menandatangani salinan surat ini dan mengembalikannya kepada Divisi HRD. Kami menantikan kehadiran Saudara sebagai bagian dari tim kami.',
   pakaiHrd: true, pakaiKandidat: true,
   ttdJabatan: 'Manajer HRD', ttdNama: 'Ratna Dewi Lestari', ttdId: '', ttd: '', stempel: '',
+  ttdKandidat: '',
 });
 
 // Data User: identitas kop, penanda tangan & gambar (bukan isi surat)
@@ -146,13 +148,14 @@ export default function SuratPenawaranKerja() {
     }
   }, [f, notify]);
 
-  const [bg, setBg] = useState({ logo: true, ttd: true, stempel: true });
+  const [bg, setBg] = useState({ logo: true, ttd: true, stempel: true, ttdKandidat: true });
   const bgError = (m: string) => notify('error', m);
   const logo = useBgRemoved(f.logo, bg.logo, bgError);
   const ttd = useBgRemoved(f.ttd, bg.ttd, bgError);
   const stempel = useBgRemoved(f.stempel, bg.stempel, bgError);
+  const ttdKandidat = useBgRemoved(f.ttdKandidat, bg.ttdKandidat, bgError);
   const bgFor = (key: keyof typeof bg, shown: { src: string; busy: boolean }) => ({ bg: bg[key], onBg: (v: boolean) => setBg((p) => ({ ...p, [key]: v })), shown: shown.src, bgBusy: shown.busy });
-  const busy = logo.busy || ttd.busy || stempel.busy;
+  const busy = logo.busy || ttd.busy || stempel.busy || ttdKandidat.busy;
 
   const set = <K extends keyof Form>(key: K, v: Form[K]) => setF((p) => ({ ...p, [key]: v }));
   const reset = () => {
@@ -176,7 +179,7 @@ export default function SuratPenawaranKerja() {
   const v = (s: string) => isian(s, ks);
   const tgl = (s: string) => (ks ? TITIK : fmtTanggal(s));
   const signers = ([
-    f.pakaiKandidat && { heading: 'Menyetujui,', role: 'Kandidat', name: ks ? '' : f.kandidat },
+    f.pakaiKandidat && { heading: 'Menyetujui,', role: 'Kandidat', name: ks ? '' : f.kandidat, ttd: ks ? '' : ttdKandidat.src, ttdOffset: getOffset(f.posisi, 'ttdKandidat') },
     f.pakaiHrd && { heading: 'Hormat kami,', role: f.ttdJabatan, name: f.ttdNama, idLine: f.ttdId, ttd: ks ? '' : ttd.src, stempel: ks ? '' : stempel.src, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
   ] as (LayoutSigner | false)[]).filter((x): x is LayoutSigner => !!x);
   const nomor = nomorTampil(f.nomor, f.pakaiNomor, ks);
@@ -197,7 +200,7 @@ export default function SuratPenawaranKerja() {
     { g: SIGN, el: <P>{f.penutup}</P> },
     { g: SIGN, el: <ClosingSigns placeDate={[f.kota, tgl(f.tanggal)].filter(Boolean).join(', ')} signers={signers} k={kk} /> },
   ];
-  const { count, render } = usePagedLetter(units, [f, logo.src, ttd.src, stempel.src], letterRef, { gaya: f.gaya, pg, kk, title: f.judul, nomor });
+  const { count, render } = usePagedLetter(units, [f, logo.src, ttd.src, stempel.src, ttdKandidat.src], letterRef, { gaya: f.gaya, pg, kk, title: f.judul, nomor });
   const lampiranAuto = lampiranOtomatis(count);
   const lampiran = f.lampiranManual ? f.lampiran.trim() : lampiranAuto;
   const pages = render({
@@ -217,7 +220,11 @@ export default function SuratPenawaranKerja() {
       <DocOptions nomor={{ value: f.pakaiNomor, onChange: (x) => set('pakaiNomor', x) }} kosong={{ value: f.kosong, onChange: (x) => set('kosong', x) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(x) => set('skala', x)} />
       <p className="text-xs text-gray-500">Dokumen {count} halaman; isi yang tidak muat otomatis berlanjut ke halaman berikutnya.</p>
-      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, ...(f.pakaiHrd ? [{ id: 'ttd', label: 'TTD HRD' }, { id: 'stempel', label: 'Stempel' }] : [])]}
+      <PositionPad targets={[
+        { id: 'logo', label: 'Logo' },
+        ...(f.pakaiKandidat ? [{ id: 'ttdKandidat', label: `TTD ${f.kandidat || 'Kandidat'}` }] : []),
+        ...(f.pakaiHrd ? [{ id: 'ttd', label: `TTD ${f.ttdNama || 'HRD'}` }, { id: 'stempel', label: 'Stempel' }] : []),
+      ]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(x) => set('posisi', x)} />
       <LayoutPicker value={f.gaya} onChange={(x) => set('gaya', x)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(x) => set('paper', x)} onLandscape={(x) => set('landscape', x)} />
@@ -318,9 +325,12 @@ export default function SuratPenawaranKerja() {
                   {text('ttdNama', 'Nama')}
                   {text('ttdId', 'NIK karyawan (opsional)')}
                 </div>
-                <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
+                <ImageUpload label={`Tanda tangan — ${f.ttdNama || 'HRD'}`} value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
                 <ImageUpload label="Stempel" value={f.stempel} onChange={(x) => set('stempel', x)} notify={notify} {...bgFor('stempel', stempel)} />
               </>}
+              {f.pakaiKandidat && (
+                <ImageUpload label={`Tanda tangan — ${f.kandidat || 'Kandidat'} (nama mengikuti data kandidat)`} value={f.ttdKandidat} onChange={(x) => set('ttdKandidat', x)} notify={notify} {...bgFor('ttdKandidat', ttdKandidat)} />
+              )}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </FormSection>
             </>)}

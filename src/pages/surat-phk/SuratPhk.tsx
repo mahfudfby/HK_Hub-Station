@@ -216,8 +216,8 @@ export default function SuratPhk() {
       <p className="text-xs text-gray-500">Dokumen {count} halaman; isi yang tidak muat otomatis berlanjut ke halaman berikutnya.</p>
       <PositionPad targets={[
         { id: 'logo', label: 'Logo' },
-        ...(f.pakaiKaryawan ? [{ id: 'ttdKaryawan', label: 'TTD Karyawan' }] : []),
-        ...(f.pakaiUtama ? [{ id: 'ttd', label: 'TTD HRD/Direktur' }, { id: 'stempel', label: 'Stempel' }] : []),
+        ...(f.pakaiKaryawan ? [{ id: 'ttdKaryawan', label: `TTD ${f.nama || 'Karyawan'}` }] : []),
+        ...(f.pakaiUtama ? [{ id: 'ttd', label: `TTD ${f.ttdNama || 'HRD/Direktur'}` }, { id: 'stempel', label: 'Stempel' }] : []),
       ]} active={geser} onActive={setGeser} value={f.posisi} onChange={(x) => set('posisi', x)} />
       <LayoutPicker value={f.gaya} onChange={(x) => set('gaya', x)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(x) => set('paper', x)} onLandscape={(x) => set('landscape', x)} />
@@ -328,11 +328,11 @@ export default function SuratPhk() {
                   {text('ttdNama', 'Nama')}
                   {text('ttdId', 'NIK / NIP (opsional)')}
                 </div>
-                <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
+                <ImageUpload label={`Tanda tangan — ${f.ttdNama || 'HRD/Direktur'}`} value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
                 <ImageUpload label="Stempel" value={f.stempel} onChange={(x) => set('stempel', x)} notify={notify} {...bgFor('stempel', stempel)} />
               </>}
               {f.pakaiKaryawan && (
-                <ImageUpload label="Tanda tangan karyawan (nama mengikuti data karyawan)" value={f.ttdKaryawan} onChange={(x) => set('ttdKaryawan', x)} notify={notify} {...bgFor('ttdKaryawan', ttdKaryawan)} />
+                <ImageUpload label={`Tanda tangan — ${f.nama || 'Karyawan'} (nama mengikuti data karyawan)`} value={f.ttdKaryawan} onChange={(x) => set('ttdKaryawan', x)} notify={notify} {...bgFor('ttdKaryawan', ttdKaryawan)} />
               )}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </FormSection>

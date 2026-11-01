@@ -177,9 +177,9 @@ export default function SuratIzinTidakMasukKerja() {
       <TextSizeSlider value={f.skala} effective={k} onChange={(x) => set('skala', x)} />
       <PositionPad targets={[
         ...(f.kopPribadi ? [] : [{ id: 'logo', label: 'Logo' }]),
-        { id: 'ttd', label: 'TTD Karyawan' },
-        ...(f.pakaiAtasan ? [{ id: 'ttdAtasan', label: 'TTD Atasan' }] : []),
-        ...(f.pakaiHrd ? [{ id: 'ttdHrd', label: 'TTD HRD' }, { id: 'stempel', label: 'Stempel' }] : []),
+        { id: 'ttd', label: `TTD ${f.nama || 'Karyawan'}` },
+        ...(f.pakaiAtasan ? [{ id: 'ttdAtasan', label: `TTD ${f.atasanNama || 'Atasan'}` }] : []),
+        ...(f.pakaiHrd ? [{ id: 'ttdHrd', label: `TTD ${f.hrdNama || 'HRD'}` }, { id: 'stempel', label: 'Stempel' }] : []),
       ]} active={geser} onActive={setGeser} value={f.posisi} onChange={(x) => set('posisi', x)} />
       <LayoutPicker value={f.gaya} onChange={(x) => set('gaya', x)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(x) => set('paper', x)} onLandscape={(x) => set('landscape', x)} />
@@ -277,16 +277,16 @@ export default function SuratIzinTidakMasukKerja() {
               </div>
               <p className="text-sm font-bold text-gray-700">Karyawan (pemohon)</p>
               {text('ttdHeading', 'Salam penutup')}
-              <ImageUpload label="Tanda tangan karyawan" value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
+              <ImageUpload label={`Tanda tangan — ${f.nama || 'Karyawan'}`} value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
               {f.pakaiAtasan && <>
                 <p className="text-sm font-bold text-gray-700">Atasan langsung</p>
                 <div className="grid sm:grid-cols-2 gap-2">{text('atasanJabatan', 'Jabatan')}{text('atasanNama', 'Nama')}</div>
-                <ImageUpload label="Tanda tangan atasan" value={f.ttdAtasan} onChange={(x) => set('ttdAtasan', x)} notify={notify} {...bgFor('ttdAtasan', ttdAtasan)} />
+                <ImageUpload label={`Tanda tangan — ${f.atasanNama || 'Atasan'}`} value={f.ttdAtasan} onChange={(x) => set('ttdAtasan', x)} notify={notify} {...bgFor('ttdAtasan', ttdAtasan)} />
               </>}
               {f.pakaiHrd && <>
                 <p className="text-sm font-bold text-gray-700">HRD</p>
                 <div className="grid sm:grid-cols-2 gap-2">{text('hrdJabatan', 'Jabatan')}{text('hrdNama', 'Nama')}</div>
-                <ImageUpload label="Tanda tangan HRD" value={f.ttdHrd} onChange={(x) => set('ttdHrd', x)} notify={notify} {...bgFor('ttdHrd', ttdHrd)} />
+                <ImageUpload label={`Tanda tangan — ${f.hrdNama || 'HRD'}`} value={f.ttdHrd} onChange={(x) => set('ttdHrd', x)} notify={notify} {...bgFor('ttdHrd', ttdHrd)} />
                 <ImageUpload label="Stempel perusahaan" value={f.stempel} onChange={(x) => set('stempel', x)} notify={notify} {...bgFor('stempel', stempel)} />
               </>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>

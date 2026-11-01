@@ -198,8 +198,8 @@ export default function UndanganMusyawarahDesa() {
     <>
       <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
-      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' },
-        ...(f.mengetahui ? [{ id: 'ttdMengetahui', label: 'Ttd mengetahui' }, { id: 'stempelMengetahui', label: 'Stempel mengetahui' }] : [])]}
+      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: `TTD ${f.ttdNama || 'Penanda tangan'}` }, { id: 'stempel', label: 'Stempel' },
+        ...(f.mengetahui ? [{ id: 'ttdMengetahui', label: `TTD ${f.mengetahuiNama || 'Mengetahui'}` }, { id: 'stempelMengetahui', label: 'Stempel mengetahui' }] : [])]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
       <LayoutPicker value={f.gaya} onChange={(v) => set('gaya', v)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
@@ -281,7 +281,7 @@ export default function UndanganMusyawarahDesa() {
                 <Field label="Jabatan"><AutoTextarea className={inputCls} value={f.ttdJabatan} onChange={(e) => set('ttdJabatan', e.target.value)} /></Field>
                 <Field label="Nama"><AutoTextarea className={inputCls} value={f.ttdNama} onChange={(e) => set('ttdNama', e.target.value)} /></Field>
               </div>
-              <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
+              <ImageUpload label={`Tanda tangan — ${f.ttdNama || 'Penanda tangan'}`} value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
               <label className="flex items-center gap-2 min-h-[40px] text-sm font-medium">
                 <input type="checkbox" className="w-5 h-5" checked={f.mengetahui} onChange={(e) => set('mengetahui', e.target.checked)} /> Tambah "Mengetahui," pihak lain
@@ -291,7 +291,7 @@ export default function UndanganMusyawarahDesa() {
                   <Field label="Jabatan yang mengetahui"><AutoTextarea className={inputCls} value={f.mengetahuiJabatan} onChange={(e) => set('mengetahuiJabatan', e.target.value)} /></Field>
                   <Field label="Nama"><AutoTextarea className={inputCls} value={f.mengetahuiNama} onChange={(e) => set('mengetahuiNama', e.target.value)} /></Field>
                 </div>
-                <ImageUpload label="Tanda tangan (mengetahui)" value={f.ttdMengetahui} onChange={(v) => set('ttdMengetahui', v)} notify={notify} {...bgFor('ttdMengetahui', ttdMengetahui)} />
+                <ImageUpload label={`Tanda tangan — ${f.mengetahuiNama || 'Mengetahui'}`} value={f.ttdMengetahui} onChange={(v) => set('ttdMengetahui', v)} notify={notify} {...bgFor('ttdMengetahui', ttdMengetahui)} />
                 <ImageUpload label="Stempel (mengetahui)" value={f.stempelMengetahui} onChange={(v) => set('stempelMengetahui', v)} notify={notify} {...bgFor('stempelMengetahui', stempelMengetahui)} />
               </>)}
               <p className="text-sm font-bold text-gray-700">Tembusan (opsional)</p>

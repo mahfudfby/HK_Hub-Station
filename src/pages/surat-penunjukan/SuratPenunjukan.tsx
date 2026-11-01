@@ -11,7 +11,7 @@ import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import { DOTTED, ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSigner } from '../../shared/components/LetterLayouts';
-import { useBgRemoved } from '../../shared/lib/removeBg';
+import { removeBackground, useBgRemoved } from '../../shared/lib/removeBg';
 import DocOptions, { TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import FormSection from '../../shared/components/FormSection';
@@ -22,7 +22,7 @@ import FormSection from '../../shared/components/FormSection';
 // ============================================================
 // SECTION: Data
 // ============================================================
-type Signer = { heading: string; nama: string; jabatan: string };
+type Signer = { id: string; heading: string; nama: string; jabatan: string; ttd: string };
 type Form = {
   gaya: string; paper: string; landscape: boolean; skala: number; posisi: Offsets;
   logo: string; instansi: string; subKop: string; alamat: string; kontak: string;
@@ -32,7 +32,7 @@ type Form = {
   nama: string; nik: string; jabatan: string; divisi: string;
   sebagai: string; tugas: string; masaBerlaku: string; penutup: string;
   ttdHeading: string; ttdJabatan: string; ttdNama: string; ttdId: string; ttd: string; stempel: string;
-  ttdDitunjuk: boolean;
+  ttdDitunjuk: boolean; ttdTunjuk: string;
   penandaLain: Signer[];
   tembusan: string;
   pakaiNomor: boolean; kosong: boolean;
@@ -57,7 +57,7 @@ const makeDefault = (): Form => ({
   masaBerlaku: 'Penunjukan ini berlaku sejak tanggal ditetapkan sampai dengan proyek dinyatakan selesai, dengan ketentuan akan ditinjau kembali apabila terdapat kekeliruan.',
   penutup: 'Demikian surat penunjukan ini dibuat untuk dilaksanakan dengan penuh tanggung jawab.',
   ttdHeading: 'Ditetapkan oleh,', ttdJabatan: 'Direktur', ttdNama: 'Hendra Wijaya', ttdId: '', ttd: '', stempel: '',
-  ttdDitunjuk: true,
+  ttdDitunjuk: true, ttdTunjuk: '',
   penandaLain: [],
   tembusan: 'Kepala Divisi Operasional\nArsip',
   pakaiNomor: true, kosong: false,
@@ -69,6 +69,26 @@ const USER_KEYS = ['logo', 'posisi', 'instansi', 'subKop', 'alamat', 'kontak', '
 // ============================================================
 // SECTION: Potongan isi surat
 // ============================================================
+const newId = () => Math.random().toString(36).slice(2, 10);
+
+// Hapus BG untuk daftar tanda tangan dinamis (hook tidak bisa dipanggil per item); hasil di-cache per gambar asli
+function useBgRemovedList(srcs: string[], onError: (m: string) => void) {
+  const [done, setDone] = useState<Record<string, string>>({});
+  const jalan = useRef(new Set<string>());
+  const todo = srcs.filter((s) => s && !(s in done));
+  useEffect(() => {
+    todo.filter((s) => !jalan.current.has(s)).forEach((s) => {
+      jalan.current.add(s);
+      removeBackground(s)
+        .catch((err) => { onError(`Hapus background gagal: ${err?.message || 'gambar tidak bisa dibaca'}.`); return s; })
+        .then((out) => setDone((p) => ({ ...p, [s]: out })));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todo.join(' ')]);
+  return (src: string, on: boolean) => (!on || !src ? { src, busy: false } : src in done ? { src: done[src], busy: false } : { src, busy: true });
+}
+
+
 // Daftar bernomor manual (preflight Tailwind menghapus penanda <ol>; html2canvas tetap akurat)
 // blank: jumlah baris bernomor kosong untuk ditulis tangan (template kosongan)
 function NumList({ text, k, blank = 0 }: { text: string; k: number; blank?: number }) {
@@ -92,7 +112,8 @@ export default function SuratPenunjukan() {
     const d = makeDefault();
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      return saved ? { ...d, ...saved, nomor: orRandomNo(saved.nomor, POLA) } : d;
+      // data lama: penanda tangan lain belum punya id & ttd
+      return saved ? { ...d, ...saved, nomor: orRandomNo(saved.nomor, POLA), penandaLain: (saved.penandaLain ?? []).map((s: Signer) => ({ ...s, id: s.id || newId(), ttd: s.ttd ?? '' })) } : d;
     } catch {
       return d;
     }
@@ -105,13 +126,18 @@ export default function SuratPenunjukan() {
     }
   }, [f, notify]);
 
-  const [bg, setBg] = useState({ logo: true, ttd: true, stempel: true });
+  const [bg, setBg] = useState({ logo: true, ttd: true, stempel: true, ttdTunjuk: true });
   const bgError = (m: string) => notify('error', m);
   const logo = useBgRemoved(f.logo, bg.logo, bgError);
   const ttd = useBgRemoved(f.ttd, bg.ttd, bgError);
   const stempel = useBgRemoved(f.stempel, bg.stempel, bgError);
+  const ttdTunjuk = useBgRemoved(f.ttdTunjuk, bg.ttdTunjuk, bgError);
   const bgFor = (key: keyof typeof bg, shown: { src: string; busy: boolean }) => ({ bg: bg[key], onBg: (v: boolean) => setBg((p) => ({ ...p, [key]: v })), shown: shown.src, bgBusy: shown.busy });
-  const busy = logo.busy || ttd.busy || stempel.busy;
+  // Penanda tangan lain: Hapus BG per orang (bawaan aktif)
+  const [bgLain, setBgLain] = useState<Record<string, boolean>>({});
+  const lainBg = useBgRemovedList(f.penandaLain.filter((s) => bgLain[s.id] !== false).map((s) => s.ttd), bgError);
+  const lain = f.penandaLain.map((s) => lainBg(s.ttd, bgLain[s.id] !== false));
+  const busy = logo.busy || ttd.busy || stempel.busy || ttdTunjuk.busy || lain.some((x) => x.busy);
 
   const set = <K extends keyof Form>(key: K, v: Form[K]) => setF((p) => ({ ...p, [key]: v }));
   const setSigner = (i: number, p: Partial<Signer>) => set('penandaLain', f.penandaLain.map((s, j) => (j === i ? { ...s, ...p } : s)));
@@ -123,7 +149,7 @@ export default function SuratPenunjukan() {
 
   const letterRef = useRef<HTMLDivElement>(null);
   const pg = letterPage(f.paper, f.landscape);
-  const k = useFitScale(f.skala / 100, () => letterRef.current?.firstElementChild as HTMLElement, true, [f, logo.src, ttd.src, stempel.src]);
+  const k = useFitScale(f.skala / 100, () => letterRef.current?.firstElementChild as HTMLElement, true, [f, logo.src, ttd.src, stempel.src, ttdTunjuk.src, ...lain.map((x) => x.src)]);
   const kk = k * pg.f * 0.86;
   const fileName = `surat-penunjukan-${(f.nomor || 'surat').replace(/[^\w-]+/g, '-').toLowerCase()}`;
   const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
@@ -133,8 +159,8 @@ export default function SuratPenunjukan() {
   const meta = [{ label: 'Lampiran', value: f.lampiran }, { label: 'Perihal', value: f.perihal }].filter((r) => r.value.trim())
     .map((r) => (K && r.label === 'Lampiran' ? { ...r, value: TITIK } : r));
   const signers: LayoutSigner[] = [
-    ...(f.ttdDitunjuk ? [{ heading: 'Yang ditunjuk,', role: isian(f.jabatan, K), name: isian(f.nama, K), idLine: K ? '' : f.nik && `NIK. ${f.nik}` }] : []),
-    ...f.penandaLain.map((s) => ({ heading: s.heading, role: s.jabatan, name: s.nama })),
+    ...(f.ttdDitunjuk ? [{ heading: 'Yang ditunjuk,', role: isian(f.jabatan, K), name: isian(f.nama, K), idLine: K ? '' : f.nik && `NIK. ${f.nik}`, ttd: K ? '' : ttdTunjuk.src, ttdOffset: getOffset(f.posisi, 'ttdTunjuk') }] : []),
+    ...f.penandaLain.map((s, i) => ({ heading: s.heading, role: s.jabatan, name: s.nama, ttd: K ? '' : lain[i].src, ttdOffset: getOffset(f.posisi, `ttd_${s.id}`) })),
     { heading: f.ttdHeading, role: f.ttdJabatan, name: f.ttdNama, idLine: f.ttdId, ttd: K ? '' : ttd.src, stempel: K ? '' : stempel.src, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
   ];
   const doc: LayoutDoc = {
@@ -166,7 +192,9 @@ export default function SuratPenunjukan() {
     <>
       <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
-      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
+      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: `TTD ${f.ttdNama || f.ttdJabatan || 'utama'}` }, { id: 'stempel', label: 'Stempel' },
+        ...(f.ttdDitunjuk ? [{ id: 'ttdTunjuk', label: `TTD ${f.nama || 'yang ditunjuk'}` }] : []),
+        ...f.penandaLain.map((s) => ({ id: `ttd_${s.id}`, label: `TTD ${s.nama || s.jabatan || 'penanda tangan'}` }))]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
       <LayoutPicker value={f.gaya} onChange={(v) => set('gaya', v)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
@@ -241,23 +269,28 @@ export default function SuratPenunjukan() {
                 <Field label="Nama"><AutoTextarea className={inputCls} value={f.ttdNama} onChange={(e) => set('ttdNama', e.target.value)} /></Field>
                 <Field label="NIK karyawan (opsional)"><AutoTextarea className={inputCls} value={f.ttdId} onChange={(e) => set('ttdId', e.target.value)} /></Field>
               </div>
-              <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
+              <ImageUpload label={`Tanda tangan — ${f.ttdNama || f.ttdJabatan || 'penanda tangan utama'}`} value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
               <label className="flex items-center gap-2 min-h-[40px] text-sm font-medium text-gray-700">
                 <input type="checkbox" className="h-5 w-5" checked={f.ttdDitunjuk} onChange={(e) => set('ttdDitunjuk', e.target.checked)} />
                 Tampilkan tanda tangan "Yang ditunjuk," di kiri
               </label>
+              {f.ttdDitunjuk && <ImageUpload label={`Tanda tangan — ${f.nama || 'yang ditunjuk'}`} value={f.ttdTunjuk} onChange={(v) => set('ttdTunjuk', v)} notify={notify} {...bgFor('ttdTunjuk', ttdTunjuk)} />}
               <p className="text-sm font-bold text-gray-700">Penanda tangan lain (opsional)</p>
               {f.penandaLain.map((p, i) => (
-                <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 items-start">
+                <div key={p.id} className="rounded-xl border border-gray-200 p-3 space-y-2">
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 items-start">
                   <AutoTextarea aria-label={`Salam penanda tangan ${i + 1}`} placeholder="Mis. Mengetahui," className={inputCls} value={p.heading} onChange={(e) => setSigner(i, { heading: e.target.value })} />
                   <AutoTextarea aria-label={`Jabatan penanda tangan ${i + 1}`} placeholder="Jabatan" className={inputCls} value={p.jabatan} onChange={(e) => setSigner(i, { jabatan: e.target.value })} />
                   <AutoTextarea aria-label={`Nama penanda tangan ${i + 1}`} placeholder="Nama" className={inputCls} value={p.nama} onChange={(e) => setSigner(i, { nama: e.target.value })} />
                   <button type="button" onClick={() => set('penandaLain', f.penandaLain.filter((_, j) => j !== i))} aria-label={`Hapus penanda tangan ${i + 1}`}
                     className="px-3 min-h-[40px] rounded-lg text-red-600 border border-red-200">✕</button>
                 </div>
+                <ImageUpload label={`Tanda tangan — ${p.nama || p.jabatan || `penanda tangan ${i + 1}`}`} value={p.ttd} onChange={(v) => setSigner(i, { ttd: v })} notify={notify}
+                  bg={bgLain[p.id] !== false} onBg={(v) => setBgLain((b) => ({ ...b, [p.id]: v }))} shown={lain[i].src} bgBusy={lain[i].busy} />
+                </div>
               ))}
-              <button type="button" onClick={() => set('penandaLain', [...f.penandaLain, { heading: 'Mengetahui,', nama: '', jabatan: 'Manajer HRD' }])} className="min-h-[40px] text-sm font-medium text-blue-700">+ Tambah penanda tangan</button>
+              <button type="button" onClick={() => set('penandaLain', [...f.penandaLain, { id: newId(), heading: 'Mengetahui,', nama: '', jabatan: 'Manajer HRD', ttd: '' }])} className="min-h-[40px] text-sm font-medium text-blue-700">+ Tambah penanda tangan</button>
               <Field label="Tembusan (opsional)"><AutoTextarea rows={2} className={inputCls} value={f.tembusan} onChange={(e) => set('tembusan', e.target.value)} /></Field>
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </FormSection>

@@ -216,8 +216,8 @@ export default function SuratKeteranganPenghasilanKaryawan() {
       <TextSizeSlider value={f.skala} effective={k} onChange={(x) => set('skala', x)} />
       <PositionPad targets={[
         { id: 'logo', label: 'Logo' },
-        ...(f.pakaiUtama ? [{ id: 'ttd', label: 'TTD HRD/Finance' }, { id: 'stempel', label: 'Stempel' }] : []),
-        ...(f.pakaiDirektur ? [{ id: 'ttdDir', label: 'TTD Direktur' }] : []),
+        ...(f.pakaiUtama ? [{ id: 'ttd', label: `TTD ${f.ttdNama || 'HRD/Finance'}` }, { id: 'stempel', label: 'Stempel' }] : []),
+        ...(f.pakaiDirektur ? [{ id: 'ttdDir', label: `TTD ${f.dirNama || 'Direktur'}` }] : []),
       ]} active={geser} onActive={setGeser} value={f.posisi} onChange={(x) => set('posisi', x)} />
       <LayoutPicker value={f.gaya} onChange={(x) => set('gaya', x)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(x) => set('paper', x)} onLandscape={(x) => set('landscape', x)} />
@@ -312,13 +312,13 @@ export default function SuratKeteranganPenghasilanKaryawan() {
                   {text('ttdNama', 'Nama')}
                   {text('ttdId', 'NIK karyawan (opsional)')}
                 </div>
-                <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
+                <ImageUpload label={`Tanda tangan — ${f.ttdNama || 'HRD/Finance'}`} value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
                 <ImageUpload label="Stempel" value={f.stempel} onChange={(x) => set('stempel', x)} notify={notify} {...bgFor('stempel', stempel)} />
               </>}
               {f.pakaiDirektur && <>
                 <p className="text-sm font-bold text-gray-700">Mengetahui</p>
                 <div className="grid sm:grid-cols-2 gap-2">{text('dirJabatan', 'Jabatan')}{text('dirNama', 'Nama')}</div>
-                <ImageUpload label="Tanda tangan direktur" value={f.ttdDir} onChange={(x) => set('ttdDir', x)} notify={notify} {...bgFor('ttdDir', ttdDir)} />
+                <ImageUpload label={`Tanda tangan — ${f.dirNama || 'Direktur'}`} value={f.ttdDir} onChange={(x) => set('ttdDir', x)} notify={notify} {...bgFor('ttdDir', ttdDir)} />
               </>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </FormSection>

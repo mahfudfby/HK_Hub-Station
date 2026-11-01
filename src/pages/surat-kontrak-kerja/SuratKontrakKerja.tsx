@@ -31,6 +31,10 @@ import { LampiranField, lampiranTeks } from './Lampiran';
 type Pasal = { judul: string; isi: string; tugas?: boolean; gaji?: boolean };
 // Komponen upah: tunjangan tetap = label + nilai; tidak tetap = label + nilai dan/atau keterangan.
 type Item = { label: string; nilai: string; ket: string };
+type Saksi = { id: string; nama: string; ttd: string }; // id tetap: kunci geseran tanda tangan
+const newId = () => Math.random().toString(36).slice(2, 8);
+// Data lama: saksi berupa string → objek ber-id
+const toSaksi = (s: string | Partial<Saksi>): Saksi => (typeof s === 'string' ? { id: newId(), nama: s, ttd: '' } : { nama: '', ttd: '', ...s, id: s.id || newId() });
 type Form = {
   gaya: string; paper: string; landscape: boolean; skala: number; posisi: Offsets;
   pakaiNomor: boolean; kosong: boolean;
@@ -41,7 +45,7 @@ type Form = {
   jabatan: string; penempatan: string; mulai: string; selesai: string;
   hariKerja: string; jamKerja: string; gaji: string; tunjTetap: Item[]; tunjTidak: Item[]; tglGaji: string;
   tugas: string; pasal: Pasal[];
-  ttd: string; stempel: string; saksi: string[];
+  ttd: string; stempel: string; ttdK: string; saksi: Saksi[];
 };
 
 const STORAGE_KEY = 'surat-kontrak-kerja:v1';
@@ -100,7 +104,7 @@ const makeDefault = (): Form => ({
     { label: 'Uang lembur', nilai: '', ket: 'sesuai peraturan perundang-undangan' },
   ],
   tugas: PRESET.Admin, pasal: PASAL_DEFAULT,
-  ttd: '', stempel: '', saksi: [],
+  ttd: '', stempel: '', ttdK: '', saksi: [],
 });
 
 // Data User: identitas kop, penanda tangan perusahaan & gambar (bukan isi perjanjian)
@@ -178,7 +182,7 @@ export default function SuratKontrakKerja() {
     const d = makeDefault();
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      return saved ? { ...d, ...saved, nomor: orRandomNo(saved.nomor, POLA), pasal: migrasiPasal(saved.pasal ?? d.pasal) } : d;
+      return saved ? { ...d, ...saved, nomor: orRandomNo(saved.nomor, POLA), pasal: migrasiPasal(saved.pasal ?? d.pasal), saksi: (saved.saksi ?? []).map(toSaksi) } : d;
     } catch {
       return d;
     }
@@ -191,13 +195,18 @@ export default function SuratKontrakKerja() {
     }
   }, [f, notify]);
 
-  const [bg, setBg] = useState({ logo: true, ttd: true, stempel: true });
+  const [bg, setBg] = useState({ logo: true, ttd: true, stempel: true, ttdK: true });
   const bgError = (m: string) => notify('error', m);
   const logo = useBgRemoved(f.logo, bg.logo, bgError);
   const ttd = useBgRemoved(f.ttd, bg.ttd, bgError);
   const stempel = useBgRemoved(f.stempel, bg.stempel, bgError);
+  const ttdK = useBgRemoved(f.ttdK, bg.ttdK, bgError);
   const bgFor = (key: keyof typeof bg, shown: { src: string; busy: boolean }) => ({ bg: bg[key], onBg: (v: boolean) => setBg((p) => ({ ...p, [key]: v })), shown: shown.src, bgBusy: shown.busy });
-  const busy = logo.busy || ttd.busy || stempel.busy;
+  // Tanda tangan saksi (maks. 3): 3 slot tetap agar jumlah hook tidak berubah; Hapus BG per id saksi
+  const [bgS, setBgS] = useState<Record<string, boolean>>({});
+  const onS = (i: number) => !!f.saksi[i] && (bgS[f.saksi[i].id] ?? true);
+  const ttdS = [useBgRemoved(f.saksi[0]?.ttd ?? '', onS(0), bgError), useBgRemoved(f.saksi[1]?.ttd ?? '', onS(1), bgError), useBgRemoved(f.saksi[2]?.ttd ?? '', onS(2), bgError)];
+  const busy = logo.busy || ttd.busy || stempel.busy || ttdK.busy || ttdS.some((x) => x.busy);
 
   const set = <K extends keyof Form>(key: K, v: Form[K]) => setF((p) => ({ ...p, [key]: v }));
   const setPasal = (i: number, p: Partial<Pasal>) => set('pasal', f.pasal.map((s, j) => (j === i ? { ...s, ...p } : s)));
@@ -291,14 +300,14 @@ export default function SuratKontrakKerja() {
         <div style={{ textAlign: 'right', marginBottom: 2 * kk }}>{placeDate}</div>
         {/* Pihak Kedua (karyawan) kiri, Pihak Pertama (perusahaan, + stempel) kanan; ruang tanda tangan muat meterai */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16 * kk }}>
-          <SignBlock s={{ heading: 'PIHAK KEDUA,', role: 'Karyawan', name: isian(f.nama, ks) }} k={kk} />
+          <SignBlock s={{ heading: 'PIHAK KEDUA,', role: 'Karyawan', name: isian(f.nama, ks), ttd: ks ? '' : ttdK.src, ttdOffset: getOffset(f.posisi, 'ttdKaryawan') }} k={kk} />
           <SignBlock k={kk} align="right" s={{ heading: 'PIHAK PERTAMA,', role: f.p1Jabatan, name: f.p1Nama, ttd: ks ? '' : ttd.src, stempel: ks ? '' : stempel.src, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel') }} />
         </div>
         {f.saksi.length > 0 && (
           <div style={{ marginTop: 10 * kk }}>
             <div style={{ textAlign: 'center', marginBottom: 2 * kk }}>Saksi-saksi:</div>
             <div style={{ display: 'flex', justifyContent: 'space-evenly', gap: 12 * kk }}>
-              {f.saksi.map((s, i) => <SignBlock key={i} s={{ heading: `Saksi ${i + 1},`, name: isian(s, ks) }} k={kk} width={130} />)}
+              {f.saksi.map((s, i) => <SignBlock key={s.id} s={{ heading: `Saksi ${i + 1},`, name: isian(s.nama, ks), ttd: ks ? '' : ttdS[i]?.src, ttdOffset: getOffset(f.posisi, `ttdSaksi_${s.id}`) }} k={kk} width={130} />)}
             </div>
           </div>
         )}
@@ -362,7 +371,12 @@ export default function SuratKontrakKerja() {
       <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <p className="text-xs text-gray-500">Dokumen {ranges.length} halaman; pasal yang tidak muat otomatis berlanjut ke halaman berikutnya.</p>
-      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
+      <PositionPad targets={[
+        { id: 'logo', label: 'Logo' },
+        { id: 'ttd', label: `TTD ${f.p1Nama || 'Pihak Pertama'}` }, { id: 'stempel', label: 'Stempel' },
+        { id: 'ttdKaryawan', label: `TTD ${f.nama || 'Pihak Kedua'}` },
+        ...f.saksi.map((s, i) => ({ id: `ttdSaksi_${s.id}`, label: `TTD ${s.nama || `Saksi ${i + 1}`}` })),
+      ]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
       <LayoutPicker value={f.gaya} onChange={(v) => set('gaya', v)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
@@ -420,7 +434,7 @@ export default function SuratKontrakKerja() {
                 <Field label="Nama wakil perusahaan"><AutoTextarea className={inputCls} value={f.p1Nama} onChange={(e) => set('p1Nama', e.target.value)} /></Field>
                 <Field label="Jabatan"><AutoTextarea className={inputCls} value={f.p1Jabatan} onChange={(e) => set('p1Jabatan', e.target.value)} /></Field>
               </div>
-              <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
+              <ImageUpload label={`Tanda tangan — ${f.p1Nama || 'Pihak Pertama'}`} value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
             </FormSection>
 
@@ -431,6 +445,7 @@ export default function SuratKontrakKerja() {
                 <Field label="Tempat, tanggal lahir"><AutoTextarea className={inputCls} value={f.ttl} onChange={(e) => set('ttl', e.target.value)} /></Field>
               </div>
               <Field label="Alamat"><AutoTextarea className={inputCls} value={f.alamatK} onChange={(e) => set('alamatK', e.target.value)} /></Field>
+              <ImageUpload label={`Tanda tangan — ${f.nama || 'Pihak Kedua'}`} value={f.ttdK} onChange={(v) => set('ttdK', v)} notify={notify} {...bgFor('ttdK', ttdK)} />
             </FormSection>
 
             <FormSection title="Pekerjaan & Waktu Kerja">
@@ -497,12 +512,17 @@ export default function SuratKontrakKerja() {
 
             <FormSection title="Saksi (opsional)">
               {f.saksi.map((s, i) => (
-                <div key={i} className="flex gap-2">
-                  <AutoTextarea aria-label={`Nama saksi ${i + 1}`} placeholder="Nama saksi" className={inputCls} value={s} onChange={(e) => set('saksi', f.saksi.map((x, j) => (j === i ? e.target.value : x)))} />
-                  <button type="button" onClick={() => set('saksi', f.saksi.filter((_, j) => j !== i))} aria-label={`Hapus saksi ${i + 1}`} className="px-3 min-h-[40px] rounded-lg text-red-600 border border-red-200">✕</button>
+                <div key={s.id} className="space-y-2 rounded-lg border p-3">
+                  <div className="flex gap-2">
+                    <AutoTextarea aria-label={`Nama saksi ${i + 1}`} placeholder="Nama saksi" className={inputCls} value={s.nama} onChange={(e) => set('saksi', f.saksi.map((x, j) => (j === i ? { ...x, nama: e.target.value } : x)))} />
+                    <button type="button" onClick={() => set('saksi', f.saksi.filter((_, j) => j !== i))} aria-label={`Hapus saksi ${i + 1}`} className="px-3 min-h-[40px] rounded-lg text-red-600 border border-red-200">✕</button>
+                  </div>
+                  <ImageUpload label={`Tanda tangan — ${s.nama || `Saksi ${i + 1}`}`} value={s.ttd} notify={notify}
+                    onChange={(v) => setF((p) => ({ ...p, saksi: p.saksi.map((x) => (x.id === s.id ? { ...x, ttd: v } : x)) }))}
+                    bg={bgS[s.id] ?? true} onBg={(v) => setBgS((p) => ({ ...p, [s.id]: v }))} shown={ttdS[i].src} bgBusy={ttdS[i].busy} />
                 </div>
               ))}
-              {f.saksi.length < 3 && <button type="button" onClick={() => set('saksi', [...f.saksi, ''])} className="min-h-[40px] text-sm font-medium text-blue-700">+ Tambah saksi</button>}
+              {f.saksi.length < 3 && <button type="button" onClick={() => set('saksi', [...f.saksi, { id: newId(), nama: '', ttd: '' }])} className="min-h-[40px] text-sm font-medium text-blue-700">+ Tambah saksi</button>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </FormSection>
             </>)}

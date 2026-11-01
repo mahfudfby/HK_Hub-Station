@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import AutoTextarea from '../../shared/components/AutoTextarea';
 import FitPreview from '../../shared/components/FitPreview';
 import NumberFormatInput from '../../shared/components/NumberFormatInput';
-import PositionPad, { getOffset, type Offsets } from '../../shared/components/PositionPad';
+import PositionPad, { fxOf, getOffset, type Offset, type Offsets } from '../../shared/components/PositionPad';
 import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/CanvasMode';
 import SharedGallery from '../../shared/components/SharedGallery';
 import UserData from '../../shared/components/UserData';
@@ -35,6 +35,7 @@ type Form = {
   kewajiban: string; penutup: string;
   ttdHeading: string; ttdJabatan: string; ttdNama: string; ttdId: string; ttd: string; stempel: string;
   pengesahan: boolean; tembusan: string;
+  ttdTiba: string; stempelTiba: string; ttdBerangkat: string; stempelBerangkat: string; // pejabat di tempat tujuan
 };
 
 const STORAGE_KEY = 'surat-tugas-luar-kota:v1';
@@ -64,6 +65,7 @@ const makeDefault = (): Form => ({
   penutup: 'Demikian surat tugas ini dibuat untuk dilaksanakan dengan penuh tanggung jawab.',
   ttdHeading: 'Hormat kami,', ttdJabatan: 'Direktur', ttdNama: 'Hendra Wijaya', ttdId: '', ttd: '', stempel: '',
   pengesahan: true, tembusan: 'Manajer Keuangan\nArsip',
+  ttdTiba: '', stempelTiba: '', ttdBerangkat: '', stempelBerangkat: '',
 });
 
 // Data User: identitas kop, penanda tangan & gambar (bukan isi surat)
@@ -106,24 +108,33 @@ function PegawaiTable({ rows, kosong, k }: { rows: Pegawai[]; kosong: boolean; k
 }
 
 // Kolom pengesahan di tempat tujuan (Tiba di / Berangkat dari), diisi & dicap pihak tujuan
-function Pengesahan({ k }: { k: number }) {
+// Gambar ttd/cap (opsional) berikut geserannya; kosong = ditandatangani & dicap basah
+type Sah = { ttd: string; cap: string; oT: Offset; oC: Offset; idT: string; idC: string };
+function Pengesahan({ k, tiba, berangkat }: { k: number; tiba: Sah; berangkat: Sah }) {
   const box: CSSProperties = { flex: 1, border: '1px solid #000', padding: 6 * k };
-  const col = (judul: string) => (
+  const col = (judul: string, s: Sah) => {
+    const fT = fxOf(s.oT, s.idT);
+    const fC = fxOf(s.oC, s.idC);
+    return (
     <div style={box}>
       <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 4 * k, rowGap: 2 * k }}>
         <span>{judul}</span><span>: {TITIK}</span>
         <span>Pada tanggal</span><span>: {TITIK}</span>
       </div>
       <div style={{ textAlign: 'center', marginTop: 4 * k }}>Pejabat di tempat tujuan,</div>
-      <div style={{ height: 52 * k }} />
+      <div style={{ position: 'relative', height: 52 * k }}>
+        {s.cap && <img src={s.cap} alt="Cap" style={{ position: 'absolute', left: `calc(20% + ${s.oC.x}px)`, top: s.oC.y, height: 52 * k * fC.z, opacity: fC.a, mixBlendMode: 'multiply' }} />}
+        {s.ttd && <img src={s.ttd} alt="Tanda tangan" style={{ position: 'absolute', left: `calc(50% - ${60 * k * fT.z}px + ${s.oT.x}px)`, top: (52 * k - 44 * k * fT.z) / 2 + s.oT.y, height: 44 * k * fT.z, maxWidth: 120 * k * fT.z, opacity: fT.a, objectFit: 'contain', mixBlendMode: 'multiply' }} />}
+      </div>
       <div style={{ textAlign: 'center' }}>( {TITIK} )</div>
       <div style={{ textAlign: 'center', fontSize: '0.85em' }}>Nama, tanda tangan & cap</div>
     </div>
-  );
+    );
+  };
   return (
     <div style={{ marginBottom: 8 * k }}>
       <div style={{ fontWeight: 700, marginBottom: 2 * k }}>Pengesahan di tempat tujuan:</div>
-      <div style={{ display: 'flex', gap: 8 * k }}>{col('Tiba di')}{col('Berangkat dari')}</div>
+      <div style={{ display: 'flex', gap: 8 * k }}>{col('Tiba di', tiba)}{col('Berangkat dari', berangkat)}</div>
     </div>
   );
 }
@@ -152,13 +163,17 @@ export default function SuratTugasLuarKota() {
     }
   }, [f, notify]);
 
-  const [bg, setBg] = useState({ logo: true, ttd: true, stempel: true });
+  const [bg, setBg] = useState({ logo: true, ttd: true, stempel: true, ttdTiba: true, stempelTiba: true, ttdBerangkat: true, stempelBerangkat: true });
   const bgError = (m: string) => notify('error', m);
   const logo = useBgRemoved(f.logo, bg.logo, bgError);
   const ttd = useBgRemoved(f.ttd, bg.ttd, bgError);
   const stempel = useBgRemoved(f.stempel, bg.stempel, bgError);
+  const ttdTiba = useBgRemoved(f.ttdTiba, bg.ttdTiba, bgError);
+  const stempelTiba = useBgRemoved(f.stempelTiba, bg.stempelTiba, bgError);
+  const ttdBerangkat = useBgRemoved(f.ttdBerangkat, bg.ttdBerangkat, bgError);
+  const stempelBerangkat = useBgRemoved(f.stempelBerangkat, bg.stempelBerangkat, bgError);
   const bgFor = (key: keyof typeof bg, shown: { src: string; busy: boolean }) => ({ bg: bg[key], onBg: (v: boolean) => setBg((p) => ({ ...p, [key]: v })), shown: shown.src, bgBusy: shown.busy });
-  const busy = logo.busy || ttd.busy || stempel.busy;
+  const busy = logo.busy || ttd.busy || stempel.busy || ttdTiba.busy || stempelTiba.busy || ttdBerangkat.busy || stempelBerangkat.busy;
 
   const set = <K extends keyof Form>(key: K, v: Form[K]) => setF((p) => ({ ...p, [key]: v }));
   const setPegawai = (i: number, p: Partial<Pegawai>) => set('pegawai', f.pegawai.map((s, j) => (j === i ? { ...s, ...p } : s)));
@@ -170,7 +185,7 @@ export default function SuratTugasLuarKota() {
 
   const letterRef = useRef<HTMLDivElement>(null);
   const pg = letterPage(f.paper, f.landscape);
-  const k = useFitScale(f.skala / 100, () => letterRef.current?.firstElementChild as HTMLElement, true, [f, logo.src, ttd.src, stempel.src]);
+  const k = useFitScale(f.skala / 100, () => letterRef.current?.firstElementChild as HTMLElement, true, [f, logo.src, ttd.src, stempel.src, ttdTiba.src, stempelTiba.src, ttdBerangkat.src, stempelBerangkat.src]);
   const kk = k * pg.f * 0.86;
   const fileName = `surat-tugas-luar-kota-${(f.nomor || 'surat').replace(/[^\w-]+/g, '-').toLowerCase()}`;
   const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
@@ -182,6 +197,7 @@ export default function SuratTugasLuarKota() {
     ? 'Seluruh biaya perjalanan dinas ditanggung oleh perusahaan'
     : ks ? `Uang saku Rp ${TITIK} per orang per hari`
       : `Uang saku Rp ${rupiah(saku)} per orang per hari${hari ? ` (Rp ${rupiah(saku * hari)} per orang untuk ${hari} hari)` : ''}; transportasi & penginapan ditanggung perusahaan`;
+  const sah = (n: string, t: string, c: string): Sah => ({ ttd: ks ? '' : t, cap: ks ? '' : c, idT: `ttd${n}`, idC: `stempel${n}`, oT: getOffset(f.posisi, `ttd${n}`), oC: getOffset(f.posisi, `stempel${n}`) });
   const doc: LayoutDoc = {
     logo: logo.src, logoOffset: getOffset(f.posisi, 'logo'),
     kopName: f.instansi, kopLines: [f.subKop, f.alamat, f.kontak],
@@ -211,7 +227,7 @@ export default function SuratTugasLuarKota() {
     signers: [{ heading: f.ttdHeading, role: f.ttdJabatan, name: f.ttdNama, idLine: f.ttdId, ttd: ks ? '' : ttd.src, stempel: ks ? '' : stempel.src, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true }],
     footer: (f.pengesahan || f.tembusan) ? (
       <>
-        {f.pengesahan && <Pengesahan k={kk} />}
+        {f.pengesahan && <Pengesahan k={kk} tiba={sah('Tiba', ttdTiba.src, stempelTiba.src)} berangkat={sah('Berangkat', ttdBerangkat.src, stempelBerangkat.src)} />}
         {f.tembusan && <><div style={{ fontWeight: 700 }}>Tembusan:</div><div style={{ whiteSpace: 'pre-line' }}>{f.tembusan}</div></>}
       </>
     ) : undefined,
@@ -223,7 +239,9 @@ export default function SuratTugasLuarKota() {
     <>
       <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
-      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
+      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: `TTD ${f.ttdNama || f.ttdJabatan || 'utama'}` }, { id: 'stempel', label: 'Stempel' },
+        ...(f.pengesahan ? [{ id: 'ttdTiba', label: 'TTD pejabat (Tiba di)' }, { id: 'stempelTiba', label: 'Cap (Tiba di)' },
+          { id: 'ttdBerangkat', label: 'TTD pejabat (Berangkat dari)' }, { id: 'stempelBerangkat', label: 'Cap (Berangkat dari)' }] : [])]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
       <LayoutPicker value={f.gaya} onChange={(v) => set('gaya', v)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
@@ -317,12 +335,19 @@ export default function SuratTugasLuarKota() {
                 <Field label="Nama"><AutoTextarea className={inputCls} value={f.ttdNama} onChange={(e) => set('ttdNama', e.target.value)} /></Field>
                 <Field label="NIK karyawan (opsional)"><AutoTextarea className={inputCls} value={f.ttdId} onChange={(e) => set('ttdId', e.target.value)} /></Field>
               </div>
-              <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
+              <ImageUpload label={`Tanda tangan — ${f.ttdNama || f.ttdJabatan || 'penanda tangan utama'}`} value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
               <label className="flex items-center gap-2 min-h-[40px] text-sm font-medium text-gray-700">
                 <input type="checkbox" className="h-5 w-5" checked={f.pengesahan} onChange={(e) => set('pengesahan', e.target.checked)} />
                 Tampilkan kolom pengesahan "Tiba di / Berangkat dari" (cap & tanda tangan pihak tujuan)
               </label>
+              {f.pengesahan && (<>
+                <p className="text-xs text-gray-500">Opsional: kosongkan bila ditandatangani & dicap basah di tempat tujuan.</p>
+                <ImageUpload label="Tanda tangan — Pejabat (Tiba di)" value={f.ttdTiba} onChange={(v) => set('ttdTiba', v)} notify={notify} {...bgFor('ttdTiba', ttdTiba)} />
+                <ImageUpload label="Cap — Tiba di" value={f.stempelTiba} onChange={(v) => set('stempelTiba', v)} notify={notify} {...bgFor('stempelTiba', stempelTiba)} />
+                <ImageUpload label="Tanda tangan — Pejabat (Berangkat dari)" value={f.ttdBerangkat} onChange={(v) => set('ttdBerangkat', v)} notify={notify} {...bgFor('ttdBerangkat', ttdBerangkat)} />
+                <ImageUpload label="Cap — Berangkat dari" value={f.stempelBerangkat} onChange={(v) => set('stempelBerangkat', v)} notify={notify} {...bgFor('stempelBerangkat', stempelBerangkat)} />
+              </>)}
               <Field label="Tembusan (opsional)"><AutoTextarea rows={2} className={inputCls} value={f.tembusan} onChange={(e) => set('tembusan', e.target.value)} /></Field>
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </FormSection>

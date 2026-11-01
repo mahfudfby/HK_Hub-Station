@@ -34,7 +34,7 @@ type Form = {
   lama: Posisi; baru: Posisi;
   efektif: string; percobaan: string; tugas: string; penutup: string;
   ttdHeading: string; ttdJabatan: string; ttdNama: string; ttdId: string; ttd: string; stempel: string;
-  ttdYbs: boolean; tembusan: string;
+  ttdYbs: boolean; ttdKaryawan: string; tembusan: string;
 };
 
 const STORAGE_KEY = 'surat-promosi-jabatan:v1';
@@ -58,7 +58,7 @@ const makeDefault = (): Form => ({
   tugas: 'Memimpin dan mengawasi seluruh kegiatan operasional gudang cabang.\nMenjamin ketepatan penerimaan, penyimpanan, dan pengiriman barang.\nMenyusun laporan persediaan dan kinerja gudang setiap bulan kepada Manajer Operasional.\nMembina, mengatur jadwal, dan menilai kinerja staf gudang.\nMenerapkan prosedur keselamatan dan keamanan kerja di area gudang.',
   penutup: 'Kami mengucapkan selamat atas kepercayaan yang diberikan dan berharap Saudara dapat menjalankan amanah jabatan baru ini dengan sebaik-baiknya. Demikian surat ini dibuat untuk dilaksanakan sebagaimana mestinya.',
   ttdHeading: 'Ditetapkan oleh,', ttdJabatan: 'Direktur', ttdNama: 'Hendra Wijaya', ttdId: '', ttd: '', stempel: '',
-  ttdYbs: false, tembusan: 'Manajer HRD\nManajer Operasional\nArsip',
+  ttdYbs: false, ttdKaryawan: '', tembusan: 'Manajer HRD\nManajer Operasional\nArsip',
 });
 
 // Data User: identitas kop, penanda tangan & gambar (bukan isi surat)
@@ -115,13 +115,14 @@ export default function SuratPromosiJabatan() {
     }
   }, [f, notify]);
 
-  const [bg, setBg] = useState({ logo: true, ttd: true, stempel: true });
+  const [bg, setBg] = useState({ logo: true, ttd: true, stempel: true, ttdKaryawan: true });
   const bgError = (m: string) => notify('error', m);
   const logo = useBgRemoved(f.logo, bg.logo, bgError);
   const ttd = useBgRemoved(f.ttd, bg.ttd, bgError);
   const stempel = useBgRemoved(f.stempel, bg.stempel, bgError);
+  const ttdKaryawan = useBgRemoved(f.ttdKaryawan, bg.ttdKaryawan, bgError);
   const bgFor = (key: keyof typeof bg, shown: { src: string; busy: boolean }) => ({ bg: bg[key], onBg: (v: boolean) => setBg((p) => ({ ...p, [key]: v })), shown: shown.src, bgBusy: shown.busy });
-  const busy = logo.busy || ttd.busy || stempel.busy;
+  const busy = logo.busy || ttd.busy || stempel.busy || ttdKaryawan.busy;
 
   const set = <K extends keyof Form>(key: K, v: Form[K]) => setF((p) => ({ ...p, [key]: v }));
   const setPos = (side: 'lama' | 'baru', key: keyof Posisi, v: string) => setF((p) => ({ ...p, [side]: { ...p[side], [key]: v } }));
@@ -133,7 +134,7 @@ export default function SuratPromosiJabatan() {
 
   const letterRef = useRef<HTMLDivElement>(null);
   const pg = letterPage(f.paper, f.landscape);
-  const k = useFitScale(f.skala / 100, () => letterRef.current?.firstElementChild as HTMLElement, true, [f, logo.src, ttd.src, stempel.src]);
+  const k = useFitScale(f.skala / 100, () => letterRef.current?.firstElementChild as HTMLElement, true, [f, logo.src, ttd.src, stempel.src, ttdKaryawan.src]);
   const kk = k * pg.f * 0.86;
   const fileName = `surat-promosi-jabatan-${(f.nomor || 'surat').replace(/[^\w-]+/g, '-').toLowerCase()}`;
   const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
@@ -142,7 +143,7 @@ export default function SuratPromosiJabatan() {
   const t = (v: string) => (ks || !v ? TITIK : v);
   // Tanpa label bersama: "Yang bersangkutan" & Direktur tersebar rata kiri–kanan
   const signers: LayoutSigner[] = [
-    ...(f.ttdYbs ? [{ heading: 'Yang bersangkutan,', role: isian(f.baru.jabatan, ks), name: isian(f.nama, ks), idLine: !ks && f.nik ? `NIK. ${f.nik}` : '' }] : []),
+    ...(f.ttdYbs ? [{ heading: 'Yang bersangkutan,', role: isian(f.baru.jabatan, ks), name: isian(f.nama, ks), idLine: !ks && f.nik ? `NIK. ${f.nik}` : '', ttd: ks ? '' : ttdKaryawan.src, ttdOffset: getOffset(f.posisi, 'ttdKaryawan') }] : []),
     { heading: f.ttdHeading, role: f.ttdJabatan, name: f.ttdNama, idLine: f.ttdId, ttd: ks ? '' : ttd.src, stempel: ks ? '' : stempel.src, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
   ];
   const tugas = ks ? Array(4).fill(TITIK).join('\n') : f.tugas;
@@ -179,7 +180,8 @@ export default function SuratPromosiJabatan() {
     <>
       <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
-      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
+      <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: `TTD ${f.ttdNama || f.ttdJabatan || 'utama'}` }, { id: 'stempel', label: 'Stempel' },
+        ...(f.ttdYbs ? [{ id: 'ttdKaryawan', label: `TTD ${f.nama || 'yang bersangkutan'}` }] : [])]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
       <LayoutPicker value={f.gaya} onChange={(v) => set('gaya', v)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
@@ -272,12 +274,13 @@ export default function SuratPromosiJabatan() {
                 <Field label="Nama"><AutoTextarea className={inputCls} value={f.ttdNama} onChange={(e) => set('ttdNama', e.target.value)} /></Field>
                 <Field label="NIK karyawan (opsional)"><AutoTextarea className={inputCls} value={f.ttdId} onChange={(e) => set('ttdId', e.target.value)} /></Field>
               </div>
-              <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
+              <ImageUpload label={`Tanda tangan — ${f.ttdNama || f.ttdJabatan || 'penanda tangan utama'}`} value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
               <label className="flex items-center gap-2 min-h-[40px] text-sm font-medium text-gray-700">
                 <input type="checkbox" className="h-5 w-5" checked={f.ttdYbs} onChange={(e) => set('ttdYbs', e.target.checked)} />
                 Tampilkan tanda tangan "Yang bersangkutan," di kiri
               </label>
+              {f.ttdYbs && <ImageUpload label={`Tanda tangan — ${f.nama || 'yang bersangkutan'}`} value={f.ttdKaryawan} onChange={(v) => set('ttdKaryawan', v)} notify={notify} {...bgFor('ttdKaryawan', ttdKaryawan)} />}
               <Field label="Tembusan (opsional)"><AutoTextarea rows={2} className={inputCls} value={f.tembusan} onChange={(e) => set('tembusan', e.target.value)} /></Field>
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </FormSection>

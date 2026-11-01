@@ -146,8 +146,8 @@ export default function SuratKeteranganPenghasilan() {
 
   const [geser, setGeser] = useState('logo');
   const [canvas, setCanvas] = useCanvasMode();
-  const targets = [{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'TTD Lurah' }, { id: 'stempel', label: 'Stempel kelurahan' },
-    ...(f.pemohonOn ? [{ id: 'ttdPemohon', label: 'TTD pemohon' }] : [])];
+  const targets = [{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: `TTD ${f.ttdNama || 'Lurah'}` }, { id: 'stempel', label: 'Stempel kelurahan' },
+    ...(f.pemohonOn ? [{ id: 'ttdPemohon', label: `TTD ${f.warga[0]?.value || 'Pemohon'}` }] : [])];
   const tampilan = (
     <>
       <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
@@ -234,7 +234,7 @@ export default function SuratKeteranganPenghasilan() {
                 {text('ttdNama', 'Nama Lurah')}
               </div>
               {text('ttdNip', 'NIP')}
-              <ImageUpload label="Tanda tangan Lurah" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
+              <ImageUpload label={`Tanda tangan — ${f.ttdNama || 'Lurah'}`} value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel kelurahan" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
               <label className="flex items-center gap-2 min-h-[44px] font-medium">
                 <input type="checkbox" className="w-5 h-5" checked={f.pemohonOn} onChange={(e) => set('pemohonOn', e.target.checked)} />
@@ -242,7 +242,7 @@ export default function SuratKeteranganPenghasilan() {
               </label>
               {f.pemohonOn && (<>
                 {text('pemohonHeading', 'Salam pemohon')}
-                <ImageUpload label="Tanda tangan pemohon" value={f.ttdPemohon} onChange={(v) => set('ttdPemohon', v)} notify={notify} {...bgFor('ttdPemohon', ttdPemohon)} />
+                <ImageUpload label={`Tanda tangan — ${f.warga[0]?.value || 'Pemohon'}`} value={f.ttdPemohon} onChange={(v) => set('ttdPemohon', v)} notify={notify} {...bgFor('ttdPemohon', ttdPemohon)} />
               </>)}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </FormSection>

@@ -179,10 +179,12 @@ export default function SuratIzinSekolah() {
     <>
       <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
+      {/* Target hanya untuk penanda tangan yang tampil */}
       <PositionPad targets={[
-        { id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'TTD orang tua' },
-        { id: 'ttdRt', label: 'TTD Ketua RT' }, { id: 'stempelRt', label: 'Stempel RT' },
-        { id: 'ttdRw', label: 'TTD Ketua RW' }, { id: 'stempelRw', label: 'Stempel RW' },
+        { id: 'logo', label: 'Logo' },
+        ...(f.pakaiOrtu ? [{ id: 'ttd', label: `TTD ${f.ortuNama || 'Orang tua/wali'}` }] : []),
+        ...(f.pakaiRt ? [{ id: 'ttdRt', label: `TTD ${f.rtNama || 'Ketua RT'}` }, { id: 'stempelRt', label: 'Stempel RT' }] : []),
+        ...(f.pakaiRw ? [{ id: 'ttdRw', label: `TTD ${f.rwNama || 'Ketua RW'}` }, { id: 'stempelRw', label: 'Stempel RW' }] : []),
       ]} active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
       <LayoutPicker value={f.gaya} onChange={(v) => set('gaya', v)} />
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
@@ -292,16 +294,16 @@ export default function SuratIzinSekolah() {
               </div>
               {f.pakaiOrtu && <>
                 {text('ttdHeading', 'Salam penutup orang tua')}
-                <ImageUpload label="Tanda tangan orang tua/wali" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
+                <ImageUpload label={`Tanda tangan — ${f.ortuNama || 'Orang tua/wali'}`} value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               </>}
               {f.pakaiRt && <>
                 {text('rtNama', `Nama Ketua RT ${f.rt}`)}
-                <ImageUpload label="Tanda tangan Ketua RT" value={f.ttdRt} onChange={(v) => set('ttdRt', v)} notify={notify} {...bgFor('ttdRt', ttdRt)} />
+                <ImageUpload label={`Tanda tangan — ${f.rtNama || 'Ketua RT'}`} value={f.ttdRt} onChange={(v) => set('ttdRt', v)} notify={notify} {...bgFor('ttdRt', ttdRt)} />
                 <ImageUpload label="Stempel RT" value={f.stempelRt} onChange={(v) => set('stempelRt', v)} notify={notify} {...bgFor('stempelRt', stempelRt)} />
               </>}
               {f.pakaiRw && <>
                 {text('rwNama', `Nama Ketua RW ${f.rw}`)}
-                <ImageUpload label="Tanda tangan Ketua RW" value={f.ttdRw} onChange={(v) => set('ttdRw', v)} notify={notify} {...bgFor('ttdRw', ttdRw)} />
+                <ImageUpload label={`Tanda tangan — ${f.rwNama || 'Ketua RW'}`} value={f.ttdRw} onChange={(v) => set('ttdRw', v)} notify={notify} {...bgFor('ttdRw', ttdRw)} />
                 <ImageUpload label="Stempel RW" value={f.stempelRw} onChange={(v) => set('stempelRw', v)} notify={notify} {...bgFor('stempelRw', stempelRw)} />
               </>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
