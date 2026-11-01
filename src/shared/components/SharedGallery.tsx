@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 
 // Galeri foto bersama: semua gambar HK Hub di Cloudinary (lewat /api/cloudinary-list), untuk semua pengguna,
 // sampai pemilik menghapusnya di Cloudinary. Dikelompokkan per kategori (Logo / Tanda tangan / Stempel / Lainnya);
@@ -18,6 +18,25 @@ console.assert(catOfKey('ttdRw') === 'ttd' && catOfKey('managerSignature') === '
 const labelOf = (k: string) => IMAGE_LABEL[k] ?? k.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
 // Kolom gambar = kolom bernama logo/ttd/stempel/signature (+ akhiran, mis. ttdRt)
 const isImageKey = (k: string) => k in IMAGE_LABEL || catOfKey(k) !== '';
+
+// Bingkai "Galeri Foto" dengan tombol ciutkan/lebarkan untuk seluruh galeri
+export function GaleriLipat({ children, className = '' }: { children: ReactNode; className?: string }) {
+  const [buka, setBuka] = useState(true);
+  const id = useId();
+  return (
+    <div className={`space-y-2 ${className}`}>
+      <button type="button" aria-expanded={buka} aria-controls={id} onClick={() => setBuka(!buka)}
+        className="flex min-h-[44px] w-full items-center justify-between gap-2 rounded-lg px-1 text-left font-bold text-gray-800">
+        <span>Galeri Foto</span>
+        <span className="flex items-center gap-1 text-xs font-medium text-gray-600">
+          {buka ? 'Ciutkan' : 'Lebarkan'}
+          <span aria-hidden="true" className={`text-base transition-transform ${buka ? 'rotate-180' : ''}`}>▾</span>
+        </span>
+      </button>
+      {buka && <div id={id}>{children}</div>}
+    </div>
+  );
+}
 
 // Satu permintaan per kunjungan halaman, dipakai bersama Data User & Edit Canvas
 let cache: Promise<SharedImage[]> | null = null;
@@ -79,10 +98,25 @@ export default function SharedGallery({ keys, data, onApply, onPicked, showEmpty
           {buka && <div id={`galeri-${id}`} className="flex flex-wrap gap-2 p-2">
             {g.imgs.map((img) => {
               const k = keyFor(g.kind);
+              // Klik 1 = pasang; klik 2 (foto sudah terpasang) = lepas dari semua kolom yang memakainya
+              const dipakai = imageKeys.filter((x) => current[x] === img.url);
+              const aktif = dipakai.length > 0;
               return (
-                <button key={img.url} type="button" title={`Pakai sebagai ${labelOf(k).toLowerCase()}`} aria-label={`Pakai gambar ${g.label.toLowerCase()} ini sebagai ${labelOf(k).toLowerCase()}`}
-                  onClick={() => { onApply({ [k]: img.url }); onPicked?.(`${labelOf(k)} dari galeri dipasang.`); }}
-                  className={`h-14 w-14 shrink-0 rounded-lg border bg-white p-1 ${imageKeys.some((x) => current[x] === img.url) ? 'border-blue-600 ring-2 ring-blue-600' : 'border-gray-300'}`}>
+                <button key={img.url} type="button" aria-pressed={aktif}
+                  title={aktif ? 'Klik lagi untuk melepas' : `Pakai sebagai ${labelOf(k).toLowerCase()}`}
+                  aria-label={aktif ? `Lepas gambar ${g.label.toLowerCase()} ini` : `Pakai gambar ${g.label.toLowerCase()} ini sebagai ${labelOf(k).toLowerCase()}`}
+                  onClick={() => {
+                    if (aktif) {
+                      onApply(Object.fromEntries(dipakai.map((x) => [x, ''])));
+                      onPicked?.(`${dipakai.map(labelOf).join(', ')} dilepas.`);
+                    } else {
+                      onApply({ [k]: img.url });
+                      onPicked?.(`${labelOf(k)} dari galeri dipasang.`);
+                    }
+                  }}
+                  className={`h-14 w-14 shrink-0 rounded-lg border-2 p-1 transition duration-150 ${aktif
+                    ? 'translate-y-0.5 scale-95 !border-blue-600 bg-blue-50 shadow-[inset_0_3px_6px_rgba(0,0,0,0.35)]'
+                    : 'border-gray-300 bg-white shadow-md hover:-translate-y-0.5'}`}>
                   <img src={img.url.replace('/upload/', '/upload/w_112,h_112,c_fit/')} alt="" loading="lazy" className="h-full w-full object-contain" />
                 </button>
               );
