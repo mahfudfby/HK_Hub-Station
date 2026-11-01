@@ -9,16 +9,19 @@ import SharedGallery from '../../shared/components/SharedGallery';
 import UserData from '../../shared/components/UserData';
 import DocOptions, { Switch, TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
-import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
-import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSigner } from '../../shared/components/LetterLayouts';
+import { TextSizeSlider } from '../../shared/components/TextScale';
+import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, type Notify } from '../../shared/components/LetterKit';
+import { InfoRows, LayoutPicker, P, type LayoutSigner } from '../../shared/components/LetterLayouts';
+import { usePagesExport } from '../surat-kontrak-kerja/exportPages';
+import { ClosingSigns, LampiranField, SIGN, lampiranOtomatis, usePagedLetter, type Unit } from '../surat-penawaran-kerja/paged';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { num, rupiah, terbilangRupiah } from '../../shared/lib/money';
+import FormSection from '../../shared/components/FormSection';
 
 // Surat Keputusan Pengangkatan Karyawan Tetap: SK direksi yang mengangkat karyawan kontrak (PKWT) /
 // masa percobaan menjadi karyawan tetap (PKWTT), dengan menimbang/mengingat, diktum, gaji & hak-kewajiban.
-// Menu berdiri sendiri (file, form & penyimpanan terpisah). Tata letak dari LetterLayouts.
+// Menu berdiri sendiri (file, form & penyimpanan terpisah). Tata letak dari LetterLayouts; isi panjang berlanjut ke halaman berikut.
 
 // ============================================================
 // SECTION: Data
@@ -28,6 +31,7 @@ type Form = {
   pakaiNomor: boolean; kosong: boolean;
   logo: string; instansi: string; subKop: string; alamat: string; kontak: string;
   judul: string; nomor: string; kota: string; tanggal: string;
+  lampiranManual: boolean; lampiran: string; // Otomatis = jumlah lembar sesudah halaman 1
   menimbang: string; mengingat: string; pembuka: string;
   nama: string; nik: string; jabatan: string; divisi: string;
   statusSemula: string; periodeSemula: string; tmt: string;
@@ -48,6 +52,7 @@ const makeDefault = (): Form => ({
   alamat: 'Jl. Jenderal Sudirman No. 88, Kel. Karet Tengsin, Kec. Tanah Abang, Jakarta Pusat, DKI Jakarta 10220',
   kontak: 'Telp. (021) 5790-1234 • hrd@cahayanusantara.co.id • www.cahayanusantara.co.id',
   judul: 'SURAT KEPUTUSAN\nPENGANGKATAN KARYAWAN TETAP', nomor: randomDocNo(POLA), kota: 'Jakarta', tanggal: today(),
+  lampiranManual: false, lampiran: '',
   menimbang: 'Bahwa karyawan yang bersangkutan telah menyelesaikan masa kontrak kerja dengan hasil penilaian kinerja yang baik.\nBahwa perusahaan membutuhkan tenaga kerja tetap untuk menjamin kesinambungan kegiatan operasional.\nBahwa untuk itu perlu ditetapkan keputusan pengangkatan karyawan tetap.',
   mengingat: 'Undang-Undang Nomor 13 Tahun 2003 tentang Ketenagakerjaan beserta perubahannya.\nPeraturan Pemerintah Nomor 35 Tahun 2021 tentang PKWT, Alih Daya, Waktu Kerja dan Waktu Istirahat, dan PHK.\nPeraturan Perusahaan PT Cahaya Nusantara Abadi yang berlaku.',
   pembuka: 'Mengangkat karyawan dengan data di bawah ini sebagai Karyawan Tetap berdasarkan Perjanjian Kerja Waktu Tidak Tertentu (PKWTT):',
@@ -81,10 +86,10 @@ function NumList({ lines, k, alpha }: { lines: string[]; k: number; alpha?: bool
   );
 }
 
-// Baris diktum SK: "Menimbang : isi" / "PERTAMA : isi"
+// Baris diktum SK: "Menimbang : isi" / "PERTAMA : isi"; kolom label lebar tetap agar unit terpisah (antarhalaman) tetap sejajar
 function Diktum({ items, k }: { items: [string, ReactNode][]; k: number }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'max-content max-content 1fr', columnGap: 6 * k, rowGap: 6 * k, margin: `0 0 ${10 * k}px` }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '6.6em max-content 1fr', columnGap: 6 * k, rowGap: 6 * k, margin: `0 0 ${6 * k}px` }}>
       {items.map(([label, isi]) => <div key={label} style={{ display: 'contents' }}><span style={{ fontWeight: 700 }}>{label}</span><span>:</span><div style={{ textAlign: 'justify' }}>{isi}</div></div>)}
     </div>
   );
@@ -132,10 +137,10 @@ export default function SuratPengangkatanKaryawanTetap() {
 
   const letterRef = useRef<HTMLDivElement>(null);
   const pg = letterPage(f.paper, f.landscape);
-  const k = useFitScale(f.skala / 100, () => letterRef.current?.firstElementChild as HTMLElement, true, [f, logo.src, ttd.src, stempel.src, ttdKaryawan.src]);
+  const k = f.skala / 100; // huruf normal (tidak dikecilkan otomatis); isi panjang berlanjut ke halaman berikut
   const kk = k * pg.f * 0.86;
   const fileName = `sk-karyawan-tetap-${(f.nomor || 'surat').replace(/[^\w-]+/g, '-').toLowerCase()}`;
-  const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
+  const { exporting, run } = usePagesExport(() => [...letterRef.current!.querySelectorAll<HTMLElement>('[data-page]')], fileName, notify, pg.paper);
 
   // Template kosongan: data karyawan, status, tanggal & gaji → titik-titik; gambar ttd/stempel disembunyikan
   const ks = f.kosong;
@@ -173,25 +178,30 @@ export default function SuratPengangkatanKaryawanTetap() {
   const URUT = ['PERTAMA', 'KEDUA', 'KETIGA', 'KEEMPAT'];
   const diktumUrut = diktum.map((isi, i) => [URUT[i], isi] as [string, ReactNode]);
 
-  const doc: LayoutDoc = {
+  const nomor = nomorTampil(f.nomor, f.pakaiNomor, ks);
+  // Unit isi (halaman dipotong di batas unit); diktum terakhir + tanda tangan selalu bersama di halaman terakhir
+  const units: Unit[] = [
+    ...(menimbang.length ? [{ g: 0, el: <Diktum k={kk} items={[['Menimbang', <NumList lines={menimbang} k={kk} />]]} /> }] : []),
+    ...(mengingat.length ? [{ g: 1, el: <Diktum k={kk} items={[['Mengingat', <NumList lines={mengingat} k={kk} />]]} /> }] : []),
+    { g: 2, el: <>
+      <P style={{ textAlign: 'center', fontWeight: 700, letterSpacing: '0.15em', textIndent: 0, marginTop: 4 * kk }}>MEMUTUSKAN</P>
+      <P style={{ textIndent: 0 }}><b>Menetapkan</b> : Keputusan Direksi tentang Pengangkatan Karyawan Tetap.</P>
+    </> },
+    ...diktumUrut.map((d, i) => ({ g: i === diktumUrut.length - 1 ? SIGN : 3 + i, el: <Diktum k={kk} items={[d]} /> })),
+    { g: SIGN, el: <ClosingSigns k={kk} placeDate={[f.kota, ks ? TITIK : fmtTanggal(f.tanggal)].filter(Boolean).join(', ')} signers={signers}
+      footer={f.tembusan ? <><div style={{ fontWeight: 700 }}>Tembusan:</div><div style={{ whiteSpace: 'pre-line' }}>{f.tembusan}</div></> : undefined} /> },
+  ];
+  const { count, render } = usePagedLetter(units, [f, logo.src, ttd.src, stempel.src, ttdKaryawan.src], letterRef, { gaya: f.gaya, pg, kk, title: f.judul, nomor });
+  const lampiranAuto = lampiranOtomatis(count);
+  const lampiran = f.lampiranManual ? f.lampiran.trim() : lampiranAuto;
+  const pages = render({
     logo: logo.src, logoOffset: getOffset(f.posisi, 'logo'),
     kopName: f.instansi, kopLines: [f.subKop, f.alamat, f.kontak],
-    title: f.judul, nomor: nomorTampil(f.nomor, f.pakaiNomor, ks),
-    placeDate: [f.kota, ks ? TITIK : fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
-    body: (
-      <>
-        {(menimbang.length > 0 || mengingat.length > 0) && <Diktum k={kk} items={[
-          ...(menimbang.length ? [['Menimbang', <NumList key="a" lines={menimbang} k={kk} />] as [string, ReactNode]] : []),
-          ...(mengingat.length ? [['Mengingat', <NumList key="b" lines={mengingat} k={kk} />] as [string, ReactNode]] : []),
-        ]} />}
-        <P style={{ textAlign: 'center', fontWeight: 700, letterSpacing: '0.15em', textIndent: 0 }}>MEMUTUSKAN</P>
-        <P style={{ textIndent: 0 }}><b>Menetapkan</b> : Keputusan Direksi tentang Pengangkatan Karyawan Tetap.</P>
-        <Diktum k={kk} items={diktumUrut} />
-      </>
-    ),
-    signers,
-    footer: f.tembusan ? <><div style={{ fontWeight: 700 }}>Tembusan:</div><div style={{ whiteSpace: 'pre-line' }}>{f.tembusan}</div></> : undefined,
-  };
+    title: f.judul, nomor,
+    meta: lampiran ? [{ label: 'Lampiran', value: lampiran }] : undefined,
+    placeDate: '',
+    signers: [],
+  });
 
   const [geser, setGeser] = useState('logo');
   const [canvas, setCanvas] = useCanvasMode();
@@ -199,6 +209,7 @@ export default function SuratPengangkatanKaryawanTetap() {
     <>
       <DocOptions nomor={{ value: f.pakaiNomor, onChange: (x) => set('pakaiNomor', x) }} kosong={{ value: f.kosong, onChange: (x) => set('kosong', x) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(x) => set('skala', x)} />
+      <p className="text-xs text-gray-500">Dokumen {count} halaman; isi yang tidak muat otomatis berlanjut ke halaman berikutnya.</p>
       <PositionPad targets={[
         { id: 'logo', label: 'Logo' },
         ...(f.pakaiKaryawan ? [{ id: 'ttdKaryawan', label: 'TTD Karyawan' }] : []),
@@ -235,29 +246,27 @@ export default function SuratPengangkatanKaryawanTetap() {
             ) : (<>
             <UserData storageKey="data-user:surat-pengangkatan-karyawan-tetap" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Surat</h2>
+            <FormSection title="Kop Surat">
               <ImageUpload label="Logo" value={f.logo} onChange={(x) => set('logo', x)} notify={notify} {...bgFor('logo', logo)} />
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
               {text('kontak', 'Telepon, email, website')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Surat Keputusan</h2>
+            <FormSection title="Data Surat Keputusan">
               {text('judul', 'Judul surat')}
               <Field label="Nomor surat"><NumberFormatInput parts={['Nomor', 'Kode', 'Unit', 'Bulan', 'Tahun']} example={`021/SK-KT/HRD/${ROMAN[new Date().getMonth()]}/${new Date().getFullYear()} (bulan angka romawi)`} value={f.nomor} onChange={(x) => set('nomor', x)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('kota', 'Ditetapkan di (kota)')}
                 <Field label="Tanggal ditetapkan"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
               </div>
+              <LampiranField manual={f.lampiranManual} value={f.lampiran} auto={lampiranAuto} onManual={(x) => set('lampiranManual', x)} onValue={(x) => set('lampiran', x)} />
               {text('menimbang', 'Menimbang (opsional, satu poin per baris)', 3)}
               {text('mengingat', 'Mengingat (opsional, satu poin per baris)', 3)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Karyawan</h2>
+            <FormSection title="Data Karyawan">
               {text('pembuka', 'Kalimat diktum pertama', 2)}
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('nama', 'Nama karyawan')}
@@ -272,18 +281,16 @@ export default function SuratPengangkatanKaryawanTetap() {
                 <input inputMode="numeric" placeholder="Kosongkan bila tidak dicantumkan" className={inputCls} value={f.gaji} onChange={(e) => set('gaji', e.target.value.replace(/\D/g, ''))} />
               </Field>
               {gaji > 0 && <p className="text-sm text-gray-600">Rp {rupiah(gaji)} — {terbilangRupiah(gaji)}</p>}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Hak, Kewajiban & Penutup</h2>
+            <FormSection title="Hak, Kewajiban & Penutup">
               {text('hak', 'Hak karyawan (satu poin per baris)', 3)}
               {text('kewajiban', 'Kewajiban karyawan (satu poin per baris)', 3)}
               {text('penutup', 'Kalimat penutup keputusan', 3)}
               {text('tembusan', 'Tembusan (opsional)', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penanda Tangan</h2>
+            <FormSection title="Penanda Tangan">
               <p className="text-sm text-gray-700">Tampilkan tanda tangan (boleh keduanya atau salah satu):</p>
               <div className="flex flex-wrap gap-x-4">
                 {([['pakaiUtama', 'Direktur'], ['pakaiKaryawan', 'Yang bersangkutan (karyawan)']] as const).map(([key, label]) => (
@@ -305,13 +312,13 @@ export default function SuratPengangkatanKaryawanTetap() {
                 <ImageUpload label="Tanda tangan karyawan (nama mengikuti data karyawan)" value={f.ttdKaryawan} onChange={(x) => set('ttdKaryawan', x)} notify={notify} {...bgFor('ttdKaryawan', ttdKaryawan)} />
               )}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 
           <FitPreview>
-            <div ref={letterRef} className="w-max shadow-lg">
-              <LayoutLetter layout={f.gaya} doc={doc} k={kk} W={pg.W} H={pg.H} pf={pg.f} />
+            <div ref={letterRef} className="w-max flex flex-col gap-6">
+              {pages}
             </div>
           </FitPreview>
         </div>

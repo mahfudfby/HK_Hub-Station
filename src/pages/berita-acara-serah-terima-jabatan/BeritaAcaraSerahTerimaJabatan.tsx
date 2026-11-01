@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import AutoTextarea from '../../shared/components/AutoTextarea';
 import FitPreview from '../../shared/components/FitPreview';
@@ -9,15 +9,18 @@ import SharedGallery from '../../shared/components/SharedGallery';
 import UserData from '../../shared/components/UserData';
 import DocOptions, { Switch, TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
-import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
-import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSigner } from '../../shared/components/LetterLayouts';
+import { TextSizeSlider } from '../../shared/components/TextScale';
+import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, type Notify } from '../../shared/components/LetterKit';
+import { InfoRows, LayoutPicker, P, type LayoutSigner } from '../../shared/components/LetterLayouts';
+import { usePagesExport } from '../surat-kontrak-kerja/exportPages';
+import { ClosingSigns, LampiranField, SIGN, lampiranOtomatis, usePagedLetter, type Unit } from '../surat-penawaran-kerja/paged';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
+import FormSection from '../../shared/components/FormSection';
 
 // Berita Acara Serah Terima Jabatan: pejabat lama (Pihak Pertama) menyerahkan jabatan kepada pejabat baru
 // (Pihak Kedua) beserta lampiran pekerjaan berjalan, dokumen/arsip, dan aset; diketahui atasan/direktur.
-// shortcut: satu halaman (dikecilkan useFitScale bila tabel panjang); pakai paginasi Kontrak Kerja bila pengguna butuh lampiran sangat panjang.
+// Isi panjang (tabel banyak baris) berlanjut ke halaman berikut; huruf tetap ukuran normal.
 
 // ============================================================
 // SECTION: Data
@@ -28,6 +31,7 @@ type Form = {
   pakaiNomor: boolean; kosong: boolean;
   logo: string; instansi: string; subKop: string; alamat: string; kontak: string;
   judul: string; nomor: string; kota: string; tanggal: string; tempat: string;
+  lampiranManual: boolean; lampiran: string; // Otomatis = jumlah lembar sesudah halaman 1
   p1Nama: string; p1Nik: string; p1Jabatan: string;
   p2Nama: string; p2Nik: string; p2Jabatan: string;
   jabatan: string; dasar: string;
@@ -57,6 +61,7 @@ const makeDefault = (): Form => ({
   kontak: 'Telp. (021) 5790-1234 • hrd@cahayanusantara.co.id • www.cahayanusantara.co.id',
   judul: 'BERITA ACARA SERAH TERIMA JABATAN', nomor: randomDocNo(POLA), kota: 'Jakarta', tanggal: today(),
   tempat: 'Kantor Pusat PT Cahaya Nusantara Abadi, Jakarta',
+  lampiranManual: false, lampiran: '',
   p1Nama: 'Budi Santoso', p1Nik: 'KRY-2016-0045', p1Jabatan: 'Kepala Gudang Regional Jakarta',
   p2Nama: 'Andi Pratama', p2Nik: 'KRY-2019-0127', p2Jabatan: 'Supervisor Gudang (Kepala Gudang terpilih)',
   jabatan: 'Kepala Gudang Regional Jakarta', dasar: 'Surat Keputusan Direksi Nomor 045/SK/DIR/X/2026 tentang Rotasi Jabatan',
@@ -88,23 +93,25 @@ const USER_KEYS = ['logo', 'posisi', 'instansi', 'subKop', 'alamat', 'kontak', '
 // ============================================================
 // SECTION: Potongan isi
 // ============================================================
-// Tabel lampiran: No | kolom…; kosong = 3 baris kosong untuk ditulis tangan
-function Lampiran({ title, cols, w, rows, k, blank }: { title: string; cols: readonly string[]; w: readonly string[]; rows: Row[]; k: number; blank: boolean }) {
+// Tabel lampiran: No | kolom…; kosong = 3 baris kosong untuk ditulis tangan.
+// Satu unit paginasi per baris (tabel per baris, lebar kolom tetap) agar tabel panjang bisa berlanjut ke halaman berikut.
+// shortcut: kepala tabel tidak diulang di halaman lanjutan; tambahkan bila pengguna memintanya.
+function tableUnits({ title, cols, w }: { title: string; cols: readonly string[]; w: readonly string[] }, rows: Row[], k: number, blank: boolean, g: number): Unit[] {
   const cell = { border: '1px solid #000', padding: `${2 * k}px ${5 * k}px`, verticalAlign: 'top' as const, overflowWrap: 'anywhere' as const, height: 16 * k };
   const list = blank ? Array<Row>(3).fill(cols.map(() => '')) : rows.filter((r) => r.some((c) => c.trim()));
-  return (
-    <div style={{ margin: `0 0 ${8 * k}px` }}>
-      <div style={{ fontWeight: 700, marginBottom: 2 * k }}>{title}</div>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.92em' }}>
-        <thead><tr><th style={{ ...cell, width: '6%' }}>No</th>{cols.map((c, i) => <th key={c} style={{ ...cell, width: w[i] }}>{c}</th>)}</tr></thead>
-        <tbody>
-          {list.length ? list.map((r, i) => (
-            <tr key={i}><td style={{ ...cell, textAlign: 'center' }}>{blank ? '' : i + 1}</td>{cols.map((_, j) => <td key={j} style={cell}>{r[j] ?? ''}</td>)}</tr>
-          )) : <tr><td colSpan={cols.length + 1} style={{ ...cell, textAlign: 'center' }}>Nihil</td></tr>}
-        </tbody>
-      </table>
-    </div>
+  const head = <div style={{ fontWeight: 700, marginBottom: 2 * k }}>{title}</div>;
+  const table = (body: ReactNode, first: boolean, last: boolean) => (
+    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: '0.92em', marginTop: first ? 0 : -1, marginBottom: last ? 8 * k : 0 }}>
+      <colgroup><col style={{ width: '6%' }} />{cols.map((c, i) => <col key={c} style={{ width: w[i] }} />)}</colgroup>
+      {first && <thead><tr><th style={cell}>No</th>{cols.map((c) => <th key={c} style={cell}>{c}</th>)}</tr></thead>}
+      <tbody>{body}</tbody>
+    </table>
   );
+  if (!list.length) return [{ g, el: <>{head}{table(<tr><td colSpan={cols.length + 1} style={{ ...cell, textAlign: 'center' }}>Nihil</td></tr>, true, true)}</> }];
+  return list.map((r, i) => ({
+    g,
+    el: <>{i === 0 && head}{table(<tr><td style={{ ...cell, textAlign: 'center' }}>{blank ? '' : i + 1}</td>{cols.map((_, j) => <td key={j} style={cell}>{r[j] ?? ''}</td>)}</tr>, i === 0, i === list.length - 1)}</>,
+  }));
 }
 
 function TableEditor({ cols, rows, onChange, label }: { cols: readonly string[]; rows: Row[]; onChange: (r: Row[]) => void; label: string }) {
@@ -192,10 +199,10 @@ export default function BeritaAcaraSerahTerimaJabatan() {
 
   const letterRef = useRef<HTMLDivElement>(null);
   const pg = letterPage(f.paper, f.landscape);
-  const k = useFitScale(f.skala / 100, () => letterRef.current?.firstElementChild as HTMLElement, true, [f, logo.src, ttd.src, stempel.src, ttd1.src, ttd2.src]);
+  const k = f.skala / 100; // huruf normal (tidak dikecilkan otomatis); isi panjang berlanjut ke halaman berikut
   const kk = k * pg.f * 0.86;
   const fileName = `bast-jabatan-${(f.nomor || 'surat').replace(/[^\w-]+/g, '-').toLowerCase()}`;
-  const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
+  const { exporting, run } = usePagesExport(() => [...letterRef.current!.querySelectorAll<HTMLElement>('[data-page]')], fileName, notify, pg.paper);
 
   // Template kosongan: data pihak, jabatan, tanggal & tabel → titik-titik/baris kosong; gambar ttd/stempel disembunyikan
   const ks = f.kosong;
@@ -206,29 +213,34 @@ export default function BeritaAcaraSerahTerimaJabatan() {
     f.pakai2 && { heading: 'PIHAK KEDUA,\nYang menerima', name: ks ? '' : f.p2Nama, ttd: img(ttd2.src), ttdOffset: getOffset(f.posisi, 'ttd2') },
     f.pakaiAtasan && { heading: f.atasanHeading, role: f.atasanJabatan, name: f.atasanNama, idLine: f.atasanId, ttd: img(ttd.src), stempel: img(stempel.src), ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
   ] as (LayoutSigner | false)[]).filter((x): x is LayoutSigner => !!x);
-  const doc: LayoutDoc = {
+  const nomor = nomorTampil(f.nomor, f.pakaiNomor, ks);
+  // Unit isi (halaman dipotong di batas unit); penutup + tanda tangan (+ saksi) selalu bersama di halaman terakhir
+  const units: Unit[] = [
+    { g: 0, el: <P>Pada hari ini <b>{ks ? TITIK : hari(f.tanggal)}</b>, tanggal <b>{ks ? TITIK : fmtTanggal(f.tanggal)}</b>, bertempat di {v(f.tempat) || TITIK}, kami yang bertanda tangan di bawah ini:</P> },
+    { g: 1, el: <><InfoRows rows={[{ label: 'Nama', value: v(f.p1Nama) }, { label: 'NIK karyawan', value: v(f.p1Nik) }, { label: 'Jabatan lama', value: v(f.p1Jabatan) }]} />
+      <P>selanjutnya disebut <b>PIHAK PERTAMA</b> (yang menyerahkan);</P></> },
+    { g: 2, el: <><InfoRows rows={[{ label: 'Nama', value: v(f.p2Nama) }, { label: 'NIK karyawan', value: v(f.p2Nik) }, { label: 'Jabatan', value: v(f.p2Jabatan) }]} />
+      <P>selanjutnya disebut <b>PIHAK KEDUA</b> (yang menerima).</P></> },
+    { g: 3, el: <P>
+      {(f.dasar.trim() || ks) && <>Berdasarkan {v(f.dasar) || TITIK}, </>}
+      PIHAK PERTAMA menyerahkan jabatan <b>{v(f.jabatan) || TITIK}</b> kepada PIHAK KEDUA, dan PIHAK KEDUA menyatakan menerima serah terima jabatan tersebut beserta pekerjaan, dokumen, dan aset dengan rincian sebagai berikut:
+    </P> },
+    ...TABLES.flatMap((t, i) => tableUnits(t, f[t.key], kk, ks, 10 + i)),
+    { g: SIGN, el: <P>{f.penutup}</P> },
+    { g: SIGN, el: <ClosingSigns k={kk} placeDate={[f.kota, ks ? TITIK : fmtTanggal(f.tanggal)].filter(Boolean).join(', ')} signers={signers}
+      footer={f.pakaiSaksi ? <Saksi text={f.saksi} k={kk} blank={ks} /> : undefined} /> },
+  ];
+  const { count, render } = usePagedLetter(units, [f, logo.src, ttd.src, stempel.src, ttd1.src, ttd2.src], letterRef, { gaya: f.gaya, pg, kk, title: f.judul, nomor });
+  const lampiranAuto = lampiranOtomatis(count);
+  const lampiran = f.lampiranManual ? f.lampiran.trim() : lampiranAuto;
+  const pages = render({
     logo: logo.src, logoOffset: getOffset(f.posisi, 'logo'),
     kopName: f.instansi, kopLines: [f.subKop, f.alamat, f.kontak],
-    title: f.judul, nomor: nomorTampil(f.nomor, f.pakaiNomor, ks),
-    placeDate: [f.kota, ks ? TITIK : fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
-    body: (
-      <>
-        <P>Pada hari ini <b>{ks ? TITIK : hari(f.tanggal)}</b>, tanggal <b>{ks ? TITIK : fmtTanggal(f.tanggal)}</b>, bertempat di {v(f.tempat) || TITIK}, kami yang bertanda tangan di bawah ini:</P>
-        <InfoRows rows={[{ label: 'Nama', value: v(f.p1Nama) }, { label: 'NIK karyawan', value: v(f.p1Nik) }, { label: 'Jabatan lama', value: v(f.p1Jabatan) }]} />
-        <P>selanjutnya disebut <b>PIHAK PERTAMA</b> (yang menyerahkan);</P>
-        <InfoRows rows={[{ label: 'Nama', value: v(f.p2Nama) }, { label: 'NIK karyawan', value: v(f.p2Nik) }, { label: 'Jabatan', value: v(f.p2Jabatan) }]} />
-        <P>selanjutnya disebut <b>PIHAK KEDUA</b> (yang menerima).</P>
-        <P>
-          {(f.dasar.trim() || ks) && <>Berdasarkan {v(f.dasar) || TITIK}, </>}
-          PIHAK PERTAMA menyerahkan jabatan <b>{v(f.jabatan) || TITIK}</b> kepada PIHAK KEDUA, dan PIHAK KEDUA menyatakan menerima serah terima jabatan tersebut beserta pekerjaan, dokumen, dan aset dengan rincian sebagai berikut:
-        </P>
-        {TABLES.map((t) => <Lampiran key={t.key} title={t.title} cols={t.cols} w={t.w} rows={f[t.key]} k={kk} blank={ks} />)}
-        <P>{f.penutup}</P>
-      </>
-    ),
-    signers,
-    footer: f.pakaiSaksi ? <Saksi text={f.saksi} k={kk} blank={ks} /> : undefined,
-  };
+    title: f.judul, nomor,
+    meta: lampiran ? [{ label: 'Lampiran', value: lampiran }] : undefined,
+    placeDate: '',
+    signers: [],
+  });
 
   const [geser, setGeser] = useState('logo');
   const [canvas, setCanvas] = useCanvasMode();
@@ -236,6 +248,7 @@ export default function BeritaAcaraSerahTerimaJabatan() {
     <>
       <DocOptions nomor={{ value: f.pakaiNomor, onChange: (x) => set('pakaiNomor', x) }} kosong={{ value: f.kosong, onChange: (x) => set('kosong', x) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(x) => set('skala', x)} />
+      <p className="text-xs text-gray-500">Dokumen {count} halaman; isi yang tidak muat otomatis berlanjut ke halaman berikutnya.</p>
       <PositionPad targets={[
         { id: 'logo', label: 'Logo' },
         ...(f.pakai1 ? [{ id: 'ttd1', label: 'TTD Pihak Pertama' }] : []),
@@ -273,17 +286,15 @@ export default function BeritaAcaraSerahTerimaJabatan() {
             ) : (<>
             <UserData storageKey="data-user:berita-acara-serah-terima-jabatan" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Surat</h2>
+            <FormSection title="Kop Surat">
               <ImageUpload label="Logo" value={f.logo} onChange={(x) => set('logo', x)} notify={notify} {...bgFor('logo', logo)} />
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
               {text('kontak', 'Telepon, email, website')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Berita Acara</h2>
+            <FormSection title="Data Berita Acara">
               {text('judul', 'Judul')}
               <Field label="Nomor berita acara"><NumberFormatInput parts={['Nomor', 'Kode', 'Unit', 'Bulan', 'Tahun']} example={`017/BAST-JAB/GDG/${ROMAN[new Date().getMonth()]}/${new Date().getFullYear()} (unit = singkatan divisi)`} value={f.nomor} onChange={(x) => set('nomor', x)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
@@ -291,32 +302,29 @@ export default function BeritaAcaraSerahTerimaJabatan() {
                 {text('kota', 'Kota (tempat penandatanganan)')}
               </div>
               {text('tempat', 'Bertempat di')}
-            </section>
+              <LampiranField manual={f.lampiranManual} value={f.lampiran} auto={lampiranAuto} onManual={(x) => set('lampiranManual', x)} onValue={(x) => set('lampiran', x)} />
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Para Pihak</h2>
+            <FormSection title="Para Pihak">
               <p className="text-sm font-bold text-gray-700">Pihak Pertama (yang menyerahkan)</p>
               <div className="grid sm:grid-cols-3 gap-2">{text('p1Nama', 'Nama')}{text('p1Nik', 'NIK karyawan')}{text('p1Jabatan', 'Jabatan lama')}</div>
               <p className="text-sm font-bold text-gray-700">Pihak Kedua (yang menerima)</p>
               <div className="grid sm:grid-cols-3 gap-2">{text('p2Nama', 'Nama')}{text('p2Nik', 'NIK karyawan')}{text('p2Jabatan', 'Jabatan')}</div>
               {text('jabatan', 'Jabatan yang diserahterimakan')}
               {text('dasar', 'Dasar (SK/memo, opsional)', 2)}
-            </section>
+            </FormSection>
 
             {TABLES.map((t) => (
-              <section key={t.key} className="space-y-3">
-                <h2 className="font-bold">Lampiran {t.title}</h2>
+              <FormSection key={t.key} title={`Lampiran ${t.title}`}>
                 <TableEditor cols={t.cols} rows={f[t.key]} onChange={(x) => set(t.key, x)} label="baris" />
-              </section>
+              </FormSection>
             ))}
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penutup</h2>
+            <FormSection title="Penutup">
               {text('penutup', 'Kalimat penutup', 3)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penanda Tangan</h2>
+            <FormSection title="Penanda Tangan">
               <p className="text-sm text-gray-700">Tampilkan tanda tangan (boleh ketiganya, dua, atau salah satu):</p>
               <div className="flex flex-wrap gap-x-4">
                 {([['pakai1', 'Pihak Pertama'], ['pakai2', 'Pihak Kedua'], ['pakaiAtasan', 'Atasan/Direktur'], ['pakaiSaksi', 'Saksi-saksi']] as const).map(([key, label]) => (
@@ -338,13 +346,13 @@ export default function BeritaAcaraSerahTerimaJabatan() {
               </>}
               {f.pakaiSaksi && text('saksi', 'Saksi (satu per baris: Nama — Jabatan)', 2)}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 
           <FitPreview>
-            <div ref={letterRef} className="w-max shadow-lg">
-              <LayoutLetter layout={f.gaya} doc={doc} k={kk} W={pg.W} H={pg.H} pf={pg.f} />
+            <div ref={letterRef} className="w-max flex flex-col gap-6">
+              {pages}
             </div>
           </FitPreview>
         </div>
