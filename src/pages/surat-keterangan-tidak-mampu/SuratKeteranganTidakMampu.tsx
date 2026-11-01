@@ -11,6 +11,7 @@ import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutRow, type LayoutSigner } from '../../shared/components/LetterLayouts';
+import DocOptions, { TITIK, TITIK_PENDEK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 
@@ -30,6 +31,7 @@ type Form = {
   keperluan: string; berlaku: string; penutup: string;
   ttdHeading: string; ttdNama: string; ttdNip: string; ttd: string; stempel: string;
   camatOn: boolean; camatHeading: string; camatNama: string; camatNip: string; ttdCamat: string; stempelCamat: string;
+  pakaiNomor: boolean; kosong: boolean; // opsi dokumen (DocOptions)
 };
 
 const STORAGE_KEY = 'surat-keterangan-tidak-mampu:v1';
@@ -57,6 +59,7 @@ const makeDefault = (): Form => ({
   penutup: 'Demikian surat keterangan ini dibuat dengan sebenarnya untuk dapat dipergunakan sebagaimana mestinya.',
   ttdHeading: 'Lurah Sukamaju,', ttdNama: 'Drs. H. Rahmat Hidayat, M.Si.', ttdNip: 'NIP. 19700512 199503 1 004', ttd: '', stempel: '',
   camatOn: false, camatHeading: 'Mengetahui,\nCamat Cibeunying Kidul,', camatNama: 'Dr. Hj. Nurhayati, S.Sos., M.Si.', camatNip: 'NIP. 19720817 199803 2 006', ttdCamat: '', stempelCamat: '',
+  pakaiNomor: true, kosong: false,
 });
 
 // Data User: identitas kop kelurahan, pejabat & gambar (bukan data warga / isi surat)
@@ -69,20 +72,22 @@ const KEPERLUAN = ['Pengajuan keringanan biaya pendidikan anak di sekolah', 'Pen
 // SECTION: Isi surat -> LayoutDoc
 // ============================================================
 function buildDoc(f: Form): LayoutDoc {
+  const ko = f.kosong; // template kosongan: data warga, pengantar, tanggal & keperluan jadi titik-titik; pejabat tetap
+  const img = (x: string) => (ko ? '' : x); // tanda tangan & stempel basah
   const signers: LayoutSigner[] = [];
-  if (f.camatOn) signers.push({ heading: f.camatHeading, name: f.camatNama, idLine: f.camatNip, ttd: f.ttdCamat, stempel: f.stempelCamat, ttdOffset: getOffset(f.posisi, 'ttdCamat'), stempelOffset: getOffset(f.posisi, 'stempelCamat') });
-  signers.push({ heading: f.ttdHeading, name: f.ttdNama, idLine: f.ttdNip, ttd: f.ttd, stempel: f.stempel, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true });
+  if (f.camatOn) signers.push({ heading: f.camatHeading, name: f.camatNama, idLine: f.camatNip, ttd: img(f.ttdCamat), stempel: img(f.stempelCamat), ttdOffset: getOffset(f.posisi, 'ttdCamat'), stempelOffset: getOffset(f.posisi, 'stempelCamat') });
+  signers.push({ heading: f.ttdHeading, name: f.ttdNama, idLine: f.ttdNip, ttd: img(f.ttd), stempel: img(f.stempel), ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true });
   return {
     logo: f.logo, logoOffset: getOffset(f.posisi, 'logo'),
     kopName: f.pemda, kopLines: [f.kecamatan, f.kelurahan, f.alamatKop, f.kontak],
-    title: f.judul, nomor: f.nomor,
-    placeDate: [f.kota, fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
+    title: f.judul, nomor: nomorTampil(f.nomor, f.pakaiNomor, ko),
+    placeDate: ko ? `${f.kota || TITIK_PENDEK}, …………… 20……` : [f.kota, fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
     body: (
       <>
         <P>{f.pembuka}</P>
-        <InfoRows rows={f.warga} />
-        <P>Berdasarkan Surat Pengantar {f.pengantarDari} Nomor {f.pengantarNo || '...'} tanggal {fmtTanggal(f.pengantarTgl) || '...'}, {f.keterangan}</P>
-        <P>Surat keterangan ini diberikan untuk keperluan: <b>{f.keperluan}</b>, dan berlaku selama {f.berlaku}.</P>
+        <InfoRows rows={ko ? f.warga.map((r) => ({ ...r, value: '' })) : f.warga} />
+        <P>Berdasarkan Surat Pengantar {ko ? TITIK : f.pengantarDari} Nomor {ko ? TITIK : f.pengantarNo || '...'} tanggal {ko ? TITIK : fmtTanggal(f.pengantarTgl) || '...'}, {f.keterangan}</P>
+        <P>Surat keterangan ini diberikan untuk keperluan: <b>{ko ? `${TITIK}${TITIK}${TITIK}` : f.keperluan}</b>, dan berlaku selama {f.berlaku}.</P>
         <P>{f.penutup}</P>
       </>
     ),
@@ -144,6 +149,7 @@ export default function SuratKeteranganTidakMampu() {
     ...(f.camatOn ? [{ id: 'ttdCamat', label: 'TTD Camat' }, { id: 'stempelCamat', label: 'Stempel kecamatan' }] : [])];
   const tampilan = (
     <>
+      <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <PositionPad targets={targets} active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
       <LayoutPicker value={f.gaya} onChange={(v) => set('gaya', v)} />

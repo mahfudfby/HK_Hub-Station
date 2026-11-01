@@ -6,7 +6,8 @@ import FitPreview from '../../shared/components/FitPreview';
 import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/CanvasMode';
 import SharedGallery from '../../shared/components/SharedGallery';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
-import { ExportButton, Field, ImageUpload, inputCls, fmtTanggal, useLetterExport, PaperPicker, PAPERS, paperOf, orient, type Notify, type Paper } from '../../shared/components/LetterKit';
+import DocOptions from '../../shared/components/DocOptions';
+import { DOTTED, ExportButton, Field, ImageUpload, inputCls, fmtTanggal, useLetterExport, PaperPicker, PAPERS, paperOf, orient, type Notify, type Paper } from '../../shared/components/LetterKit';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { num, rupiah } from '../../shared/lib/money';
 import { code128 } from '../../shared/lib/code128';
@@ -58,6 +59,8 @@ type Resi = {
   items: Item[];
   catatan: string;
   skala: number; // ukuran teks (%)
+  pakaiNomor: boolean; // tampilkan no. resi/pesanan + barcode (sakelar tampilan, bukan Data User)
+  kosong: boolean; // template kosongan untuk diisi tangan
 };
 
 const RESI_FMT = 'RS00{n8}';
@@ -88,6 +91,8 @@ const DEFAULT: Resi = {
   items: [{ nama: 'Contoh produk', qty: '1' }],
   catatan: '',
   skala: 100,
+  pakaiNomor: true,
+  kosong: false,
 };
 
 // 081234567890 → ********7890
@@ -188,6 +193,9 @@ function Label({ r, k: ks, g }: { r: Resi; k: number; g: Geom }) {
     ? <span style={{ ...head, ...inv, padding: '0 3px', marginRight: 3 }}>{children}</span>
     : <span style={head}>{children}: </span>);
   const isi = r.items.filter((it) => it.nama);
+  // Template kosongan: data jadi garis titik-titik untuk ditulis tangan, barcode disembunyikan
+  const kos = r.kosong;
+  const bl = (w = '100%') => <span style={{ display: 'inline-block', width: w, height: f(c ? 12 : 15), borderBottom: DOTTED, verticalAlign: 'bottom' }} />;
 
   // Kepala
   const logo = (h: number) => r.logo && <img src={r.logo} alt="Logo" style={{ height: Math.round(h * z), maxWidth: Math.round(80 * z), objectFit: 'contain' }} />;
@@ -233,35 +241,43 @@ function Label({ r, k: ks, g }: { r: Resi; k: number; g: Geom }) {
     renggang: { ...numBase, fontFamily: COUSINE, letterSpacing: 3 },
     garis: { ...numBase, fontSize: f(c ? 11.5 : 13), letterSpacing: 2, borderTop: '1px solid #000', borderBottom: '1px solid #000', padding: '1px 0', marginTop: 4 },
   }[t.num];
-  const kode = <>
+  const kode = kos ? <div style={{ ...numStyle, ...(t.num === 'balik' ? { background: undefined, color: undefined, border: '1px solid #000' } : {}), display: 'flex', alignItems: 'flex-end', gap: 4, padding: '2px 4px' }}>
+    <span style={{ whiteSpace: 'nowrap' }}>No. Resi</span>{bl()}
+  </div> : <>
     <Barcode text={r.noResi} height={c ? Math.max(Math.round(36 * z), Math.round((kotak ? 36 : 38) * k)) : Math.round((kotak ? 54 : 58) * Math.min(ks, 1.2) * z)} maxWidth={kotak ? inner - Math.ceil(bw) * 2 - 12 : inner} />
     <div style={numStyle}>{r.noResi}</div>
   </>;
 
   // COD
-  const codIsi = r.cod
+  const codIsi = kos
+    ? <><div style={{ fontSize: f(c ? 9 : 11) }}>COD / NON-COD</div><div style={{ fontSize: f(c ? 9 : 11), display: 'flex', alignItems: 'flex-end', gap: 2 }}><span style={{ flexShrink: 0 }}>Rp</span>{bl()}</div></>
+    : r.cod
     ? <><div style={{ fontSize: f(c ? 8 : 10) }}>COD</div><div style={{ fontSize: f(c ? 13 : 15) }}>Rp {rupiah(num(r.nilaiCod))}</div></>
     : <div style={{ fontSize: f(c ? 12 : 14) }}>NON-COD</div>;
   const tengahKol: CSSProperties = { textAlign: 'center', fontWeight: 800, display: 'flex', flexDirection: 'column', justifyContent: 'center' };
   const codEl = t.cod === 'cap'
     ? <div style={{ flex: 1, display: 'flex', border: '2px solid #000', padding: 2 }}>
-        <div style={{ flex: 1, border: '1px solid #000', padding: c ? 1 : 4, letterSpacing: 1, ...tengahKol, ...(r.cod ? inv : {}) }}>{codIsi}</div>
+        <div style={{ flex: 1, border: '1px solid #000', padding: c ? 1 : 4, letterSpacing: 1, ...tengahKol, ...(r.cod && !kos ? inv : {}) }}>{codIsi}</div>
       </div>
-    : <div style={{ flex: 1, ...(r.cod && t.cod === 'balik' ? inv : { border: `${t.cod === 'garis' ? 3 : 1.5}px solid #000` }), padding: c ? 3 : 6, ...tengahKol }}>{codIsi}</div>;
+    : <div style={{ flex: 1, ...(r.cod && !kos && t.cod === 'balik' ? inv : { border: `${t.cod === 'garis' ? 3 : 1.5}px solid #000` }), padding: c ? 3 : 6, ...tengahKol }}>{codIsi}</div>;
 
   const penerima = (st?: CSSProperties) => (
     <Sec title="Penerima" st={st}>
+      {kos ? <>{bl()}{bl()}{bl()}{bl()}</> : <>
       <div style={{ fontWeight: 700, fontSize: f(c ? 11 : 13) }}>{r.penerima}{c && r.penerimaTelp && <span style={{ fontWeight: 400, fontSize: f(9.5) }}> • {hp(r.penerimaTelp)}</span>}</div>
       {!c && r.penerimaTelp && <div>{hp(r.penerimaTelp)}</div>}
       {r.penerimaAlamat && <div>{r.penerimaAlamat}</div>}
       {r.penerimaKota && <div style={{ fontWeight: 700 }}>{r.penerimaKota}</div>}
+      </>}
     </Sec>
   );
   const pengirim = (st?: CSSProperties) => (
     <Sec title="Pengirim" st={st}>
+      {kos ? <>{bl()}{bl()}{bl()}</> : <>
       <div style={{ fontWeight: 700 }}>{r.pengirim}</div>
       {r.pengirimTelp && <div>{hp(r.pengirimTelp)}</div>}
       {r.pengirimAlamat && <div>{r.pengirimAlamat}</div>}
+      </>}
     </Sec>
   );
 
@@ -270,20 +286,20 @@ function Label({ r, k: ks, g }: { r: Resi; k: number; g: Geom }) {
       {kepala}
 
       {/* Barcode nomor resi */}
-      {kotak ? <div style={{ border: `${bw}px solid #000`, padding: '4px 6px', marginBottom: gap }}>{kode}</div> : kode}
+      {r.pakaiNomor && (kotak ? <div style={{ border: `${bw}px solid #000`, padding: '4px 6px', marginBottom: gap }}>{kode}</div> : kode)}
 
       {/* COD / berat / koli */}
       <div style={{ display: 'flex', gap, marginBottom: gap }}>
         {codEl}
         <div style={{ ...frame, minWidth: s(c ? 74 : 82) }}>
-          <div>Berat: <b>{r.berat}</b></div>
-          <div>Koli: <b>{r.koli}</b></div>
+          <div>Berat: {kos ? <>{bl(`${s(30)}px`)} kg</> : <b>{r.berat}</b>}</div>
+          <div>Koli: {kos ? bl(`${s(30)}px`) : <b>{r.koli}</b>}</div>
         </div>
       </div>
 
       {c ? <>
         {penerima()}
-        <div style={box}><Tag>Pengirim</Tag><b>{r.pengirim}</b>{r.pengirimTelp && ` • ${hp(r.pengirimTelp)}`}{r.pengirimAlamat && ` • ${r.pengirimAlamat}`}</div>
+        <div style={box}><Tag>Pengirim</Tag>{kos ? <>{bl('70%')}{bl()}</> : <><b>{r.pengirim}</b>{r.pengirimTelp && ` • ${hp(r.pengirimTelp)}`}{r.pengirimAlamat && ` • ${r.pengirimAlamat}`}</>}</div>
       </> : t.cols ? (
         <div style={{ display: 'flex', gap }}>
           {penerima({ flex: 3, minWidth: 0 })}
@@ -292,21 +308,24 @@ function Label({ r, k: ks, g }: { r: Resi; k: number; g: Geom }) {
       ) : <>{penerima()}{pengirim()}</>}
 
       {/* Nomor pesanan + barcode kecil */}
-      {r.noPesanan && (
+      {r.pakaiNomor && (r.noPesanan || kos) && (
         <div style={box}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, marginBottom: 2 }}>
-            <span>No. Pesanan: <b>{r.noPesanan}</b></span>
-            {r.tanggal && <span style={{ whiteSpace: 'nowrap' }}>{fmtTanggal(r.tanggal)}</span>}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 6, marginBottom: 2 }}>
+            {kos ? <span style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 3 }}><span style={{ whiteSpace: 'nowrap' }}>No. Pesanan:</span>{bl()}</span>
+              : <span>No. Pesanan: <b>{r.noPesanan}</b></span>}
+            {kos ? <span style={{ whiteSpace: 'nowrap' }}>……/……/20……</span> : r.tanggal && <span style={{ whiteSpace: 'nowrap' }}>{fmtTanggal(r.tanggal)}</span>}
           </div>
-          <Barcode text={r.noPesanan} height={Math.round((c ? 18 : 28) * Math.min(ks, 1.2) * z)} maxWidth={inner - 12} />
+          {!kos && <Barcode text={r.noPesanan} height={Math.round((c ? 18 : 28) * Math.min(ks, 1.2) * z)} maxWidth={inner - 12} />}
         </div>
       )}
 
       {c ? (
-        isi.length > 0 && <div style={box}><Tag>Isi</Tag>{isi.map((it) => `${it.nama} x${it.qty}`).join(', ')}</div>
+        kos ? <div style={box}><Tag>Isi</Tag>{bl('80%')}</div>
+          : isi.length > 0 && <div style={box}><Tag>Isi</Tag>{isi.map((it) => `${it.nama} x${it.qty}`).join(', ')}</div>
       ) : (
         <Sec title="Isi paket">
-          {isi.map((it, i) => (
+          {kos && [1, 2, 3].map((i) => <div key={i} style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>{t.isi === 'nomor' && `${i}.`}{bl()}<span style={{ whiteSpace: 'nowrap' }}>x{bl(`${s(18)}px`)}</span></div>)}
+          {!kos && isi.map((it, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 6, ...(t.isi === 'nomor' && i < isi.length - 1 ? { borderBottom: '1px dashed #000' } : {}) }}>
               <span>{t.isi === 'nomor' && `${i + 1}. `}{it.nama}</span>
               <b style={{ whiteSpace: 'nowrap' }}>x{it.qty}</b>
@@ -315,8 +334,8 @@ function Label({ r, k: ks, g }: { r: Resi; k: number; g: Geom }) {
         </Sec>
       )}
       {r.catatan && (c
-        ? <div style={box}><Tag>Catatan</Tag>{r.catatan}</div>
-        : <Sec title="Catatan"><div style={{ whiteSpace: 'pre-line' }}>{r.catatan}</div></Sec>)}
+        ? <div style={box}><Tag>Catatan</Tag>{kos ? bl('75%') : r.catatan}</div>
+        : <Sec title="Catatan">{kos ? bl() : <div style={{ whiteSpace: 'pre-line' }}>{r.catatan}</div>}</Sec>)}
       {!c && (
         <div style={{ textAlign: 'center', fontSize: f(9), ...(t.foot === 'bar' ? { ...inv, fontWeight: 700, padding: '2px 0' } : t.foot === 'garis' ? { borderTop: '1px dashed #000', paddingTop: 4 } : {}) }}>
           Simpan resi ini sebagai bukti pengiriman
@@ -389,6 +408,7 @@ export default function Resi80() {
   const userKeys = ['logo', 'toko', 'ekspedisi', 'layanan', 'pengirim', 'pengirimTelp', 'pengirimAlamat', 'samarkanHp'] as const;
   const tampilan = (
     <>
+      <DocOptions nomor={{ value: r.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: r.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={r.skala} onChange={(v) => set('skala', v)} effective={k} />
       <Field label="Template resi">
         <select className={inputCls} value={tplOf(r.template).id} onChange={(e) => set('template', e.target.value)}>

@@ -9,9 +9,10 @@ import SharedGallery from '../../shared/components/SharedGallery';
 import UserData from '../../shared/components/UserData';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
+import { DOTTED, ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSigner } from '../../shared/components/LetterLayouts';
 import { useBgRemoved } from '../../shared/lib/removeBg';
+import DocOptions, { TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 
 // Surat Pemindahan / Mutasi Karyawan: posisi lama vs baru, tanggal efektif, alasan, hak & kewajiban.
@@ -35,6 +36,7 @@ type Form = {
   ttdKaryawan: boolean;
   penandaLain: Signer[];
   tembusan: string;
+  pakaiNomor: boolean; kosong: boolean;
 };
 
 const STORAGE_KEY = 'surat-mutasi:v1';
@@ -60,6 +62,7 @@ const makeDefault = (): Form => ({
   ttdKaryawan: true,
   penandaLain: [],
   tembusan: 'Kepala Cabang Surabaya\nManajer HRD\nArsip',
+  pakaiNomor: true, kosong: false,
 });
 
 // Data User: identitas kop, penanda tangan & gambar (bukan template/kertas, bukan isi surat)
@@ -69,25 +72,26 @@ const USER_KEYS = ['logo', 'posisi', 'instansi', 'subKop', 'alamat', 'kontak', '
 // SECTION: Potongan isi surat
 // ============================================================
 // Daftar bernomor manual (preflight Tailwind menghapus penanda <ol>; html2canvas tetap akurat)
-function NumList({ text, k }: { text: string; k: number }) {
-  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+// blank: jumlah baris bernomor kosong untuk ditulis tangan (template kosongan)
+function NumList({ text, k, blank = 0 }: { text: string; k: number; blank?: number }) {
+  const lines = blank ? Array<string>(blank).fill('') : text.split('\n').map((l) => l.trim()).filter(Boolean);
   if (!lines.length) return null;
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 6 * k, rowGap: 2 * k, margin: `0 0 ${10 * k}px ${16 * k}px` }}>
-      {lines.map((l, i) => <div key={i} style={{ display: 'contents' }}><span>{i + 1}.</span><span style={{ textAlign: 'justify' }}>{l}</span></div>)}
+    <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 6 * k, rowGap: 2 * k, alignItems: blank ? 'end' : undefined, margin: `0 0 ${10 * k}px ${16 * k}px` }}>
+      {lines.map((l, i) => <div key={i} style={{ display: 'contents' }}><span>{i + 1}.</span><span style={{ textAlign: 'justify' }}>{l || <span style={{ display: 'block', height: '1.6em', borderBottom: DOTTED }} />}</span></div>)}
     </div>
   );
 }
 
 // Posisi lama vs baru: Uraian | Semula | Menjadi
-function MoveTable({ rows, k }: { rows: [string, string, string][]; k: number }) {
+function MoveTable({ rows, k, kosong }: { rows: [string, string, string][]; k: number; kosong?: boolean }) {
   const cell = { border: '1px solid #000', padding: `${3 * k}px ${6 * k}px`, verticalAlign: 'top' as const, overflowWrap: 'anywhere' as const };
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse', margin: `0 0 ${10 * k}px`, fontSize: '0.95em' }}>
       <thead>
         <tr>{['Uraian', 'Semula', 'Menjadi'].map((h, i) => <th key={h} style={{ ...cell, width: i ? '38%' : '24%', textAlign: 'left' }}>{h}</th>)}</tr>
       </thead>
-      <tbody>{rows.map((r) => <tr key={r[0]}>{r.map((c, i) => <td key={i} style={{ ...cell, fontWeight: i === 0 ? 700 : undefined }}>{c}</td>)}</tr>)}</tbody>
+      <tbody>{rows.map((r) => <tr key={r[0]} style={kosong ? { height: 28 * k } : undefined}>{r.map((c, i) => <td key={i} style={{ ...cell, fontWeight: i === 0 ? 700 : undefined }}>{kosong && i ? '' : c}</td>)}</tr>)}</tbody>
     </table>
   );
 }
@@ -140,28 +144,30 @@ export default function SuratMutasi() {
   const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
 
   // Lampiran/Perihal/Kepada opsional: kosong = gaya SK (nomor di bawah judul)
-  const meta = [{ label: 'Lampiran', value: f.lampiran }, { label: 'Perihal', value: f.perihal }].filter((r) => r.value.trim());
+  const K = f.kosong; // template kosongan: data jadi titik-titik, ttd/stempel basah
+  const meta = [{ label: 'Lampiran', value: f.lampiran }, { label: 'Perihal', value: f.perihal }].filter((r) => r.value.trim())
+    .map((r) => (K && r.label === 'Lampiran' ? { ...r, value: TITIK } : r));
   const signers: LayoutSigner[] = [
-    ...(f.ttdKaryawan ? [{ heading: 'Yang bersangkutan,', role: f.jabatanBaru, name: f.nama, idLine: f.nik && `NIK. ${f.nik}` }] : []),
+    ...(f.ttdKaryawan ? [{ heading: 'Yang bersangkutan,', role: isian(f.jabatanBaru, K), name: isian(f.nama, K), idLine: K ? '' : f.nik && `NIK. ${f.nik}` }] : []),
     ...f.penandaLain.map((s) => ({ heading: s.heading, role: s.jabatan, name: s.nama })),
-    { heading: f.ttdHeading, role: f.ttdJabatan, name: f.ttdNama, idLine: f.ttdId, ttd: ttd.src, stempel: stempel.src, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
+    { heading: f.ttdHeading, role: f.ttdJabatan, name: f.ttdNama, idLine: f.ttdId, ttd: K ? '' : ttd.src, stempel: K ? '' : stempel.src, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
   ];
   const doc: LayoutDoc = {
     logo: logo.src, logoOffset: getOffset(f.posisi, 'logo'),
     kopName: f.instansi, kopLines: [f.subKop, f.alamat, f.kontak],
-    title: f.judul, nomor: f.nomor,
+    title: f.judul, nomor: nomorTampil(f.nomor, f.pakaiNomor, K),
     meta: meta.length ? meta : undefined,
-    placeDate: [f.kota, fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
-    recipient: f.kepada.trim() ? ['Kepada Yth.', ...f.kepada.split('\n')] : undefined,
+    placeDate: [f.kota || (K ? '……' : ''), K ? '…………… 20……' : fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
+    recipient: f.kepada.trim() ? (K ? ['Kepada Yth.', TITIK + TITIK, 'di Tempat'] : ['Kepada Yth.', ...f.kepada.split('\n')]) : undefined,
     body: (
       <>
         {f.dasar.trim() && <P style={{ marginBottom: 2 * kk }}>Dasar / menimbang:</P>}
-        <NumList text={f.dasar} k={kk} />
+        <NumList text={f.dasar} k={kk} blank={K && f.dasar.trim() ? 3 : 0} />
         <P>{f.pembuka}</P>
-        <InfoRows rows={[{ label: 'Nama', value: f.nama }, { label: 'NIK karyawan', value: f.nik }]} />
+        <InfoRows rows={[{ label: 'Nama', value: isian(f.nama, K) }, { label: 'NIK karyawan', value: isian(f.nik, K) }]} />
         <P>Dari posisi semula ke posisi baru sebagai berikut:</P>
-        <MoveTable k={kk} rows={[['Jabatan', f.jabatanLama, f.jabatanBaru], ['Divisi', f.divisiLama, f.divisiBaru], ['Lokasi kerja', f.lokasiLama, f.lokasiBaru]]} />
-        {f.efektif && <P>Mutasi ini berlaku efektif mulai tanggal <b>{fmtTanggal(f.efektif)}</b>.</P>}
+        <MoveTable k={kk} kosong={K} rows={[['Jabatan', f.jabatanLama, f.jabatanBaru], ['Divisi', f.divisiLama, f.divisiBaru], ['Lokasi kerja', f.lokasiLama, f.lokasiBaru]]} />
+        {(K || f.efektif) && <P>Mutasi ini berlaku efektif mulai tanggal <b>{K ? TITIK + TITIK : fmtTanggal(f.efektif)}</b>.</P>}
         {f.hak.trim() && <P style={{ marginBottom: 2 * kk }}>Hak dan kewajiban:</P>}
         <NumList text={f.hak} k={kk} />
         <P>{f.penutup}</P>
@@ -175,6 +181,7 @@ export default function SuratMutasi() {
   const [canvas, setCanvas] = useCanvasMode();
   const tampilan = (
     <>
+      <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />

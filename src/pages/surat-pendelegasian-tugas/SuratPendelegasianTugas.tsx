@@ -9,10 +9,11 @@ import SharedGallery from '../../shared/components/SharedGallery';
 import UserData from '../../shared/components/UserData';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
+import { DOTTED, ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSigner } from '../../shared/components/LetterLayouts';
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { useBgRemoved } from '../../shared/lib/removeBg';
+import DocOptions, { TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
 
 // Surat Pendelegasian Tugas: pimpinan perusahaan mendelegasikan tugas & wewenang kepada pegawai untuk periode tertentu.
 // Menu berdiri sendiri; tata letak dari LetterLayouts (20 template), kertas/ekspor dari LetterKit.
@@ -29,6 +30,7 @@ type Form = {
   pembuka: string; tugas: string[]; mulai: string; selesai: string; batasan: string; penutup: string;
   ttd: string; stempel: string; ttdPenerima: string;
   mengetahui: boolean; mengetahuiJabatan: string; mengetahuiNama: string; mengetahuiId: string; ttdMengetahui: string;
+  pakaiNomor: boolean; kosong: boolean;
 };
 
 const STORAGE_KEY = 'surat-pendelegasian-tugas:v1';
@@ -57,6 +59,7 @@ const makeDefault = (): Form => ({
   penutup: 'Demikian surat pendelegasian tugas ini dibuat untuk dilaksanakan dengan penuh tanggung jawab dan dipergunakan sebagaimana mestinya.',
   ttd: '', stempel: '', ttdPenerima: '',
   mengetahui: false, mengetahuiJabatan: 'Direktur Utama', mengetahuiNama: 'Hendra Wijaya', mengetahuiId: '', ttdMengetahui: '',
+  pakaiNomor: true, kosong: false,
 });
 
 // Data User: identitas kop, penanda tangan & gambar (bukan isi surat)
@@ -129,28 +132,29 @@ export default function SuratPendelegasianTugas() {
   const fileName = `surat-pendelegasian-tugas-${(f.nomor || 'surat').replace(/[^\w-]+/g, '-').toLowerCase()}`;
   const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
 
-  const periode = [fmtTanggal(f.mulai), fmtTanggal(f.selesai)].filter(Boolean).join(' s.d. ');
+  const K = f.kosong; // template kosongan: data penerima/tugas/periode jadi titik-titik, ttd/stempel basah
+  const periode = K ? `${TITIK} s.d. ${TITIK}` : [fmtTanggal(f.mulai), fmtTanggal(f.selesai)].filter(Boolean).join(' s.d. ');
   const signers: LayoutSigner[] = [
-    { heading: 'Penerima delegasi,', role: f.penerimaJabatan, name: f.penerimaNama, idLine: nik(f.penerimaId), ttd: ttdPenerima.src, ttdOffset: getOffset(f.posisi, 'ttdPenerima') },
-    ...(f.mengetahui ? [{ heading: 'Mengetahui,', role: f.mengetahuiJabatan, name: f.mengetahuiNama, idLine: nik(f.mengetahuiId), ttd: ttdMengetahui.src, ttdOffset: getOffset(f.posisi, 'ttdMengetahui') }] : []),
-    { heading: 'Pemberi delegasi,', role: f.pemberiJabatan, name: f.pemberiNama, idLine: nik(f.pemberiId), ttd: ttd.src, stempel: stempel.src, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
+    { heading: 'Penerima delegasi,', role: isian(f.penerimaJabatan, K), name: isian(f.penerimaNama, K), idLine: K ? '' : nik(f.penerimaId), ttd: K ? '' : ttdPenerima.src, ttdOffset: getOffset(f.posisi, 'ttdPenerima') },
+    ...(f.mengetahui ? [{ heading: 'Mengetahui,', role: f.mengetahuiJabatan, name: f.mengetahuiNama, idLine: nik(f.mengetahuiId), ttd: K ? '' : ttdMengetahui.src, ttdOffset: getOffset(f.posisi, 'ttdMengetahui') }] : []),
+    { heading: 'Pemberi delegasi,', role: f.pemberiJabatan, name: f.pemberiNama, idLine: nik(f.pemberiId), ttd: K ? '' : ttd.src, stempel: K ? '' : stempel.src, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
   ];
   const doc: LayoutDoc = {
     logo: logo.src, logoOffset: getOffset(f.posisi, 'logo'),
     kopName: f.instansi, kopLines: [f.subKop, f.alamat, f.kontak],
-    title: f.judul, nomor: f.nomor,
-    placeDate: [f.kota, fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
+    title: f.judul, nomor: nomorTampil(f.nomor, f.pakaiNomor, K),
+    placeDate: [f.kota || (K ? '……' : ''), K ? '…………… 20……' : fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
     body: (
       <>
         <P>Yang bertanda tangan di bawah ini:</P>
         <InfoRows rows={[{ label: 'Nama', value: f.pemberiNama }, { label: 'Jabatan', value: f.pemberiJabatan }, { label: 'NIK', value: f.pemberiId }]} />
         <P>selanjutnya disebut <b>Pemberi Delegasi</b>, dengan ini mendelegasikan tugas dan wewenang kepada:</P>
-        <InfoRows rows={[{ label: 'Nama', value: f.penerimaNama }, { label: 'Jabatan', value: f.penerimaJabatan }, { label: 'NIK', value: f.penerimaId }]} />
+        <InfoRows rows={[{ label: 'Nama', value: isian(f.penerimaNama, K) }, { label: 'Jabatan', value: isian(f.penerimaJabatan, K) }, { label: 'NIK', value: isian(f.penerimaId, K) }]} />
         <P>selanjutnya disebut <b>Penerima Delegasi</b>.</P>
-        <P>{f.pembuka}</P>
-        {f.tugas.some(Boolean) && (
+        <P>{K ? `Sehubungan dengan ${TITIK}${TITIK}${TITIK}, dengan ini mendelegasikan tugas dan wewenang kepada penerima delegasi sebagai berikut:` : f.pembuka}</P>
+        {(K || f.tugas.some(Boolean)) && (
           <ol style={{ margin: `0 0 ${8 * kk}px`, paddingLeft: 24 * kk, listStyle: 'decimal' }}>
-            {f.tugas.filter(Boolean).map((t, i) => <li key={i} style={{ textAlign: 'justify', whiteSpace: 'pre-line' }}>{t}</li>)}
+            {(K ? Array<string>(4).fill('') : f.tugas.filter(Boolean)).map((t, i) => <li key={i} style={{ textAlign: 'justify', whiteSpace: 'pre-line' }}>{t || <span style={{ display: 'inline-block', width: '100%', height: '1.6em', borderBottom: DOTTED, verticalAlign: 'bottom' }} />}</li>)}
           </ol>
         )}
         {periode && <P>Pendelegasian ini berlaku selama periode <b>{periode}</b> dan berakhir dengan sendirinya setelah periode tersebut.</P>}
@@ -165,6 +169,7 @@ export default function SuratPendelegasianTugas() {
   const [canvas, setCanvas] = useCanvasMode();
   const tampilan = (
     <>
+      <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Ttd pemberi' }, { id: 'stempel', label: 'Stempel' }, { id: 'ttdPenerima', label: 'Ttd penerima' },
         ...(f.mengetahui ? [{ id: 'ttdMengetahui', label: 'Ttd mengetahui' }] : [])]}

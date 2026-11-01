@@ -113,3 +113,6 @@
 @media (prefers-reduced-motion: reduce) {
   .slip-app *, .slip-toast { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+/* Template kosongan: garis isian nominal untuk ditulis tangan */
+.slip-blank { display: inline-block; width: 6.5em; border-bottom: 1px dotted currentColor; vertical-align: -0.2em; }

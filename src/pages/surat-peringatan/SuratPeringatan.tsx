@@ -9,7 +9,8 @@ import SharedGallery from '../../shared/components/SharedGallery';
 import UserData from '../../shared/components/UserData';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, signSpace, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
+import DocOptions, { TITIK_PENDEK, isian, nomorTampil } from '../../shared/components/DocOptions';
+import { Dots, ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, signSpace, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { FitLine, Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts } from '../../shared/components/LetterStyles';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
@@ -37,6 +38,7 @@ type Form = {
   ttdHeading: string; ttdJabatan: string; ttdNama: string; ttdId: string; ttd: string; stempel: string;
   penandaLain: Signer[];
   tembusan: string;
+  pakaiNomor: boolean; kosong: boolean;
 };
 
 const STORAGE_KEY = 'surat-peringatan:v1';
@@ -58,6 +60,7 @@ const DEFAULT: Form = {
   penandaLain: [{ heading: "Yang Menerima,", nama: "", jabatan: "Karyawan" }],
   ttdHeading: "Hormat kami,", ttdJabatan: "HRD Manager", ttdNama: 'Nama Penanda Tangan', ttdId: '', ttd: '', stempel: '',
   tembusan: '',
+  pakaiNomor: true, kosong: false,
 };
 
 // Data User: identitas kop, penanda tangan & gambar (bukan template/kertas, bukan isi surat)
@@ -66,14 +69,15 @@ const USER_KEYS = ['logo', 'posisi', 'instansi', 'subKop', 'alamat', 'kontak', '
 // ============================================================
 // SECTION: Potongan isi surat
 // ============================================================
-function InfoGrid({ rows, k }: { rows: Row[]; k: number }) {
+// Mode kosongan: nilai jadi garis titik-titik, jarak baris lega untuk tulisan tangan
+function InfoGrid({ rows, k, kosong }: { rows: Row[]; k: number; kosong?: boolean }) {
   if (!rows.length) return null;
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 8 * k, rowGap: 3 * k, margin: `0 0 ${10 * k}px ${16 * k}px` }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 8 * k, rowGap: (kosong ? 9 : 3) * k, margin: `0 0 ${10 * k}px ${16 * k}px` }}>
       {rows.map((r, i) => (
         <div key={i} style={{ display: 'contents' }}>
           <span style={{ minWidth: 120 * k }}>{r.label}</span>
-          <span style={{ display: 'flex', gap: 6 * k }}><span>:</span><span style={{ flex: 1 }}>{r.value}</span></span>
+          <span style={{ display: 'flex', gap: 6 * k }}><span>:</span><span style={{ flex: 1 }}>{kosong ? <Dots w="100%" /> : r.value}</span></span>
         </div>
       ))}
     </div>
@@ -108,7 +112,8 @@ function ItemTable({ cols, rows, k }: { cols: Col[]; rows: string[][]; k: number
 function Letter({ f, k, W, H, pf }: { f: Form; k: number; W: number; H: number; pf: number }) {
   const g = getGaya(f.gaya);
   useLetterFonts(g);
-  const tempatTanggal = [f.kota, fmtTanggal(f.tanggal)].filter(Boolean).join(', ');
+  const tempatTanggal = f.kosong ? `${f.kota || TITIK_PENDEK}, …………… 20……` : [f.kota, fmtTanggal(f.tanggal)].filter(Boolean).join(', ');
+  const no = nomorTampil(f.nomor, f.pakaiNomor, f.kosong);
   const oT = getOffset(f.posisi, 'ttd');
   const oS = getOffset(f.posisi, 'stempel');
   const fxT = fxOf(oT, 'ttd');
@@ -126,12 +131,12 @@ function Letter({ f, k, W, H, pf }: { f: Form; k: number; W: number; H: number; 
       <Rule g={g} mb={14 * k} />
       <div style={{ textAlign: 'center', marginBottom: 14 * k }}>
         <Title g={g} k={k}>{f.judul}</Title>
-        <div style={{ marginTop: 3 * k }}>Nomor : {f.nomor}</div>
+        {no !== undefined && <div style={{ marginTop: 3 * k }}>Nomor : {no}</div>}
       </div>
       {f.pembuka && <p style={{ marginBottom: 8 * k }}>{f.pembuka}</p>}
-      <InfoGrid rows={f.karyawan} k={k} />
+      <InfoGrid rows={f.karyawan} k={k} kosong={f.kosong} />
       {f.dasar && <p style={{ marginBottom: 8 * k }}>{f.dasar}</p>}
-      <InfoGrid rows={f.pelanggaran} k={k} />
+      <InfoGrid rows={f.pelanggaran} k={k} kosong={f.kosong} />
       {f.sanksi && <p style={{ marginBottom: 8 * k }}>{f.sanksi}</p>}
       {f.penutup && <p style={{ marginBottom: 8 * k }}>{f.penutup}</p>}
       {/* Jarak elastis ke tanda tangan: lega bila isi pendek, menyusut (tidak keluar kertas) bila isi panjang */}
@@ -141,7 +146,7 @@ function Letter({ f, k, W, H, pf }: { f: Form; k: number; W: number; H: number; 
           <div key={i} style={{ textAlign: 'center', minWidth: 120 * k }}>
             <div>{p.heading}</div>
             <div style={{ height: signSpace(72 * k) }} />
-            <div style={{ fontWeight: 700, borderBottom: '1px solid #000', display: 'inline-block', minWidth: 120 * k, paddingBottom: 1 }}>{p.nama || ' '}</div>
+            <div style={{ fontWeight: 700, borderBottom: '1px solid #000', display: 'inline-block', minWidth: 120 * k, paddingBottom: 1 }}>{isian(p.nama, f.kosong) || ' '}</div>
             {p.jabatan && <div style={{ fontSize: 11 * k }}>{p.jabatan}</div>}
           </div>
         ))}
@@ -160,7 +165,7 @@ function Letter({ f, k, W, H, pf }: { f: Form; k: number; W: number; H: number; 
       {f.tembusan && (
         <div style={{ marginTop: 10 * k, fontSize: 11 * k }}>
           <div style={{ fontWeight: 700 }}>Tembusan:</div>
-          <div>{f.tembusan}</div>
+          <div>{f.kosong ? <Dots w="60%" /> : f.tembusan}</div>
         </div>
       )}
     </div>
@@ -261,6 +266,7 @@ export default function SuratPeringatan() {
   const [canvas, setCanvas] = useCanvasMode();
   const tampilan = (
     <>
+      <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
@@ -351,7 +357,7 @@ export default function SuratPeringatan() {
 
           <FitPreview>
             <div ref={letterRef} className="w-max shadow-lg">
-              <Letter f={{ ...f, logo: logo.src, ttd: ttd.src, stempel: stempel.src }} k={k * pg.f * 0.86} W={pg.W} H={pg.H} pf={pg.f} />
+              <Letter f={{ ...f, logo: logo.src, ttd: f.kosong ? '' : ttd.src, stempel: f.kosong ? '' : stempel.src }} k={k * pg.f * 0.86} W={pg.W} H={pg.H} pf={pg.f} />
             </div>
           </FitPreview>
         </div>

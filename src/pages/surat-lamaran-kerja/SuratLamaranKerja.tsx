@@ -8,7 +8,8 @@ import SharedGallery from '../../shared/components/SharedGallery';
 import UserData from '../../shared/components/UserData';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
+import { Dots, ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
+import DocOptions, { TITIK } from '../../shared/components/DocOptions';
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc } from '../../shared/components/LetterLayouts';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 
@@ -27,6 +28,7 @@ type Form = {
   salam: string; ttl: string; pendidikan: string;
   kualifikasi: string; lampiran: string[]; penutup: string;
   ttdHeading: string; ttd: string;
+  kosong: boolean;
 };
 
 const STORAGE_KEY = 'surat-lamaran-kerja:v1';
@@ -46,6 +48,7 @@ const DEFAULT: Form = {
   lampiran: ['Daftar Riwayat Hidup (CV)', 'Fotokopi ijazah terakhir', 'Fotokopi transkrip nilai', 'Fotokopi KTP', 'Pas foto berwarna ukuran 4x6', 'Fotokopi sertifikat pendukung'],
   penutup: 'Besar harapan saya untuk dapat diberikan kesempatan wawancara agar dapat menjelaskan lebih lanjut mengenai potensi diri saya. Atas perhatian dan kesempatan yang Bapak/Ibu berikan, saya ucapkan terima kasih.',
   ttdHeading: 'Hormat saya,', ttd: '',
+  kosong: false,
 };
 
 // Data User: identitas kop pelamar & tanda tangan (bukan isi lamaran)
@@ -54,31 +57,36 @@ const USER_KEYS = ['logo', 'posisi', 'nama', 'profesi', 'alamat', 'telepon', 'em
 // ============================================================
 // SECTION: Isi surat -> LayoutDoc
 // ============================================================
+// Template kosongan: kop & data diri pelamar tetap; tujuan, posisi, sumber, tanggal & lampiran jadi titik-titik
 function buildDoc(f: Form): LayoutDoc {
+  const ko = f.kosong;
+  const jabatan = ko ? TITIK : f.jabatan;
+  const perusahaan = ko ? TITIK : f.perusahaan;
+  const lampiran = ko ? ['', '', '', '', ''] : f.lampiran;
   return {
     logo: f.logo, logoOffset: getOffset(f.posisi, 'logo'),
     kopName: f.nama,
     kopLines: [f.profesi, f.alamat, [f.telepon && `Telp. ${f.telepon}`, f.email, f.web].filter(Boolean).join(' • ')].filter(Boolean),
-    meta: [{ label: 'Lampiran', value: f.lampiran.length ? `${f.lampiran.length} berkas` : '-' }, { label: 'Perihal', value: `Lamaran Pekerjaan sebagai ${f.jabatan}` }],
-    placeDate: [f.kota, fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
-    recipient: ['Kepada Yth.', f.kepada, f.perusahaan, f.alamatTujuan, 'di Tempat'].filter(Boolean),
+    meta: [{ label: 'Lampiran', value: ko ? `${TITIK} berkas` : f.lampiran.length ? `${f.lampiran.length} berkas` : '-' }, { label: 'Perihal', value: `Lamaran Pekerjaan sebagai ${jabatan}` }],
+    placeDate: ko ? `${f.kota || '……'}, …………… 20……` : [f.kota, fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
+    recipient: ko ? ['Kepada Yth.', TITIK, TITIK, TITIK, 'di Tempat'] : ['Kepada Yth.', f.kepada, f.perusahaan, f.alamatTujuan, 'di Tempat'].filter(Boolean),
     body: (
       <>
         <P>{f.salam}</P>
-        <P>{`Berdasarkan informasi lowongan pekerjaan yang saya peroleh dari ${f.sumber}, ${f.perusahaan} sedang membuka kesempatan untuk posisi ${f.jabatan}. Dengan ini saya bermaksud mengajukan lamaran untuk mengisi posisi tersebut. Adapun data diri saya sebagai berikut:`}</P>
+        <P>{`Berdasarkan informasi lowongan pekerjaan yang saya peroleh dari ${ko ? TITIK : f.sumber}, ${perusahaan} sedang membuka kesempatan untuk posisi ${jabatan}. Dengan ini saya bermaksud mengajukan lamaran untuk mengisi posisi tersebut. Adapun data diri saya sebagai berikut:`}</P>
         <InfoRows rows={[
           { label: 'Nama', value: f.nama }, { label: 'Tempat, tgl. lahir', value: f.ttl }, { label: 'Pendidikan terakhir', value: f.pendidikan },
           { label: 'Alamat', value: f.alamat }, { label: 'Telepon', value: f.telepon }, { label: 'Email', value: f.email },
         ]} />
         <P>{f.kualifikasi}</P>
-        {f.lampiran.length > 0 && <>
+        {lampiran.length > 0 && <>
           <P>Sebagai bahan pertimbangan, bersama surat ini saya lampirkan:</P>
-          <ol style={{ margin: '0 0 0.6em', paddingLeft: '2.4em', listStyle: 'decimal' }}>{f.lampiran.map((l, i) => <li key={i}>{l}</li>)}</ol>
+          <ol style={{ margin: '0 0 0.6em', paddingLeft: '2.4em', listStyle: 'decimal' }}>{lampiran.map((l, i) => <li key={i}>{ko ? <Dots w="100%" /> : l}</li>)}</ol>
         </>}
         <P>{f.penutup}</P>
       </>
     ),
-    signers: [{ heading: f.ttdHeading, name: f.nama, ttd: f.ttd, ttdOffset: getOffset(f.posisi, 'ttd'), main: true }],
+    signers: [{ heading: f.ttdHeading, name: f.nama, ttd: ko ? '' : f.ttd, ttdOffset: getOffset(f.posisi, 'ttd'), main: true }],
   };
 }
 
@@ -145,6 +153,7 @@ export default function SuratLamaranKerja() {
   const [canvas, setCanvas] = useCanvasMode();
   const tampilan = (
     <>
+      <DocOptions kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <PositionPad targets={[{ id: 'logo', label: 'Foto / logo' }, { id: 'ttd', label: 'Tanda tangan' }]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />

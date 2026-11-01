@@ -13,6 +13,7 @@ import { num, rupiah } from '../lib/money';
 import { orRandomNo, randomDocNo } from '../lib/docNumber';
 import { cssFamily, useGoogleFonts, type WebFont } from '../lib/fonts';
 import { TextSizeSlider, useFitScale } from './TextScale';
+import DocOptions, { nomorTampil, TITIK } from './DocOptions';
 
 // Nota pembelian untuk printer thermal 58mm / 80mm.
 // Lebar nota × skala 2 = lebar titik cetak printer: 58mm → 192px → PNG 384px (±32 karakter/baris),
@@ -64,6 +65,8 @@ type Nota = {
   skala: number; // ukuran teks nota (%)
   paper: string; // id di PAPERS; bawaan T58/T80 sesuai menu
   landscape: boolean;
+  pakaiNomor: boolean; // tampilkan nomor nota
+  kosong: boolean; // template kosongan untuk diisi tangan
 };
 
 const nowLocal = () => {
@@ -98,6 +101,8 @@ const DEFAULT: Nota = {
   skala: 100,
   paper: 'T58', // diganti T80 di menu 80mm
   landscape: false,
+  pakaiNomor: true,
+  kosong: false,
 };
 
 // total = jumlah harga produk; pajak % dari total; diskon % dari total atau nominal; bayarTotal = akhir
@@ -216,6 +221,9 @@ const Barcode = ({ v, h }: { v: string; h: number }) => {
 function Receipt({ n, T, k }: { n: Nota; T: Layout; k: number }) {
   const c = calc(n);
   const t = tplOf(n.template);
+  const K = n.kosong;
+  const nomor = nomorTampil(n.nomor, n.pakaiNomor, K); // undefined = baris nomor disembunyikan
+  const tgl = K ? '……/……/20…… ……:……' : fmtWaktu(n.waktu);
   const base = T.font + (t.size ?? 0);
   const fs = (d: number) => (base + d) * k; // lebar nota tetap, hanya huruf yang ikut skala
   const logoW = Math.min(T.logoW * k, T.px - 2 * T.pad[1]); // logo tidak boleh lebih lebar dari area isi
@@ -259,33 +267,51 @@ function Receipt({ n, T, k }: { n: Nota; T: Layout; k: number }) {
       </div>
     );
 
-  const metaRows: [string, string][] = [['No', n.nomor], ['Tgl', fmtWaktu(n.waktu)]];
-  if (n.kasir) metaRows.push(['Kasir', n.kasir]);
-  if (n.pelanggan) metaRows.push(['Plg', n.pelanggan]);
+  const metaRows: [string, string][] = [['Tgl', tgl]];
+  if (nomor !== undefined) metaRows.unshift(['No', nomor]);
+  if (K || n.kasir) metaRows.push(['Kasir', K ? TITIK : n.kasir]);
+  if (K || n.pelanggan) metaRows.push(['Plg', K ? TITIK : n.pelanggan]);
+  // Kosongan: info selalu berlabel (pair/center tanpa label sulit diisi tangan)
+  const metaKind = K && (t.meta === 'pair' || t.meta === 'center') ? 'table' : t.meta;
   const meta =
-    t.meta === 'pair' ? (
+    metaKind === 'pair' ? (
       <>
-        <Row l={n.nomor} r={fmtWaktu(n.waktu)} />
+        <Row l={nomor ?? ''} r={tgl} />
         {(n.kasir || n.pelanggan) && <Row l={n.kasir} r={n.pelanggan} />}
       </>
-    ) : t.meta === 'center' ? (
+    ) : metaKind === 'center' ? (
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontWeight: 700 }}>No. {n.nomor}</div>
-        <div>{fmtWaktu(n.waktu)}{n.kasir && ` • ${n.kasir}`}</div>
+        {nomor !== undefined && <div style={{ fontWeight: 700 }}>No. {nomor}</div>}
+        <div>{tgl}{n.kasir && ` • ${n.kasir}`}</div>
         {n.pelanggan && <div>Pelanggan: {n.pelanggan}</div>}
       </div>
-    ) : t.meta === 'colon' ? (
+    ) : metaKind === 'colon' ? (
       metaRows.map(([l, r]) => <div key={l} style={{ display: 'flex' }}><span style={{ width: '5.5ch', flexShrink: 0 }}>{l}</span><span>: {r}</span></div>)
     ) : (
-      <div style={t.meta === 'box' ? { border: '1px solid #000', padding: '2px 4px', margin: '2px 0' } : undefined}>
+      <div style={metaKind === 'box' ? { border: '1px solid #000', padding: '2px 4px', margin: '2px 0' } : undefined}>
         {metaRows.map(([l, r]) => <Row key={l} l={l} r={r} />)}
       </div>
     );
 
   const nb: CSSProperties = { fontWeight: t.nameBold ? 700 : 400 };
   const small: CSSProperties = { fontSize: fs(-1), color: '#333' };
+  // Kosongan: 6 baris bergaris Qty | Barang | Jumlah, cukup tinggi untuk tulisan tangan
+  const cell = (i: number): CSSProperties => ({ borderLeft: i ? '1px solid #000' : undefined, padding: '0 2px', whiteSpace: 'nowrap', ...(i === 1 ? { flex: 1 } : { width: i ? '6em' : '2.5em', flexShrink: 0 }) });
+  const blankItems = (
+    <>
+      <div style={{ display: 'flex', fontWeight: 700, borderBottom: '1px solid #000' }}>
+        {['Qty', 'Barang', 'Jumlah'].map((l, i) => <span key={l} style={cell(i)}>{l}</span>)}
+      </div>
+      {Array.from({ length: 6 }, (_, r) => (
+        <div key={r} style={{ display: 'flex', height: fs(0) * 2.2, borderBottom: '1px dotted #000' }}>
+          {[0, 1, 2].map((i) => <span key={i} style={cell(i)} />)}
+        </div>
+      ))}
+    </>
+  );
   const items = (
     <div style={t.box ? { border: '1px solid #000', padding: '3px 4px' } : undefined}>
+      {K ? blankItems : <>
       {t.items === 'cols' && (
         <div style={{ display: 'flex', gap: 4, fontWeight: 700, borderBottom: '1px solid #000', paddingBottom: 1, marginBottom: 2 }}>
           <span style={{ width: '3.5ch', flexShrink: 0 }}>Qty</span><span style={{ flex: 1 }}>Item</span><span>Total</span>
@@ -335,21 +361,29 @@ function Receipt({ n, T, k }: { n: Nota; T: Layout; k: number }) {
           </div>
         );
       })}
+      </>}
     </div>
   );
 
   const sums = (
-    <div style={t.sumRight ? { marginLeft: '30%' } : undefined}>
-      <Row l="TOTAL" r={rupiah(c.total)} bold />
-      {c.pajak > 0 && <Row l={`Pajak ${n.pajak}%`} r={rupiah(c.pajak)} />}
-      {c.biaya > 0 && <Row l={n.biayaLabel || 'Biaya lain'} r={rupiah(c.biaya)} />}
-      {c.diskon > 0 && <Row l={n.diskonMode === '%' ? `Diskon ${n.diskon}%` : 'Diskon'} r={`-${rupiah(c.diskon)}`} />}
+    <div style={t.sumRight && !K ? { marginLeft: '30%' } : undefined}>
+      <Row l="TOTAL" r={K ? TITIK : rupiah(c.total)} bold />
+      {(K ? num(n.pajak) > 0 : c.pajak > 0) && <Row l={`Pajak ${n.pajak}%`} r={K ? TITIK : rupiah(c.pajak)} />}
+      {K && <Row l="Diskon" r={TITIK} />}
+      {!K && c.biaya > 0 && <Row l={n.biayaLabel || 'Biaya lain'} r={rupiah(c.biaya)} />}
+      {!K && c.diskon > 0 && <Row l={n.diskonMode === '%' ? `Diskon ${n.diskon}%` : 'Diskon'} r={`-${rupiah(c.diskon)}`} />}
     </div>
   );
 
-  const grand = rupiah(c.bayarTotal);
+  const grand = K ? TITIK : rupiah(c.bayarTotal);
   const total =
-    t.total === 'big' ? (
+    K ? (
+      // kosongan: label & titik-titik dua baris agar tidak meluber di 58mm
+      <div style={{ fontWeight: 700, fontSize: fs(2), ...BAR[t.total], textAlign: t.total === 'center' ? 'center' : undefined }}>
+        <div>TOTAL PEMBAYARAN</div>
+        <div style={{ textAlign: 'right' }}>Rp {grand}</div>
+      </div>
+    ) : t.total === 'big' ? (
       <div style={{ fontWeight: 700 }}>
         <div>TOTAL PEMBAYARAN</div>
         <div style={{ fontSize: fs(7), lineHeight: 1.15, textAlign: 'right' }}>Rp {grand}</div>
@@ -363,28 +397,28 @@ function Receipt({ n, T, k }: { n: Nota; T: Layout; k: number }) {
       <div style={{ fontSize: fs(2), ...BAR[t.total] }}><Row l="TOTAL PEMBAYARAN" r={grand} bold /></div>
     );
 
-  const payRows: [string, string][] = n.metode === 'Tunai'
+  const payRows: [string, string][] = K ? [['Metode', ''], ['Bayar', ''], ['Kembali', '']] : n.metode === 'Tunai'
     ? [['Metode Bayar', 'Tunai'], ['Tunai', rupiah(c.bayar)], ['Kembali', rupiah(Math.max(0, c.kembali))]]
     : [['Metode Bayar', n.metode], [n.nonTunai || 'Non-Tunai', grand]];
   const pay = t.pay === 'cols' ? (
     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${payRows.length}, 1fr)`, textAlign: 'center' }}>
       {payRows.map(([l, r], i) => (
         <div key={l} style={{ borderLeft: i ? '1px solid #000' : undefined, padding: '0 2px', minWidth: 0 }}>
-          <div style={small}>{i ? l : 'Metode'}</div><div style={{ fontWeight: 700 }}>{r}</div>
+          <div style={small}>{i ? l : 'Metode'}</div><div style={{ fontWeight: 700, minHeight: K ? fs(0) * 2 : undefined }}>{r}</div>
         </div>
       ))}
     </div>
   ) : (
     <div style={t.pay === 'box' ? { border: '1px solid #000', padding: '2px 4px' } : undefined}>
-      {payRows.map(([l, r]) => <Row key={l} l={l} r={r} />)}
+      {payRows.map(([l, r]) => <Row key={l} l={l} r={K ? TITIK : r} />)}
     </div>
   );
 
   const foot = n.footer && (
     t.foot === 'code' ? (
       <div style={{ textAlign: 'center' }}>
-        <Barcode v={n.nomor} h={fs(16)} />
-        <div style={{ letterSpacing: 2, marginBottom: 4 }}>{n.nomor}</div>
+        {nomor !== undefined && !K && <Barcode v={nomor} h={fs(16)} />}
+        {nomor !== undefined && <div style={{ letterSpacing: 2, marginBottom: 4 }}>{nomor}</div>}
         <div style={{ whiteSpace: 'pre-line' }}>{n.footer}</div>
       </div>
     ) : (
@@ -396,7 +430,7 @@ function Receipt({ n, T, k }: { n: Nota; T: Layout; k: number }) {
   );
 
   return (
-    <div style={{ width: T.px, height: T.h, overflow: T.h ? 'hidden' : undefined, boxSizing: 'border-box', padding: `${T.pad[0]}px ${T.pad[1]}px ${T.pad[2]}px`, background: '#fff', color: '#000', fontFamily: t.font, fontSize: fs(0), lineHeight: t.lh ?? 1.35, wordBreak: 'break-word', textTransform: t.upper ? 'uppercase' : undefined }}>
+    <div style={{ width: T.px, height: T.h, overflow: T.h ? 'hidden' : undefined, boxSizing: 'border-box', padding: `${T.pad[0]}px ${T.pad[1]}px ${T.pad[2]}px`, background: '#fff', color: '#000', fontFamily: t.font, fontSize: fs(0), lineHeight: K ? 1.9 : t.lh ?? 1.35, wordBreak: 'break-word', textTransform: t.upper ? 'uppercase' : undefined }}>
       {header}
       {line}
       {!t.metaBottom && <>{meta}{line}</>}
@@ -484,6 +518,7 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
           {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
         </select>
       </Field>
+      <DocOptions nomor={{ value: n.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: n.kosong, onChange: (v) => set('kosong', v) }} />
     </>
   );
   const unduh = (

@@ -11,6 +11,7 @@ import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSigner } from '../../shared/components/LetterLayouts';
+import DocOptions, { TITIK, TITIK_PENDEK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 
@@ -34,6 +35,7 @@ type Form = {
   ttdJabatan: string; ttdNama: string; ttd: string; stempel: string;
   mengetahui: boolean; mengetahuiJabatan: string; mengetahuiNama: string; ttdMengetahui: string; stempelMengetahui: string;
   tembusan: string[];
+  pakaiNomor: boolean; kosong: boolean; // opsi dokumen (DocOptions)
 };
 
 const STORAGE_KEY = 'undangan-musyawarah-desa:v1';
@@ -62,6 +64,7 @@ const makeDefault = (): Form => ({
   ttdJabatan: jabatanOf('desa', 'Sukamaju'), ttdNama: 'Sutrisno', ttd: '', stempel: '',
   mengetahui: false, mengetahuiJabatan: 'Ketua BPD Desa Sukamaju', mengetahuiNama: 'Haryanto', ttdMengetahui: '', stempelMengetahui: '',
   tembusan: ['Camat Wedi', 'Arsip'],
+  pakaiNomor: true, kosong: false,
 });
 
 // Data User: identitas kop, penanda tangan & gambar (bukan isi undangan)
@@ -141,9 +144,12 @@ export default function UndanganMusyawarahDesa() {
   const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
 
   const up = (s: string) => s.toUpperCase();
+  const ko = f.kosong; // template kosongan: penerima, tanggal, waktu, tempat & agenda jadi titik-titik; kop & penanda tangan tetap
+  const img = (x: string) => (ko ? '' : x); // tanda tangan & stempel basah
+  const blankLine = <span style={{ display: 'inline-block', width: '100%', height: '1.3em', borderBottom: '1.5px dotted #000' }} />;
   const signers: LayoutSigner[] = [
-    ...(f.mengetahui ? [{ heading: 'Mengetahui,', role: f.mengetahuiJabatan, name: f.mengetahuiNama, ttd: ttdMengetahui.src, stempel: stempelMengetahui.src, ttdOffset: getOffset(f.posisi, 'ttdMengetahui'), stempelOffset: getOffset(f.posisi, 'stempelMengetahui') }] : []),
-    { heading: f.ttdJabatan + ',', name: f.ttdNama, ttd: ttd.src, stempel: stempel.src, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
+    ...(f.mengetahui ? [{ heading: 'Mengetahui,', role: f.mengetahuiJabatan, name: f.mengetahuiNama, ttd: img(ttdMengetahui.src), stempel: img(stempelMengetahui.src), ttdOffset: getOffset(f.posisi, 'ttdMengetahui'), stempelOffset: getOffset(f.posisi, 'stempelMengetahui') }] : []),
+    { heading: f.ttdJabatan + ',', name: f.ttdNama, ttd: img(ttd.src), stempel: img(stempel.src), ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
   ];
   const penerima = f.penerima.filter(Boolean);
   const tembusan = f.tembusan.filter(Boolean);
@@ -156,19 +162,20 @@ export default function UndanganMusyawarahDesa() {
       [f.alamat, f.kodePos && `Kode Pos ${f.kodePos}`].filter(Boolean).join(' '),
       f.kontak,
     ],
-    nomor: f.nomor,
+    nomor: nomorTampil(f.nomor, f.pakaiNomor, ko),
     meta: [{ label: 'Lampiran', value: f.lampiran || '-' }, { label: 'Perihal', value: f.perihal }],
-    placeDate: [f.kota, fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
-    recipient: ['Kepada Yth.', f.kepadaSapaan, ...(penerima.length > 1 ? penerima.map((p, i) => `${i + 1}. ${p}`) : penerima), 'di Tempat'],
+    placeDate: ko ? `${f.kota || TITIK_PENDEK}, …………… 20……` : [f.kota, fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
+    recipient: ['Kepada Yth.', f.kepadaSapaan, ...(ko ? [TITIK + TITIK] : penerima.length > 1 ? penerima.map((p, i) => `${i + 1}. ${p}`) : penerima), 'di Tempat'],
     body: (
       <>
         {f.salamPembuka && <P style={{ fontStyle: 'italic' }}>{f.salamPembuka}</P>}
         <P>{f.pembuka}</P>
-        <InfoRows rows={[{ label: 'Hari / tanggal', value: hariTanggal(f.acaraTanggal) }, { label: 'Pukul', value: f.pukul }, { label: 'Tempat', value: f.tempat }]} />
-        {f.agenda.some(Boolean) && (<>
+        <InfoRows rows={[{ label: 'Hari / tanggal', value: isian(hariTanggal(f.acaraTanggal), ko) }, { label: 'Pukul', value: isian(f.pukul, ko) }, { label: 'Tempat', value: isian(f.tempat, ko) }]} />
+        {(ko || f.agenda.some(Boolean)) && (<>
           <P>dengan agenda sebagai berikut:</P>
           <ol style={{ margin: `0 0 ${8 * kk}px`, paddingLeft: 24 * kk, listStyle: 'decimal' }}>
-            {f.agenda.filter(Boolean).map((t, i) => <li key={i} style={{ textAlign: 'justify', whiteSpace: 'pre-line' }}>{t}</li>)}
+            {ko ? [0, 1, 2, 3].map((i) => <li key={i} style={{ marginBottom: 4 * kk }}>{blankLine}</li>)
+              : f.agenda.filter(Boolean).map((t, i) => <li key={i} style={{ textAlign: 'justify', whiteSpace: 'pre-line' }}>{t}</li>)}
           </ol>
         </>)}
         <P>{f.penutup}</P>
@@ -188,6 +195,7 @@ export default function UndanganMusyawarahDesa() {
   const [canvas, setCanvas] = useCanvasMode();
   const tampilan = (
     <>
+      <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' },
         ...(f.mengetahui ? [{ id: 'ttdMengetahui', label: 'Ttd mengetahui' }, { id: 'stempelMengetahui', label: 'Stempel mengetahui' }] : [])]}

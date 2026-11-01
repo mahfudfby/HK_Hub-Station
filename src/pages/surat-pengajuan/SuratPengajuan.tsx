@@ -9,9 +9,10 @@ import SharedGallery from '../../shared/components/SharedGallery';
 import UserData from '../../shared/components/UserData';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
+import { Dots, ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSigner } from '../../shared/components/LetterLayouts';
 import { useBgRemoved } from '../../shared/lib/removeBg';
+import DocOptions, { TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { num, rupiah, terbilangRupiah } from '../../shared/lib/money';
 
@@ -35,6 +36,7 @@ type Form = {
   ttdHeading: string; ttdJabatan: string; ttdNama: string; ttdId: string; ttd: string; stempel: string;
   penandaLain: Signer[];
   tembusan: string;
+  pakaiNomor: boolean; kosong: boolean;
 };
 
 const STORAGE_KEY = 'surat-pengajuan:v1';
@@ -99,6 +101,7 @@ const makeDefault = (): Form => ({
   ttdHeading: 'Hormat kami,', ttdJabatan: 'Manajer Umum', ttdNama: 'Budi Santoso', ttdId: '', ttd: '', stempel: '',
   penandaLain: [],
   tembusan: '',
+  pakaiNomor: true, kosong: false,
 });
 
 // Data User: identitas kop, penanda tangan & gambar (bukan template/kertas, bukan isi surat)
@@ -113,9 +116,11 @@ const itemTotal = (it: Item) => num(it.jumlah) * num(it.harga);
 // ============================================================
 // SECTION: Potongan isi surat
 // ============================================================
-function ItemTable({ items, k }: { items: Item[]; k: number }) {
+// kosong: 8 baris bergaris tanpa isi, jumlah & terbilang dikosongkan (diisi tangan)
+function ItemTable({ items, k, kosong }: { items: Item[]; k: number; kosong?: boolean }) {
   const cell = { border: '1px solid #000', padding: `${3 * k}px ${5 * k}px`, verticalAlign: 'top' as const };
   const total = items.reduce((s, it) => s + itemTotal(it), 0);
+  const rowH = { height: 26 * k };
   return (
     <>
       <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 4 * k, fontSize: '0.95em' }}>
@@ -129,7 +134,9 @@ function ItemTable({ items, k }: { items: Item[]; k: number }) {
           </tr>
         </thead>
         <tbody>
-          {items.map((it, i) => (
+          {kosong ? Array.from({ length: 8 }, (_, i) => (
+            <tr key={i} style={rowH}>{[0, 1, 2, 3, 4].map((c) => <td key={c} style={cell} />)}</tr>
+          )) : items.map((it, i) => (
             <tr key={i}>
               <td style={{ ...cell, textAlign: 'center' }}>{i + 1}</td>
               <td style={{ ...cell, overflowWrap: 'anywhere' }}>{it.uraian}</td>
@@ -138,13 +145,13 @@ function ItemTable({ items, k }: { items: Item[]; k: number }) {
               <td style={{ ...cell, textAlign: 'right' }}>{rupiah(itemTotal(it))}</td>
             </tr>
           ))}
-          <tr>
+          <tr style={kosong ? rowH : undefined}>
             <td colSpan={4} style={{ ...cell, textAlign: 'right', fontWeight: 700 }}>JUMLAH</td>
-            <td style={{ ...cell, textAlign: 'right', fontWeight: 700 }}>{rupiah(total)}</td>
+            <td style={{ ...cell, textAlign: 'right', fontWeight: 700 }}>{kosong ? '' : rupiah(total)}</td>
           </tr>
         </tbody>
       </table>
-      <div style={{ marginBottom: 10 * k, fontStyle: 'italic', fontSize: '0.95em' }}>Terbilang: {terbilangRupiah(total)}</div>
+      <div style={{ marginBottom: 10 * k, fontStyle: 'italic', fontSize: '0.95em' }}>Terbilang: {kosong ? <Dots w="82%" /> : terbilangRupiah(total)}</div>
     </>
   );
 }
@@ -240,23 +247,25 @@ export default function SuratPengajuan() {
   const fileName = `surat-pengajuan-${(f.nomor || 'surat').replace(/[^\w-]+/g, '-').toLowerCase()}`;
   const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
 
+  // Template kosongan: data surat jadi titik-titik; kop, kalimat & penanda tangan tetap (ttd/stempel basah)
+  const K = f.kosong;
   const signers: LayoutSigner[] = [
     ...f.penandaLain.map((s) => ({ heading: s.heading, role: s.jabatan, name: s.nama })),
-    { heading: f.ttdHeading, role: f.ttdJabatan, name: f.ttdNama, idLine: f.ttdId, ttd: ttd.src, stempel: stempel.src, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
+    { heading: f.ttdHeading, role: f.ttdJabatan, name: f.ttdNama, idLine: f.ttdId, ttd: K ? '' : ttd.src, stempel: K ? '' : stempel.src, ttdOffset: getOffset(f.posisi, 'ttd'), stempelOffset: getOffset(f.posisi, 'stempel'), main: true },
   ];
   const doc: LayoutDoc = {
     logo: logo.src, logoOffset: getOffset(f.posisi, 'logo'),
     kopName: f.instansi, kopLines: [f.subKop, f.alamat, f.kontak],
-    nomor: f.nomor,
-    meta: [{ label: 'Lampiran', value: f.lampiran || '-' }, { label: 'Perihal', value: f.perihal }],
-    placeDate: [f.kota, fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
-    recipient: ['Kepada Yth.', ...f.kepada.split('\n')],
+    nomor: nomorTampil(f.nomor, f.pakaiNomor, K),
+    meta: [{ label: 'Lampiran', value: K ? TITIK : f.lampiran || '-' }, { label: 'Perihal', value: f.perihal }],
+    placeDate: [f.kota || (K ? '……' : ''), K ? '…………… 20……' : fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
+    recipient: K ? ['Kepada Yth.', TITIK + TITIK, 'di Tempat'] : ['Kepada Yth.', ...f.kepada.split('\n')],
     body: (
       <>
         <P>{f.salam}</P>
         <P>{f.pembuka}</P>
-        <InfoRows rows={f.rincian} />
-        {f.pakaiTabel && f.items.length > 0 && <ItemTable items={f.items} k={kk} />}
+        <InfoRows rows={f.rincian.map((r) => ({ ...r, value: isian(r.value, K) }))} />
+        {f.pakaiTabel && (K || f.items.length > 0) && <ItemTable items={f.items} k={kk} kosong={K} />}
         <P>{f.penutup}</P>
       </>
     ),
@@ -268,6 +277,7 @@ export default function SuratPengajuan() {
   const [canvas, setCanvas] = useCanvasMode();
   const tampilan = (
     <>
+      <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />

@@ -8,7 +8,8 @@ import SharedGallery from '../../shared/components/SharedGallery';
 import UserData from '../../shared/components/UserData';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
+import { Dots, ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
+import DocOptions, { TITIK } from '../../shared/components/DocOptions';
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSigner } from '../../shared/components/LetterLayouts';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 
@@ -27,6 +28,7 @@ type Form = {
   salam: string; serahTerima: string; terimaKasih: string; penutup: string;
   ttdHeading: string; ttd: string;
   atasanOn: boolean; atasanJabatan: string; atasanNama: string; ttdAtasan: string;
+  kosong: boolean;
 };
 
 const STORAGE_KEY = 'surat-pengunduran-diri:v1';
@@ -56,6 +58,7 @@ const DEFAULT: Form = {
   penutup: 'Demikian surat pengunduran diri ini saya sampaikan. Atas perhatian dan pengertian Bapak/Ibu, saya ucapkan terima kasih.',
   ttdHeading: 'Hormat saya,', ttd: '',
   atasanOn: false, atasanJabatan: 'Atasan Langsung', atasanNama: 'Hendra Wijaya', ttdAtasan: '',
+  kosong: false,
 };
 
 // Data User: identitas kop karyawan & tanda tangan (bukan isi surat)
@@ -64,22 +67,27 @@ const USER_KEYS = ['logo', 'posisi', 'nama', 'profesi', 'alamat', 'telepon', 'em
 // ============================================================
 // SECTION: Isi surat -> LayoutDoc
 // ============================================================
+// Template kosongan: kop & data karyawan tetap; tujuan, perusahaan, tanggal efektif, alasan & tanggal surat jadi titik-titik
 function buildDoc(f: Form): LayoutDoc {
-  const signers: LayoutSigner[] = [{ heading: f.ttdHeading, name: f.nama, ttd: f.ttd, ttdOffset: getOffset(f.posisi, 'ttd'), main: true }];
-  if (f.atasanOn) signers.unshift({ heading: f.atasanJabatan, name: f.atasanNama, ttd: f.ttdAtasan, ttdOffset: getOffset(f.posisi, 'ttdAtasan') });
+  const ko = f.kosong;
+  const signers: LayoutSigner[] = [{ heading: f.ttdHeading, name: f.nama, ttd: ko ? '' : f.ttd, ttdOffset: getOffset(f.posisi, 'ttd'), main: true }];
+  if (f.atasanOn) signers.unshift({ heading: f.atasanJabatan, name: ko ? '' : f.atasanNama, ttd: ko ? '' : f.ttdAtasan, ttdOffset: getOffset(f.posisi, 'ttdAtasan') });
   return {
     logo: f.logo, logoOffset: getOffset(f.posisi, 'logo'),
     kopName: f.nama,
     kopLines: [f.profesi, f.alamat, [f.telepon && `Telp. ${f.telepon}`, f.email, f.web].filter(Boolean).join(' • ')].filter(Boolean),
     meta: [{ label: 'Perihal', value: 'Pengunduran Diri' }],
-    placeDate: [f.kota, fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
-    recipient: ['Kepada Yth.', f.kepada, f.perusahaan, f.alamatTujuan, 'di Tempat'].filter(Boolean),
+    placeDate: ko ? `${f.kota || '……'}, …………… 20……` : [f.kota, fmtTanggal(f.tanggal)].filter(Boolean).join(', '),
+    recipient: ko ? ['Kepada Yth.', TITIK, TITIK, TITIK, 'di Tempat'] : ['Kepada Yth.', f.kepada, f.perusahaan, f.alamatTujuan, 'di Tempat'].filter(Boolean),
     body: (
       <>
         <P>{f.salam}</P>
         <P>Yang bertanda tangan di bawah ini:</P>
         <InfoRows rows={[{ label: 'Nama', value: f.nama }, { label: 'NIK karyawan', value: f.nik }, { label: 'Jabatan', value: f.jabatan }, { label: 'Divisi', value: f.divisi }]} />
-        <P>{`Dengan ini mengajukan pengunduran diri dari jabatan saya sebagai ${f.jabatan} di ${f.perusahaan}, terhitung efektif sejak tanggal ${fmtTanggal(f.efektif)}. ${f.alasan}`}</P>
+        {ko ? <>
+          <P>{`Dengan ini mengajukan pengunduran diri dari jabatan saya sebagai ${f.jabatan} di ${TITIK}, terhitung efektif sejak tanggal ${TITIK} 20……. Adapun alasan pengunduran diri saya:`}</P>
+          {[0, 1, 2].map((i) => <div key={i} style={{ marginBottom: '0.5em' }}><Dots w="100%" /></div>)}
+        </> : <P>{`Dengan ini mengajukan pengunduran diri dari jabatan saya sebagai ${f.jabatan} di ${f.perusahaan}, terhitung efektif sejak tanggal ${fmtTanggal(f.efektif)}. ${f.alasan}`}</P>}
         <P>{f.serahTerima}</P>
         <P>{f.terimaKasih}</P>
         <P>{f.penutup}</P>
@@ -138,6 +146,7 @@ export default function SuratPengunduranDiri() {
   const [canvas, setCanvas] = useCanvasMode();
   const tampilan = (
     <>
+      <DocOptions kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <PositionPad targets={[{ id: 'logo', label: 'Foto / logo' }, { id: 'ttd', label: 'Tanda tangan' }, ...(f.atasanOn ? [{ id: 'ttdAtasan', label: 'Ttd atasan' }] : [])]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />

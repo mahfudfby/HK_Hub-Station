@@ -18,6 +18,7 @@ import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import PositionPad, { fxOf, getOffset, type Offsets } from '../../shared/components/PositionPad';
 import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/CanvasMode';
 import SharedGallery from '../../shared/components/SharedGallery';
+import DocOptions, { nomorTampil } from '../../shared/components/DocOptions';
 
 // Surat keterangan sehat (A5): hanya untuk akun admin. Kop diisi sendiri oleh dokter/klinik pemakai.
 
@@ -53,6 +54,8 @@ type Form = {
   paper: string; // id LETTER_PAPERS
   landscape: boolean;
   skala: number; // ukuran teks surat (%)
+  pakaiNomor: boolean; // tampilkan nomor surat
+  kosong: boolean; // template kosongan (isi manual)
 };
 
 const NO_FMT = '445/{n3}/SKS/{yyyy}';
@@ -89,6 +92,8 @@ const DEFAULT: Form = {
   skala: 100,
   paper: 'A5',
   landscape: false,
+  pakaiNomor: true,
+  kosong: false,
 };
 
 function loadForm(): Form {
@@ -100,6 +105,12 @@ function loadForm(): Form {
   }
 }
 
+// Template kosongan: data pasien, keperluan, hasil & ukuran, tanggal → titik-titik; ttd & stempel disembunyikan.
+// Kop, nama dokter, SIP & kalimat baku tetap. Isian form tidak berubah.
+const tampilKosong = (f: Form): Form => (!f.kosong ? f : {
+  ...f, rows: f.rows.map((r) => ({ ...r, value: '' })), ukur: f.ukur.map((r) => ({ ...r, value: '' })), keperluan: '', tanggal: '', ttd: '', stempel: '',
+});
+
 // ---------------- Letter preview ----------------
 function DataRow({ g, k, label, value, unit }: { g: Gaya; k: number; label: string; value: string; unit?: string }) {
   return (
@@ -107,7 +118,7 @@ function DataRow({ g, k, label, value, unit }: { g: Gaya; k: number; label: stri
       <span style={{ minWidth: (110 + g.labelExtra) * k }}>{label}</span>
       <span style={{ display: 'flex', gap: 6 * k }}>
         <span>:</span>
-        {value ? <span style={{ ...dataStyle, flex: 1, whiteSpace: 'pre-line' }}>{value}{unit && ` ${unit}`}</span> : <span style={{ flex: 1, borderBottom: DOTTED }} />}
+        {value ? <span style={{ ...dataStyle, flex: 1, whiteSpace: 'pre-line' }}>{value}{unit && ` ${unit}`}</span> : <><span style={{ flex: 1, borderBottom: DOTTED }} />{unit && <span>{unit}</span>}</>}
       </span>
     </div>
   );
@@ -116,6 +127,7 @@ function DataRow({ g, k, label, value, unit }: { g: Gaya; k: number; label: stri
 function Letter({ f, k, W, H, pf }: { f: Form; k: number; W: number; H: number; pf: number }) {
   const g = getGaya(f.gaya);
   useLetterFonts(g);
+  const nomor = nomorTampil(f.nomor, f.pakaiNomor, f.kosong);
   const grid = { display: 'grid', gridTemplateColumns: 'max-content 1fr', columnGap: 8 * k, rowGap: g.rowGap * k } as const;
   return (
     <div style={{ width: W, height: H, overflow: 'hidden', boxSizing: 'border-box', padding: `${48 * pf}px ${56 * pf}px`, background: '#fff', color: '#000', fontFamily: g.font, fontSize: g.size * k, lineHeight: 1.4, display: 'flex', flexDirection: 'column' }}>
@@ -127,14 +139,16 @@ function Letter({ f, k, W, H, pf }: { f: Form; k: number; W: number; H: number; 
       <Rule g={g} mb={12 * k} />
       <div style={{ textAlign: 'center', marginBottom: 10 * k }}>
         <Title g={g} k={k}>{f.judul}</Title>
-        <div style={{ fontSize: 12 * k }}>Nomor : {f.nomor ? <span style={dataStyle}>{f.nomor}</span> : <Dots w="12em" />}</div>
+        {nomor !== undefined && <div style={{ fontSize: 12 * k }}>Nomor : {nomor ? <span style={dataStyle}>{nomor}</span> : <Dots w="12em" />}</div>}
       </div>
       <p style={{ textAlign: 'justify', marginBottom: 4 * k }}>{f.pembuka}</p>
       <div style={{ ...grid, marginBottom: 8 * k }}>
         {f.rows.map((r, i) => <DataRow key={i} g={g} k={k} label={r.label} value={r.value} />)}
       </div>
       <p style={{ marginBottom: 2 * k }}>{f.pengantarHasil}</p>
-      <p style={{ textAlign: 'justify', fontWeight: 700, marginBottom: 8 * k }}>“{f.hasil}”</p>
+      {f.kosong // hasil pemeriksaan diisi tangan: dua baris kosong
+        ? <div style={{ marginBottom: 8 * k }}><div style={{ height: '1.8em', borderBottom: DOTTED }} /><div style={{ height: '1.8em', borderBottom: DOTTED }} /></div>
+        : <p style={{ textAlign: 'justify', fontWeight: 700, marginBottom: 8 * k }}>“{f.hasil}”</p>}
       <p style={{ marginBottom: 2 * k }}>{f.pengantarKeperluan}</p>
       <p style={{ marginBottom: 8 * k }}>{f.keperluan ? <span style={dataStyle}>{f.keperluan}</span> : <Dots w="100%" />}</p>
       <div style={{ ...grid, marginBottom: 12 * k }}>
@@ -200,6 +214,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
   const [canvas, setCanvas] = useCanvasMode();
   const tampilan = (
     <>
+      <DocOptions nomor={{ value: f.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: f.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
@@ -294,7 +309,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
 
           <FitPreview>
             <div ref={letterRef} className="w-max shadow-lg">
-              <Letter f={{ ...f, logo: logo.src, ttd: ttd.src, stempel: stempel.src }} k={k * pg.f} W={pg.W} H={pg.H} pf={pg.f} />
+              <Letter f={tampilKosong({ ...f, logo: logo.src, ttd: ttd.src, stempel: stempel.src })} k={k * pg.f} W={pg.W} H={pg.H} pf={pg.f} />
             </div>
           </FitPreview>
         </div>
