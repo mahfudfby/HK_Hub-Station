@@ -3,11 +3,21 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AlertCircle, ArrowUpRight, Check, Copy, Search, X } from 'lucide-react';
 import { routes } from '../../router/routes';
 import QrisCard from '../../shared/components/QrisCard';
+import { useAuthUser } from '../../shared/lib/auth';
 
 // ============================================================
 // SECTION: Types & Constants
 // ============================================================
 type ToastState = { type: 'success' | 'error'; message: string } | null;
+
+// Urutan kategori di Home; key = field `cat` di router/routes.ts
+const CATEGORIES = [
+  { key: 'nota', title: 'Nota & Resi' },
+  { key: 'invoice', title: 'Invoice & Faktur' },
+  { key: 'surat', title: 'Surat Perusahaan' },
+  { key: 'gaji', title: 'Gaji & Kepegawaian' },
+  { key: 'kesehatan', title: 'Kesehatan (Khusus Dokter)' },
+];
 
 const cardClass =
   'group flex items-center gap-4 min-h-[44px] rounded-2xl border border-gray-300 bg-white p-4 shadow-sm ' +
@@ -95,15 +105,24 @@ export default function Home() {
     setToast({ type: 'success', message: msg });
     navigate(location.pathname, { replace: true, state: null });
   }, [location, navigate]);
-  const apps = routes
-    .filter((r) => r.path !== '/' && 'title' in r)
-    .map((r, i) => ({ ...r, path: r.path.replace(/\/\*$/, ''), no: String(i + 1).padStart(2, '0') })); // '/spbu/*' -> '/spbu'
+  const user = useAuthUser(); // undefined = masih dicek, null = belum login
+  // Menu login: true (dokter) disembunyikan sampai login. Nomor 01, 02, … mengikuti urutan tampil per kategori.
+  const visible = routes.filter((r) => 'title' in r && (!('login' in r) || user));
+  let n = 0;
+  const groups = CATEGORIES.map((c) => ({
+    ...c,
+    apps: visible
+      .filter((r) => 'cat' in r && r.cat === c.key)
+      .map((r) => ({ ...r, path: r.path.replace(/\/\*$/, ''), no: String(++n).padStart(2, '0') })), // '/spbu/*' -> '/spbu'
+  }));
   const [q, setQ] = useState('');
   const words = q.toLowerCase().split(/\s+/).filter(Boolean);
-  const shown = apps.filter((a) => {
-    const text = String(a.title).toLowerCase(); // hanya judul, nomor tidak ikut dicari
-    return words.every((w) => text.includes(w));
-  });
+  const shownGroups = groups
+    .map((g) => ({ ...g, apps: g.apps.filter((a) => {
+      const text = String(a.title).toLowerCase(); // hanya judul, nomor tidak ikut dicari
+      return words.every((w) => text.includes(w));
+    }) }))
+    .filter((g) => g.apps.length);
 
   useEffect(() => {
     if (!toast) return;
@@ -129,24 +148,31 @@ export default function Home() {
   return (
     <main className="relative min-h-screen bg-gray-100 px-4 py-12 text-gray-900 sm:py-16">
       <BackgroundOrbs />
-      <div className="relative z-10 mx-auto w-full max-w-md">
+      <div className="relative z-10 mx-auto w-full max-w-4xl">
         <header className="mb-10 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-500 text-2xl font-bold text-white shadow-md" aria-hidden="true">HK</div>
           <h1 className="text-2xl font-bold tracking-tight">HK Hub Station</h1>
           <p className="mt-2 text-sm text-gray-700">Kumpulan aplikasi web praktis dalam satu tautan.</p>
         </header>
 
-        <QrisCard />
+        <div className="mx-auto max-w-md">
+          <QrisCard />
 
         <div className="relative mb-4">
           <Search size={18} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
           <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari menu, mis. surat, nota, invoice…"
             aria-label="Cari menu" className="w-full min-h-[44px] rounded-2xl border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm shadow-sm" />
         </div>
-        {!shown.length && <p className="mb-3 text-center text-sm text-gray-700" role="status">Menu "{q}" tidak ditemukan.</p>}
+        </div>
+        {!shownGroups.length && <p className="mb-3 text-center text-sm text-gray-700" role="status">Menu "{q}" tidak ditemukan.</p>}
 
-        <ul className="space-y-3">
-          {shown.map((app) => (
+        {shownGroups.map((g) => (
+        <section key={g.key} aria-labelledby={`kat-${g.key}`} className="mb-8">
+          <h2 id={`kat-${g.key}`} className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-700">
+            {g.title} <span className="rounded-full bg-primary-500 px-2 py-0.5 text-xs text-white">{g.apps.length}</span>
+          </h2>
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {g.apps.map((app) => (
             <li key={app.path} className="flex items-stretch gap-2">
               <Link to={app.path} className={`${cardClass} flex-1`} aria-label={`Buka ${app.title}`}>
                 <span className="shrink-0 self-start font-bold tabular-nums text-primary-700">{app.no}.</span>
@@ -166,6 +192,8 @@ export default function Home() {
             </li>
           ))}
         </ul>
+        </section>
+        ))}
 
         <footer className="mt-12 text-center text-xs text-gray-600">HK Hub Station</footer>
       </div>
