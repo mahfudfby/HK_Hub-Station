@@ -1,4 +1,5 @@
-import { ReactNode, useLayoutEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { SHY, hyphenateText } from '../lib/hyphenId';
 import { ZoomIn, ZoomOut } from 'lucide-react';
 
 const MIN_ZOOM = 25;
@@ -30,6 +31,28 @@ export default function FitPreview({ children }: { children: ReactNode }) {
     ro.observe(inner.current!);
     addEventListener('resize', fit);
     return () => { ro.disconnect(); removeEventListener('resize', fit); };
+  }, []);
+
+  // Paragraf rata kiri-kanan: sisipkan titik penggal (soft hyphen) Bahasa Indonesia agar spasi tidak renggang.
+  // Dipasang ulang setiap isi dokumen berubah (React menimpa teks saat data berubah).
+  useEffect(() => {
+    const root = inner.current;
+    if (!root) return;
+    const run = () => {
+      const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+        const t = n as Text;
+        const v = t.nodeValue || '';
+        if (v.length < 8 || !t.parentElement || getComputedStyle(t.parentElement).textAlign !== 'justify') continue;
+        const h = hyphenateText(v);
+        if (h !== v) t.nodeValue = h;
+      }
+    };
+    const mo = new MutationObserver(() => { mo.disconnect(); run(); mo.observe(root, OPTS); });
+    const OPTS = { subtree: true, childList: true, characterData: true };
+    run();
+    mo.observe(root, OPTS);
+    return () => mo.disconnect();
   }, []);
 
   const k = zoom ?? box.k;
@@ -77,5 +100,24 @@ export default function FitPreview({ children }: { children: ReactNode }) {
 // Bayangan (box-shadow) hanya hiasan preview; html2canvas menggambarnya sebagai blok abu-abu, jadi dibuang.
 export function unfitPreview(doc: Document) {
   doc.querySelectorAll<HTMLElement>('[data-fit-preview]').forEach((el) => (el.style.transform = 'none'));
+  showHyphens(doc);
   doc.querySelectorAll<HTMLElement>('[data-fit-preview] *').forEach((el) => (el.style.boxShadow = 'none'));
+}
+
+// html2canvas tidak menggambar tanda penggal otomatis: soft hyphen yang jatuh di ujung baris diganti "-" sungguhan
+// (lebarnya sama, jadi tata letak tidak bergeser). Dipanggil di dokumen klon, setelah skala dilepas.
+function showHyphens(doc: Document) {
+  const walk = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+  const nodes: Text[] = [];
+  for (let n = walk.nextNode(); n; n = walk.nextNode()) if ((n.nodeValue || '').includes(SHY)) nodes.push(n as Text);
+  const range = doc.createRange();
+  const topOf = (t: Text, i: number) => { range.setStart(t, i); range.setEnd(t, i + 1); return range.getBoundingClientRect().top; };
+  for (const t of nodes) {
+    const v = t.nodeValue || '';
+    const cut: number[] = [];
+    for (let i = v.indexOf(SHY); i > 0; i = v.indexOf(SHY, i + 1)) {
+      if (i + 1 < v.length && topOf(t, i + 1) > topOf(t, i - 1) + 2) cut.push(i); // huruf sesudahnya pindah baris
+    }
+    if (cut.length) t.nodeValue = v.split('').map((c, i) => (cut.includes(i) ? '-' : c)).join('');
+  }
 }
