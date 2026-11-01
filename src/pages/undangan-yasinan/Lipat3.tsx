@@ -55,7 +55,7 @@ function Corners({ c, k }: { c: Tone; k: number }) {
   return <>{(['top', 'bottom'] as const).flatMap((v) => (['left', 'right'] as const).map((h) => <span key={v + h} style={s(v, h)} />))}</>;
 }
 
-// Satu panel: warna blok, pita, bingkai. Isi boleh meluber (overflow terlihat) agar useFitScale bisa mengecilkan teks.
+// Satu panel: warna blok, pita, bingkai. minHeight (bukan height): isi kepanjangan memanjangkan halaman sehingga useFitScale mengecilkan teks.
 function PanelBox({ t, id, k, pad, w, h, align = 'center', children }: {
   t: Tpl; id: Panel; k: number; pad: number; w: number; h: number; align?: 'center' | 'left'; children: (c: Tone) => ReactNode;
 }) {
@@ -72,7 +72,7 @@ function PanelBox({ t, id, k, pad, w, h, align = 'center', children }: {
   const inner: CSSProperties = { flex: '1 0 auto', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', textAlign: align,
     padding: t.frame === 'none' ? 4 * k : t.frame === 'corners' ? `${20 * k}px ${16 * k}px` : `${14 * k}px ${12 * k}px` };
   return (
-    <div data-panel={id} style={{ position: 'relative', width: w, height: h, flexShrink: 0, boxSizing: 'border-box', padding: band ? `${pad + 14 * k}px ${pad}px` : pad,
+    <div data-panel={id} style={{ position: 'relative', width: w, minHeight: h, flexShrink: 0, boxSizing: 'border-box', padding: band ? `${pad + 14 * k}px ${pad}px` : pad,
       background: c.bg, color: c.ink, display: 'flex', flexDirection: 'column' }}>
       {band && <>
         <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 14 * k, background: t.tone.bg }} />
@@ -102,7 +102,7 @@ function Photo({ t, src, off, c, k, size }: { t: Tpl; src: string; off: Offset; 
   );
 }
 
-function Sampul({ t, d, c, k, wide }: { t: Tpl; d: Isi; c: Tone; k: number; wide: boolean }) {
+function Sampul({ t, d, c, k, wide, kotak }: { t: Tpl; d: Isi; c: Tone; k: number; wide: boolean; kotak: ReactNode }) {
   const judul = <div style={{ fontSize: 12 * k, letterSpacing: 4 * k, fontWeight: 700, textTransform: 'uppercase' }}>{d.judul}</div>;
   const sub = <Head t={t} k={k} size={26} c={c} style={{ margin: `${4 * k}px 0` }}>{d.subjudul}</Head>;
   const per = <div style={{ fontSize: 11.5 * k }}>{peringatanText(d.hari)}</div>;
@@ -131,7 +131,7 @@ function Sampul({ t, d, c, k, wide }: { t: Tpl; d: Isi; c: Tone; k: number; wide
       <div style={{ borderLeft: `${5 * k}px solid ${c.accent}`, paddingLeft: 10 * k, textAlign: 'left' }}>{judul}{words(30)}</div>
     ) : t.cover === 'big' ? <>{judul}<Rule c={c} k={k} w={100} />{words(36, true)}<Rule c={c} k={k} w={100} /></>
       : d.foto ? foto(120) : <>{judul}{sub}</>;
-    const text = <>{!bigTitle && d.foto && judul}{!bigTitle && d.foto && sub}{per}{bigTitle && foto(64)}{nama}{istirja}</>;
+    const text = <>{!bigTitle && d.foto && judul}{!bigTitle && d.foto && sub}{per}{bigTitle && foto(64)}{nama}{kotak}</>;
     const col = (x: ReactNode) => <div style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>{x}</div>;
     return (
       <div style={{ flex: '1 0 auto', display: 'flex', gap: 16 * k, alignItems: 'stretch' }}>
@@ -228,6 +228,18 @@ export function useTplFonts(t: Tpl) {
   useGoogleFonts([{ family: t.body, weights: [400, 700] }, { family: t.head, weights: t.headW ?? [400, 700] }, { family: t.arab, weights: [400, 700] }]);
 }
 
+// Satu kotak putih polos "Kepada Yth." di sampul: ruang kosong untuk ditulis bolpoin setelah difotokopi massal.
+// Selalu putih bertinta gelap (juga di template sampul gelap) agar tulisan tangan jelas.
+function KotakPenerima({ d, c, k, wide }: { d: Isi; c: Tone; k: number; wide: boolean }) {
+  return (
+    <div style={{ alignSelf: 'center', width: '100%', minHeight: (wide ? 70 : 84) * k, boxSizing: 'border-box', marginTop: 12 * k, background: '#ffffff', color: '#111827',
+      border: `${1.5 * k}px solid ${c.accent}`, borderRadius: 6 * k, padding: `${6 * k}px ${10 * k}px`, textAlign: 'left', fontSize: 10.5 * k, lineHeight: 1.3 }}>
+      <div style={{ fontWeight: 700 }}>Kepada Yth.</div>
+      {d.kepada && <div style={{ fontWeight: 700, fontSize: 12.5 * k, paddingTop: 4 * k, ...pre }}>{d.kepada}</div>}
+    </div>
+  );
+}
+
 // Dua kolom berdampingan di panel mendatar; di panel tegak cukup ditumpuk
 function Cols({ wide, k, a, b }: { wide: boolean; k: number; a: ReactNode; b: ReactNode }) {
   if (!wide) return <>{a}{b}</>;
@@ -247,16 +259,12 @@ export function Lembar({ t, d, k, pad, W, H }: { t: Tpl; d: Isi; k: number; pad:
   return (
     <div style={{ position: 'relative', width: W, height: H, overflow: 'hidden', display: 'flex', flexDirection: wide ? 'column' : 'row', background: t.paper, color: t.ink,
       fontFamily: cssFamily(t.body, 'serif'), fontSize: 11.5 * k, lineHeight: 1.5 }}>
-      {box('sampul', (c) => <Sampul t={t} d={d} c={c} k={k} wide={wide} />)}
+      {box('sampul', (c) => {
+        const kotak = <KotakPenerima d={d} c={c} k={k} wide={wide} />;
+        return wide ? <Sampul t={t} d={d} c={c} k={k} wide kotak={kotak} /> : <><Sampul t={t} d={d} c={c} k={k} wide={false} kotak={null} />{kotak}</>;
+      })}
       {box('waktu', (c) => <Cols wide={wide} k={k}
         a={<>
-          <div style={{ textAlign: 'left', fontSize: 11 * k, marginBottom: 6 * k }}>
-            <span>Kepada Yth. </span>
-            {d.kepada
-              ? <b style={pre}>{d.kepada}</b>
-              : <span style={{ display: 'inline-block', width: '62%', borderBottom: `1.5px dotted ${c.ink}`, height: 12 * k }} />}
-            {d.diTempat && <div>{d.diTempat}</div>}
-          </div>
           <Arab t={t} k={k} size={20} style={{ color: c.accent }}>{BASMALAH}</Arab>
           <div style={{ fontWeight: 700, margin: `${2 * k}px 0 ${6 * k}px` }}>{d.salam}</div>
           <div style={{ textAlign: 'justify', ...pre }}>{d.pembuka}</div>
