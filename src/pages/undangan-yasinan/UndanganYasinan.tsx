@@ -175,8 +175,7 @@ export default function UndanganYasinan() {
             <section className="space-y-3">
               <h2 className="font-bold">Sampul, Penerima & Doa</h2>
               <div className="grid sm:grid-cols-2 gap-2">{ta('judul', 'Judul sampul')}{ta('subjudul', 'Subjudul sampul')}</div>
-              {ta('kepada', 'Kepada Yth. (kosongkan untuk titik-titik ditulis tangan)', 2)}
-              {ta('diTempat', 'Baris "di Tempat"')}
+              {ta('kepada', 'Kepada Yth. (kosongkan = kotak putih di sampul ditulis bolpoin)', 2)}
               {ta('catatan', 'Catatan kecil (mis. mohon maaf salah nama/gelar)', 2)}
               {ta('doaArab', 'Doa (teks Arab)', 2)}
               {ta('doaArti', 'Arti doa', 2)}
