@@ -14,6 +14,7 @@ import { useBgRemoved } from '../../shared/lib/removeBg';
 import { num, rupiah } from '../../shared/lib/money';
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { cssFamily, useGoogleFonts, type WebFont } from '../../shared/lib/fonts';
+import FormSection from '../../shared/components/FormSection';
 
 // Custom Invoices Toko Online: nota pesanan gaya marketplace untuk toko online milik pengguna.
 // Sengaja generik: tanpa logo/nama/alamat/NPWP marketplace mana pun; identitas diisi sendiri oleh penjual.
@@ -400,38 +401,34 @@ export default function InvoiceTokoOnline() {
             ) : (<>
             <UserData storageKey="data-user:toko-online" keys={USER_KEYS} data={n} onApply={(u) => setN((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Toko</h2>
+            <FormSection title="Toko">
               <ImageUpload label="Logo toko" value={n.logo} onChange={(v) => set('logo', v)} notify={notify} {...bgFor('logo', logo)} />
               <div className="grid sm:grid-cols-2 gap-2">
                 {txt('logoTeks', 'Teks pengganti logo (bila tanpa gambar)')}
                 {txt('judul', 'Judul dokumen')}
               </div>
               {txt('infoToko', 'Info toko di bawah (nama usaha, alamat, NPWP, dll.)', 3)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Pembeli &amp; Penjual</h2>
+            <FormSection title="Pembeli &amp; Penjual">
               <div className="grid sm:grid-cols-2 gap-2">
                 {txt('pembeli', 'Nama pembeli')}
                 {txt('penjual', 'Nama penjual / toko')}
               </div>
               {txt('alamat', 'Alamat pembeli', 2)}
               <Field label="No. handphone pembeli"><input type="tel" className={inputCls} value={n.hp} onChange={(e) => set('hp', e.target.value)} /></Field>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Pesanan</h2>
+            <FormSection title="Pesanan">
               <div className="grid sm:grid-cols-2 gap-2">
                 {txt('noPesanan', 'No. pesanan')}
                 <Field label="Tanggal transaksi"><input type="date" className={inputCls} value={n.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
                 {txt('metode', 'Metode pembayaran')}
                 {txt('kurir', 'Jasa kirim')}
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Rincian Pesanan</h2>
+            <FormSection title="Rincian Pesanan">
               {n.items.map((it, i) => (
                 <div key={i} className="rounded-xl border border-gray-200 p-3 space-y-2">
                   <div className="flex gap-2">
@@ -448,10 +445,9 @@ export default function InvoiceTokoOnline() {
                 </div>
               ))}
               <button type="button" onClick={() => set('items', [...n.items, blankItem()])} className="text-sm font-medium text-blue-700">+ Tambah produk</button>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Biaya &amp; Total</h2>
+            <FormSection title="Biaya &amp; Total">
               <div className="grid grid-cols-2 gap-2">
                 {money('ongkir', 'Ongkos kirim (Rp)')}
                 {money('biayaLayanan', 'Biaya layanan (Rp)')}
@@ -465,15 +461,14 @@ export default function InvoiceTokoOnline() {
               <div className="text-right font-bold">Total Pembayaran: Rp{rupiah(c.total)}</div>
               {txt('catatanBiaya', 'Keterangan di bawah total', 2)}
               {txt('catatan', 'Catatan lain (opsional)', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Tanda Tangan &amp; Stempel (opsional)</h2>
+            <FormSection title="Tanda Tangan &amp; Stempel (opsional)">
               {txt('ttdNama', 'Nama di bawah tanda tangan')}
               <ImageUpload label="Tanda tangan" value={n.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel" value={n.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
               <p className="text-xs text-gray-500">Semua isian &amp; gambar hanya disimpan di perangkat ini.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

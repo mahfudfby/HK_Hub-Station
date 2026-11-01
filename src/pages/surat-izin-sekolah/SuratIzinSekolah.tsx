@@ -15,6 +15,7 @@ import DocOptions, { TITIK, TITIK_PENDEK, isian, nomorTampil } from '../../share
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { terbilangRupiah } from '../../shared/lib/money';
 import { useBgRemoved } from '../../shared/lib/removeBg';
+import FormSection from '../../shared/components/FormSection';
 
 // Surat Izin Tidak Masuk Sekolah: dari orang tua/wali ke wali kelas, diketahui Ketua RT & Ketua RW (kop RT/RW).
 // Menu berdiri sendiri (file, form & penyimpanan terpisah). Tata letak dari LetterLayouts.
@@ -214,8 +215,7 @@ export default function SuratIzinSekolah() {
             ) : (<>
             <UserData storageKey="data-user:surat-izin-sekolah" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop RT/RW</h2>
+            <FormSection title="Kop RT/RW">
               <ImageUpload label="Logo (opsional)" value={f.logo} onChange={(v) => set('logo', v)} notify={notify} {...bgFor('logo', logo)} />
               <div className="grid grid-cols-2 gap-2">
                 {text('rt', 'Nomor RT')}
@@ -226,35 +226,31 @@ export default function SuratIzinSekolah() {
               {text('kabKota', 'Kota / kabupaten')}
               {text('alamatKop', 'Alamat sekretariat')}
               {text('kontak', 'Telepon / email')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Surat</h2>
+            <FormSection title="Data Surat">
               {text('judul', 'Judul surat')}
               <Field label="Nomor surat"><NumberFormatInput parts={['Urut', 'RT', 'RW', 'Bulan', 'Tahun']} example={`${randomDocNo(pola(f.rt, f.rw).replace('{n3}', '001'))} (bulan angka romawi)`} value={f.nomor} onChange={(v) => set('nomor', v)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('kota', 'Kota')}
                 <Field label="Tanggal surat"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Tujuan</h2>
+            <FormSection title="Tujuan">
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('waliKelas', 'Kepada Yth. Bapak/Ibu')}
                 {text('kelas', 'Kelas')}
               </div>
               {text('sekolah', 'Nama sekolah')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Siswa</h2>
+            <FormSection title="Data Siswa">
               {text('siswaNama', 'Nama siswa')}
               {text('siswaNis', 'NIS / NISN')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Orang Tua / Wali</h2>
+            <FormSection title="Orang Tua / Wali">
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('ortuNama', 'Nama')}
                 {text('ortuHubungan', 'Hubungan dengan siswa')}
@@ -262,10 +258,9 @@ export default function SuratIzinSekolah() {
                 {text('ortuHp', 'No. telepon/HP')}
               </div>
               {text('ortuAlamat', 'Alamat', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Alasan & Lama Izin</h2>
+            <FormSection title="Alasan & Lama Izin">
               <div className="flex flex-wrap gap-2" role="group" aria-label="Alasan tidak masuk">
                 {ALASAN.map((a) => (
                   <button key={a} type="button" aria-pressed={f.alasan === a} onClick={() => set('alasan', a)}
@@ -280,10 +275,9 @@ export default function SuratIzinSekolah() {
               <p className="text-sm text-gray-600">Lama izin: {jumlahHari(f.mulai, f.selesai || f.mulai)} hari</p>
               {text('salam', 'Salam pembuka')}
               {text('penutup', 'Kalimat penutup', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penanda Tangan</h2>
+            <FormSection title="Penanda Tangan">
               <p className="text-sm text-gray-700">Tampilkan tanda tangan (boleh ketiganya, dua, atau salah satu):</p>
               <div className="flex flex-wrap gap-x-4">
                 {([['pakaiRt', `Ketua RT ${f.rt}`], ['pakaiRw', `Ketua RW ${f.rw}`], ['pakaiOrtu', 'Orang Tua/Wali']] as const).map(([key, label]) => (
@@ -311,7 +305,7 @@ export default function SuratIzinSekolah() {
                 <ImageUpload label="Stempel RW" value={f.stempelRw} onChange={(v) => set('stempelRw', v)} notify={notify} {...bgFor('stempelRw', stempelRw)} />
               </>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

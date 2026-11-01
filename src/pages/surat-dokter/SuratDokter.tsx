@@ -18,6 +18,7 @@ import PositionPad, { fxOf, getOffset, type Offsets } from '../../shared/compone
 import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/CanvasMode';
 import SharedGallery from '../../shared/components/SharedGallery';
 import DocOptions from '../../shared/components/DocOptions';
+import FormSection from '../../shared/components/FormSection';
 
 // Surat keterangan dokter: hanya untuk akun admin (login lewat tombol mengambang / halaman /login).
 
@@ -308,8 +309,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
                 galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
             ) : (<>
             <UserData storageKey="data-user:surat-dokter" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Pasien</h2>
+            <FormSection title="Data Pasien">
               {f.rows.map((r, i) => (
                 <div key={i} className="grid grid-cols-[8rem_1fr] gap-2">
                   <AutoTextarea aria-label={`Label baris ${i + 1}`} className={inputCls} value={r.label} onChange={(e) => setRow(i, { label: e.target.value })} />
@@ -323,10 +323,9 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
                   <button type="button" onClick={() => set('rows', f.rows.slice(0, -1))} className="text-red-600">− Hapus baris terakhir</button>
                 )}
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Hasil Pemeriksaan</h2>
+            <FormSection title="Hasil Pemeriksaan">
               <Field label="Dinyatakan">
                 <select className={inputCls} value={f.status} onChange={(e) => set('status', e.target.value as Form['status'])}>
                   <option value="SAKIT">SAKIT</option>
@@ -360,10 +359,9 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
                   Untuk dipergunakan sebagai kelengkapan administrasi : <b>{f.tujuan || '…'}</b>”
                 </p>
               </>)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Tanda Tangan</h2>
+            <FormSection title="Tanda Tangan">
               <div className="grid grid-cols-2 gap-2">
                 <Field label="Kota"><AutoTextarea className={inputCls} value={f.kota} onChange={(e) => set('kota', e.target.value)} /></Field>
                 <Field label="Tanggal surat"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
@@ -378,7 +376,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
               <ImageUpload label="Stempel" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify}
                 bg={bg.stempel} onBg={(v) => setBg((p) => ({ ...p, stempel: v }))} shown={stempel.src} bgBusy={stempel.busy} />
               <p className="text-xs text-gray-500">Logo, tanda tangan &amp; stempel hanya disimpan di perangkat ini, tidak diunggah ke server.</p>
-            </section>
+            </FormSection>
 
             <details className="space-y-3">
               <summary className="font-bold cursor-pointer">Kop &amp; Teks Surat</summary>

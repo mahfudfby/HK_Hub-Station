@@ -14,6 +14,7 @@ import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, le
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSigner } from '../../shared/components/LetterLayouts';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
+import FormSection from '../../shared/components/FormSection';
 
 // Surat Perintah Lembur (SPL): perintah atasan kepada satu/lebih karyawan untuk bekerja lembur
 // pada tanggal tertentu, dengan tabel jam mulai–selesai (total jam otomatis, mendukung lewat tengah malam).
@@ -256,37 +257,33 @@ export default function SuratPerintahLembur() {
             ) : (<>
             <UserData storageKey="data-user:surat-perintah-lembur" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Surat</h2>
+            <FormSection title="Kop Surat">
               <ImageUpload label="Logo" value={f.logo} onChange={(x) => set('logo', x)} notify={notify} {...bgFor('logo', logo)} />
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
               {text('kontak', 'Telepon, email, website')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Surat</h2>
+            <FormSection title="Data Surat">
               {text('judul', 'Judul surat')}
               <Field label="Nomor surat"><NumberFormatInput parts={['Nomor', 'Kode', 'Unit', 'Bulan', 'Tahun']} example={`021/SPL/OPS/${ROMAN[new Date().getMonth()]}/${new Date().getFullYear()} (unit = kode bagian, bulan angka romawi)`} value={f.nomor} onChange={(x) => set('nomor', x)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('kota', 'Kota')}
                 <Field label="Tanggal surat"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Rincian Lembur</h2>
+            <FormSection title="Rincian Lembur">
               {text('pembuka', 'Kalimat pembuka', 3)}
               <div className="grid sm:grid-cols-2 gap-2">
                 <Field label="Tanggal lembur"><input type="date" className={inputCls} value={f.tglLembur} onChange={(e) => set('tglLembur', e.target.value)} /></Field>
                 {text('lokasi', 'Lokasi kerja (opsional)')}
               </div>
               {text('alasan', 'Alasan / keperluan lembur', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Karyawan yang Lembur</h2>
+            <FormSection title="Karyawan yang Lembur">
               {f.rows.map((r, i) => (
                 <div key={i} className="rounded-xl border border-gray-200 p-3 space-y-2">
                   <div className="flex items-center justify-between">
@@ -309,16 +306,14 @@ export default function SuratPerintahLembur() {
               <button type="button" onClick={() => set('rows', [...f.rows, { nama: '', nik: '', jabatan: '', mulai: '17:00', selesai: '20:00', tugas: '' }])}
                 className="min-h-[40px] text-sm font-medium text-blue-700">+ Tambah karyawan</button>
               <p className="text-sm text-gray-600">Total jam lembur seluruhnya: <b>{fmtJam(total)}</b> (jam selesai lebih kecil dari jam mulai dihitung lewat tengah malam).</p>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Ketentuan & Penutup</h2>
+            <FormSection title="Ketentuan & Penutup">
               {text('ketentuan', 'Ketentuan (satu poin per baris)', 4)}
               {text('penutup', 'Kalimat penutup', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penanda Tangan</h2>
+            <FormSection title="Penanda Tangan">
               <p className="text-sm text-gray-700">Tampilkan tanda tangan (boleh keduanya atau salah satu):</p>
               <div className="flex flex-wrap gap-x-4">
                 {([['pakaiAtasan', 'Atasan yang memerintahkan'], ['pakaiHrd', 'Mengetahui, HRD']] as const).map(([key, label]) => (
@@ -342,7 +337,7 @@ export default function SuratPerintahLembur() {
                 <ImageUpload label="Tanda tangan HRD" value={f.ttdHrd} onChange={(x) => set('ttdHrd', x)} notify={notify} {...bgFor('ttdHrd', ttdHrd)} />
               </>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

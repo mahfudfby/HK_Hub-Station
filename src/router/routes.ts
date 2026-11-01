@@ -346,4 +346,11 @@ export const routes = [
     title: 'Perjanjian Kerahasiaan (NDA) Karyawan',
     desc: 'Perjanjian kerahasiaan perusahaan–karyawan dengan pasal yang bisa diedit, otomatis multi-halaman.',
   },
+  {
+    path: '/surat-perjanjian-hutang-piutang/*',
+    cat: 'pribadi',
+    component: lazy(() => import('../pages/surat-perjanjian-hutang-piutang')),
+    title: 'Surat Perjanjian Hutang Piutang',
+    desc: 'Perjanjian pinjam uang dua pihak: pasal yang bisa diedit, jadwal cicilan otomatis, saksi opsional & lampiran foto bukti di halaman terpisah.',
+  },
 ];

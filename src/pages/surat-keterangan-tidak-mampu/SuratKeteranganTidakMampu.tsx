@@ -14,6 +14,7 @@ import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutRow
 import DocOptions, { TITIK, TITIK_PENDEK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { useBgRemoved } from '../../shared/lib/removeBg';
+import FormSection from '../../shared/components/FormSection';
 
 // Surat Keterangan Tidak Mampu (SKTM) dari Kelurahan: kop pemerintah, data warga, dasar pengantar RT/RW,
 // keperluan & masa berlaku; ditandatangani Lurah (opsional diketahui Camat).
@@ -183,8 +184,7 @@ export default function SuratKeteranganTidakMampu() {
             ) : (<>
             <UserData storageKey="data-user:surat-keterangan-tidak-mampu" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Kelurahan</h2>
+            <FormSection title="Kop Kelurahan">
               <ImageUpload label="Logo pemerintah daerah" value={f.logo} onChange={(v) => set('logo', v)} notify={notify} {...bgFor('logo', logo)} />
               {text('pemda', 'Pemerintah kota / kabupaten')}
               <div className="grid sm:grid-cols-2 gap-2">
@@ -193,30 +193,27 @@ export default function SuratKeteranganTidakMampu() {
               </div>
               {text('alamatKop', 'Alamat kantor & kode pos')}
               {text('kontak', 'Telepon, email, website')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Surat</h2>
+            <FormSection title="Data Surat">
               {text('judul', 'Judul surat')}
               <Field label="Nomor surat"><NumberFormatInput parts={['Kode', 'Urut', 'Bulan', 'Tahun']} example={`${randomDocNo(POLA.replace('{n3}', '001'))} (kode klasifikasi/urut/bulan romawi/tahun)`} value={f.nomor} onChange={(v) => set('nomor', v)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('kota', 'Kota')}
                 <Field label="Tanggal surat"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Warga</h2>
+            <FormSection title="Data Warga">
               {text('pembuka', 'Kalimat pembuka', 2)}
               <div className="grid sm:grid-cols-2 gap-2">
                 {f.warga.map((r, i) => (
                   <Field key={i} label={r.label}><AutoTextarea className={inputCls} value={r.value} onChange={(e) => setWarga(i, e.target.value)} /></Field>
                 ))}
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Pengantar RT/RW & Keperluan</h2>
+            <FormSection title="Pengantar RT/RW & Keperluan">
               {text('pengantarDari', 'Surat pengantar dari')}
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('pengantarNo', 'Nomor surat pengantar')}
@@ -232,10 +229,9 @@ export default function SuratKeteranganTidakMampu() {
               {text('keperluan', 'Keperluan', 2)}
               {text('berlaku', 'Masa berlaku')}
               {text('penutup', 'Kalimat penutup', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penanda Tangan</h2>
+            <FormSection title="Penanda Tangan">
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('ttdHeading', 'Jabatan (mis. Lurah Sukamaju,)')}
                 {text('ttdNama', 'Nama Lurah')}
@@ -257,7 +253,7 @@ export default function SuratKeteranganTidakMampu() {
                 <ImageUpload label="Stempel kecamatan" value={f.stempelCamat} onChange={(v) => set('stempelCamat', v)} notify={notify} {...bgFor('stempelCamat', stempelCamat)} />
               </>)}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

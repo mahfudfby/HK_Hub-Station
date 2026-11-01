@@ -12,6 +12,7 @@ import { Dots, ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputC
 import DocOptions, { TITIK } from '../../shared/components/DocOptions';
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc } from '../../shared/components/LetterLayouts';
 import { useBgRemoved } from '../../shared/lib/removeBg';
+import FormSection, { NarrativeField } from '../../shared/components/FormSection';
 
 // Surat Lamaran Kerja: surat pribadi berkop pelamar (nama, profesi, alamat, kontak), tanpa nomor dokumen.
 // Menu berdiri sendiri (form & penyimpanan terpisah). Bahan bersama: tata letak (LetterLayouts), kertas/ekspor (LetterKit).
@@ -25,7 +26,7 @@ type Form = {
   kota: string; tanggal: string;
   kepada: string; perusahaan: string; alamatTujuan: string;
   jabatan: string; sumber: string;
-  salam: string; ttl: string; pendidikan: string;
+  salam: string; pembuka: string; ttl: string; pendidikan: string;
   kualifikasi: string; lampiran: string[]; penutup: string;
   ttdHeading: string; ttd: string;
   kosong: boolean;
@@ -43,6 +44,7 @@ const DEFAULT: Form = {
   kepada: 'Bapak/Ibu HRD / Manajer Personalia', perusahaan: 'PT Maju Bersama Sejahtera', alamatTujuan: 'Jl. Asia Afrika No. 88, Kota Bandung',
   jabatan: 'Staf Administrasi', sumber: 'situs lowongan kerja JobStreet pada 28 Oktober 2026',
   salam: 'Dengan hormat,',
+  pembuka: 'Berdasarkan informasi lowongan pekerjaan yang saya peroleh dari {sumber}, {perusahaan} sedang membuka kesempatan untuk posisi {jabatan}. Dengan ini saya bermaksud mengajukan lamaran untuk mengisi posisi tersebut. Adapun data diri saya sebagai berikut:',
   ttl: 'Bandung, 14 Maret 1999', pendidikan: 'S1 Sistem Informasi, Universitas Pasundan (IPK 3,52)',
   kualifikasi: 'Saya memiliki pengalaman dua tahun sebagai staf administrasi, terbiasa mengelola arsip, membuat laporan, serta menguasai Microsoft Office (Excel, Word) dan Google Workspace. Saya pribadi yang teliti, disiplin, mampu bekerja dalam tim maupun mandiri, serta siap belajar hal baru. Saya yakin dapat memberikan kontribusi yang baik bagi perusahaan yang Bapak/Ibu pimpin.',
   lampiran: ['Daftar Riwayat Hidup (CV)', 'Fotokopi ijazah terakhir', 'Fotokopi transkrip nilai', 'Fotokopi KTP', 'Pas foto berwarna ukuran 4x6', 'Fotokopi sertifikat pendukung'],
@@ -73,7 +75,7 @@ function buildDoc(f: Form): LayoutDoc {
     body: (
       <>
         <P>{f.salam}</P>
-        <P>{`Berdasarkan informasi lowongan pekerjaan yang saya peroleh dari ${ko ? TITIK : f.sumber}, ${perusahaan} sedang membuka kesempatan untuk posisi ${jabatan}. Dengan ini saya bermaksud mengajukan lamaran untuk mengisi posisi tersebut. Adapun data diri saya sebagai berikut:`}</P>
+        <P>{f.pembuka.replace(/\{(\w+)\}/g, (m, key: string) => ({ sumber: ko ? TITIK : f.sumber, perusahaan, jabatan } as Record<string, string>)[key] ?? m)}</P>
         <InfoRows rows={[
           { label: 'Nama', value: f.nama }, { label: 'Tempat, tgl. lahir', value: f.ttl }, { label: 'Pendidikan terakhir', value: f.pendidikan },
           { label: 'Alamat', value: f.alamat }, { label: 'Telepon', value: f.telepon }, { label: 'Email', value: f.email },
@@ -185,8 +187,7 @@ export default function SuratLamaranKerja() {
             ) : (<>
             <UserData storageKey="data-user:surat-lamaran-kerja" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Pribadi (data pelamar)</h2>
+            <FormSection title="Kop Pribadi (data pelamar)">
               <ImageUpload label="Pas foto / inisial (opsional)" value={f.logo} onChange={(v) => set('logo', v)} notify={notify} {...bgFor('logo', logo)} />
               <Field label="Nama lengkap & gelar"><AutoTextarea className={inputCls} value={f.nama} onChange={(e) => set('nama', e.target.value)} /></Field>
               <Field label="Profesi / tagline"><AutoTextarea className={inputCls} value={f.profesi} onChange={(e) => set('profesi', e.target.value)} /></Field>
@@ -200,10 +201,9 @@ export default function SuratLamaranKerja() {
                 <Field label="Tempat, tanggal lahir"><AutoTextarea className={inputCls} value={f.ttl} onChange={(e) => set('ttl', e.target.value)} /></Field>
                 <Field label="Pendidikan terakhir"><AutoTextarea className={inputCls} value={f.pendidikan} onChange={(e) => set('pendidikan', e.target.value)} /></Field>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Tujuan Lamaran</h2>
+            <FormSection title="Tujuan Lamaran">
               <Field label="Kepada Yth."><AutoTextarea className={inputCls} value={f.kepada} onChange={(e) => set('kepada', e.target.value)} /></Field>
               <Field label="Nama perusahaan"><AutoTextarea className={inputCls} value={f.perusahaan} onChange={(e) => set('perusahaan', e.target.value)} /></Field>
               <Field label="Alamat perusahaan"><AutoTextarea className={inputCls} value={f.alamatTujuan} onChange={(e) => set('alamatTujuan', e.target.value)} /></Field>
@@ -213,23 +213,24 @@ export default function SuratLamaranKerja() {
                 <Field label="Kota"><AutoTextarea className={inputCls} value={f.kota} onChange={(e) => set('kota', e.target.value)} /></Field>
                 <Field label="Tanggal surat"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Isi Lamaran</h2>
+            <FormSection title="Isi Lamaran" lockable>
               <Field label="Salam pembuka"><AutoTextarea className={inputCls} value={f.salam} onChange={(e) => set('salam', e.target.value)} /></Field>
+              <NarrativeField label="Paragraf pembuka" rows={3} value={f.pembuka} onChange={(v) => set('pembuka', v)}
+                vars={{ sumber: f.sumber, perusahaan: f.perusahaan, jabatan: f.jabatan }} onVar={(key, v) => set(key as 'sumber' | 'perusahaan' | 'jabatan', v)} />
+              <p className="text-xs text-gray-500">Kode {'{sumber} {perusahaan} {jabatan}'} terisi dari kartu Tujuan Lamaran.</p>
               <Field label="Kualifikasi, pengalaman & keahlian"><AutoTextarea rows={4} className={inputCls} value={f.kualifikasi} onChange={(e) => set('kualifikasi', e.target.value)} /></Field>
               <p className="text-sm font-bold text-gray-700">Lampiran</p>
               <ListEditor label="Lampiran" items={f.lampiran} onChange={(v) => set('lampiran', v)} />
               <Field label="Kalimat penutup"><AutoTextarea rows={3} className={inputCls} value={f.penutup} onChange={(e) => set('penutup', e.target.value)} /></Field>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Tanda Tangan</h2>
+            <FormSection title="Tanda Tangan">
               <Field label="Salam penutup"><AutoTextarea className={inputCls} value={f.ttdHeading} onChange={(e) => set('ttdHeading', e.target.value)} /></Field>
               <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

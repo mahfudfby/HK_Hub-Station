@@ -1,5 +1,6 @@
 // @ts-nocheck
 import AutoTextarea from '../../shared/components/AutoTextarea';
+import FormSection from '../../shared/components/FormSection';
 import { firebaseConfig } from '../../shared/lib/firebase';
 import QrisCard from '../../shared/components/QrisCard';
 import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/CanvasMode';
@@ -1190,8 +1191,7 @@ const App = () => {
                     {previewCard}
                 </div>) : (<>
                 {/* --- Bagian 1: Pilih SPBU --- */}
-                <div className="mb-6 p-4 bg-white rounded-xl shadow-lg">
-                    <h2 className="text-xl font-bold mb-3 text-indigo-700">1. Pilih Data User SPBU</h2>
+                <FormSection className="mb-6 p-4 bg-white rounded-xl shadow-lg" title={<span className="text-xl text-indigo-700">1. Pilih Data User SPBU</span>}>
                     
                     {/* DROPDOWN TEMPLATE */}
                     <select 
@@ -1230,12 +1230,11 @@ const App = () => {
                             Buat Baru
                         </button>
                     </div>
-                </div>
+                </FormSection>
 
                 {/* --- Bagian Edit Template (Conditional) --- */}
                 {(uiState === 'edit' || uiState === 'new') && (
-                    <div className="mb-6 p-4 bg-white rounded-xl shadow-2xl border-t-4 border-blue-500 space-y-4">
-                        <h2 className="text-xl font-bold text-blue-700">{uiState === 'new' ? 'Buat Data User Baru' : `Edit Data User: ${currentSpbu.name}`}</h2>
+                    <FormSection className="mb-6 p-4 bg-white rounded-xl shadow-2xl border-t-4 border-blue-500" title={<span className="text-xl text-blue-700">{uiState === 'new' ? 'Buat Data User Baru' : `Edit Data User: ${currentSpbu.name}`}</span>}>
                         
                         <div className="flex space-x-2 items-end">
                             <div className="flex-grow">
@@ -1362,14 +1361,13 @@ const App = () => {
                                     className={`bg-red-500 text-white p-3 rounded-lg transition-colors font-bold flex items-center ${isProcessing ? 'opacity-50' : 'hover:bg-red-600'}`}>{isProcessing && <div className="spinner mr-2"></div>}Hapus</button>
                             )}
                         </div>
-                    </div>
+                    </FormSection>
                 )}
                 
                 {/* --- Bagian Data Transaksi (Conditional) --- */}
                 {uiState === 'view' && (
                     <>
-                        <div className="mb-6 p-4 bg-white rounded-xl shadow-lg">
-                            <h2 className="text-xl font-bold mb-3 text-indigo-700">2. Data Transaksi</h2>
+                        <FormSection className="mb-6 p-4 bg-white rounded-xl shadow-lg" title={<span className="text-xl text-indigo-700">2. Data Transaksi</span>}>
                             <div className="grid grid-cols-2 gap-3 mb-3">
                                 <div>
                                     <label className="text-xs font-medium text-gray-700 block mb-1">Harga BBM</label>
@@ -1454,7 +1452,7 @@ const App = () => {
                                     ? 'Volume dihitung dari Nominal Beli.' 
                                     : 'Nominal Beli dihitung dari Volume.'}
                             </p>
-                        </div>
+                        </FormSection>
 
                         {previewCard}
                     </>

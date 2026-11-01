@@ -10,13 +10,15 @@ import UserData from '../../shared/components/UserData';
 import DocOptions, { TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, LETTER_FONT, PaperPicker, fmtTanggal, inputCls, letterPage, type Notify } from '../../shared/components/LetterKit';
+import { Dots, ExportButton, Field, ImageUpload, LETTER_FONT, PaperPicker, dataStyle, fmtTanggal, inputCls, letterPage, type Notify } from '../../shared/components/LetterKit';
 import { InfoRows, LayoutLetter, LayoutPicker, P, SignBlock, type LayoutDoc } from '../../shared/components/LetterLayouts';
 import { usePagesExport } from './exportPages';
 import { usePagination } from './usePagination';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { num, rupiah, terbilangRupiah } from '../../shared/lib/money';
+import FormSection, { NarrativeField } from '../../shared/components/FormSection';
+import { LampiranField, lampiranTeks } from './Lampiran';
 
 // Surat Kontrak Kerja (PKWT): perjanjian kerja waktu tertentu dengan pasal-pasal yang bisa diedit,
 // termasuk daftar tugas & tanggung jawab (preset per posisi). Tata letak dari LetterLayouts.
@@ -25,16 +27,19 @@ import { num, rupiah, terbilangRupiah } from '../../shared/lib/money';
 // SECTION: Data
 // ============================================================
 // Pasal: judul + isi (satu ayat per baris). `tugas` = daftar tugas disisipkan setelah isi.
-type Pasal = { judul: string; isi: string; tugas?: boolean };
+// `gaji` = rincian upah (Kesepakatan Gaji & Tunjangan) disisipkan setelah ayat pertama.
+type Pasal = { judul: string; isi: string; tugas?: boolean; gaji?: boolean };
+// Komponen upah: tunjangan tetap = label + nilai; tidak tetap = label + nilai dan/atau keterangan.
+type Item = { label: string; nilai: string; ket: string };
 type Form = {
   gaya: string; paper: string; landscape: boolean; skala: number; posisi: Offsets;
   pakaiNomor: boolean; kosong: boolean;
   logo: string; instansi: string; subKop: string; alamat: string; kontak: string;
-  judul: string; nomor: string; kota: string; tanggal: string;
+  judul: string; nomor: string; kota: string; tanggal: string; lampiranAuto: boolean; lampiran: string;
   p1Nama: string; p1Jabatan: string;
   nama: string; nik: string; ttl: string; alamatK: string;
   jabatan: string; penempatan: string; mulai: string; selesai: string;
-  hariKerja: string; jamKerja: string; gaji: string; tunjangan: string; tglGaji: string;
+  hariKerja: string; jamKerja: string; gaji: string; tunjTetap: Item[]; tunjTidak: Item[]; tglGaji: string;
   tugas: string; pasal: Pasal[];
   ttd: string; stempel: string; saksi: string[];
 };
@@ -56,7 +61,7 @@ const PASAL_DEFAULT: Pasal[] = [
   { judul: 'Jangka Waktu Perjanjian', isi: 'Perjanjian kerja ini berlaku selama {lama}, terhitung sejak tanggal {mulai} sampai dengan tanggal {selesai}.\nPerjanjian ini dapat diperpanjang atau diperbarui atas kesepakatan kedua belah pihak sesuai ketentuan peraturan perundang-undangan.' },
   { judul: 'Waktu Kerja', isi: 'Hari kerja PIHAK KEDUA adalah {hariKerja} dengan jam kerja {jamKerja}.\nPekerjaan di luar jam kerja atas perintah PIHAK PERTAMA diperhitungkan sebagai lembur sesuai ketentuan yang berlaku.' },
   { judul: 'Tugas dan Tanggung Jawab', isi: 'PIHAK KEDUA wajib melaksanakan tugas dan tanggung jawab sebagai berikut:', tugas: true },
-  { judul: 'Upah dan Tunjangan', isi: 'PIHAK PERTAMA memberikan gaji pokok kepada PIHAK KEDUA sebesar {gaji} per bulan.\nSelain gaji pokok, PIHAK KEDUA menerima tunjangan sebesar {tunjangan} per bulan.\nUpah dibayarkan setiap tanggal {tglGaji} melalui transfer ke rekening PIHAK KEDUA, setelah dipotong pajak dan iuran BPJS sesuai ketentuan.' },
+  { judul: 'Upah dan Tunjangan', gaji: true, isi: 'PIHAK PERTAMA memberikan upah kepada PIHAK KEDUA dengan rincian sebagai berikut:\nUpah dibayarkan setiap tanggal {tglGaji} melalui transfer ke rekening PIHAK KEDUA, setelah dipotong pajak dan iuran BPJS sesuai ketentuan.\nTunjangan tidak tetap diberikan sesuai kehadiran, kinerja, atau ketentuan yang berlaku dan tidak termasuk komponen upah tetap.' },
   { judul: 'Hak Cuti', isi: 'PIHAK KEDUA berhak atas cuti tahunan dan cuti lainnya sesuai peraturan perundang-undangan dan peraturan perusahaan.\nPengajuan cuti disampaikan secara tertulis paling lambat 7 (tujuh) hari sebelumnya dan wajib mendapat persetujuan atasan.' },
   { judul: 'Kerahasiaan', isi: 'PIHAK KEDUA wajib menjaga kerahasiaan seluruh data, dokumen, dan informasi perusahaan, baik selama maupun setelah berakhirnya perjanjian ini.\nPelanggaran atas ketentuan ini dapat dikenai sanksi sesuai peraturan perusahaan dan hukum yang berlaku.' },
   { judul: 'Pemutusan Perjanjian', isi: 'Perjanjian ini berakhir dengan sendirinya apabila jangka waktunya telah selesai.\nApabila salah satu pihak mengakhiri perjanjian sebelum jangka waktu berakhir, pihak tersebut wajib memberitahukan secara tertulis paling lambat 30 (tiga puluh) hari sebelumnya dan memenuhi kewajiban sesuai peraturan perundang-undangan.\nPIHAK PERTAMA dapat memutus perjanjian ini apabila PIHAK KEDUA melakukan pelanggaran berat terhadap peraturan perusahaan.' },
@@ -64,7 +69,11 @@ const PASAL_DEFAULT: Pasal[] = [
   { judul: 'Penutup', isi: 'Hal-hal yang belum diatur dalam perjanjian ini mengacu pada peraturan perusahaan dan peraturan perundang-undangan yang berlaku.\nPerjanjian ini dibuat rangkap 2 (dua), masing-masing bermeterai cukup dan mempunyai kekuatan hukum yang sama, serta ditandatangani kedua belah pihak dalam keadaan sadar tanpa paksaan dari pihak mana pun.' },
 ];
 
-const plusMonths = (n: number) => {
+// Pasal upah versi lama ({gaji}/{tunjangan} satu angka): bila belum diubah, data tersimpan diganti ke pasal bawaan baru (tabel rincian)
+const OLD_UPAH = 'PIHAK PERTAMA memberikan gaji pokok kepada PIHAK KEDUA sebesar {gaji} per bulan.\nSelain gaji pokok, PIHAK KEDUA menerima tunjangan sebesar {tunjangan} per bulan.\nUpah dibayarkan setiap tanggal {tglGaji} melalui transfer ke rekening PIHAK KEDUA, setelah dipotong pajak dan iuran BPJS sesuai ketentuan.';
+const migrasiPasal = (ps: Pasal[]) => ps.map((p) => (p.isi === OLD_UPAH ? PASAL_DEFAULT.find((d) => d.gaji)! : p));
+
+const plusMonths =(n: number) => {
   const d = new Date();
   d.setMonth(d.getMonth() + n);
   d.setDate(d.getDate() - 1);
@@ -77,13 +86,19 @@ const makeDefault = (): Form => ({
   logo: '', instansi: 'PT SINAR MAJU SEJAHTERA', subKop: 'Perdagangan Umum & Jasa Pengadaan Barang',
   alamat: 'Jl. Merdeka Raya No. 45, Kel. Gambir, Kec. Gambir, Jakarta Pusat, DKI Jakarta 10110',
   kontak: 'Telp. (021) 3456-7890 • hrd@sinarmaju.co.id • www.sinarmaju.co.id',
-  judul: 'PERJANJIAN KERJA WAKTU TERTENTU', nomor: randomDocNo(POLA), kota: 'Jakarta', tanggal: iso(new Date()),
+  judul: 'PERJANJIAN KERJA WAKTU TERTENTU', nomor: randomDocNo(POLA), kota: 'Jakarta', tanggal: iso(new Date()), lampiranAuto: true, lampiran: '',
   p1Nama: 'Hendra Wijaya', p1Jabatan: 'Direktur',
   nama: 'Dewi Lestari', nik: '3171045708980002', ttl: 'Bogor, 17 Agustus 1998',
   alamatK: 'Jl. Kenanga No. 12, RT 004/RW 007, Kel. Cempaka Putih, Jakarta Pusat',
   jabatan: 'Staf Administrasi', penempatan: 'Kantor Pusat Jakarta', mulai: iso(new Date()), selesai: plusMonths(12),
   hariKerja: 'Senin sampai dengan Jumat', jamKerja: 'pukul 08.00–17.00 WIB (istirahat 1 jam)',
-  gaji: '5200000', tunjangan: '500000', tglGaji: '25',
+  gaji: '5200000', tglGaji: '25',
+  tunjTetap: [{ label: 'Tunjangan jabatan', nilai: '300000', ket: '' }, { label: 'Tunjangan transportasi tetap', nilai: '200000', ket: '' }],
+  tunjTidak: [
+    { label: 'Uang makan', nilai: '25000', ket: 'per hari hadir' },
+    { label: 'Insentif kinerja', nilai: '', ket: 'sesuai pencapaian target' },
+    { label: 'Uang lembur', nilai: '', ket: 'sesuai peraturan perundang-undangan' },
+  ],
   tugas: PRESET.Admin, pasal: PASAL_DEFAULT,
   ttd: '', stempel: '', saksi: [],
 });
@@ -122,6 +137,36 @@ function NumList({ lines, k, mark = (i) => `${i + 1}.` }: { lines: string[]; k: 
 }
 const lines = (t: string) => t.split('\n').map((l) => l.trim()).filter(Boolean);
 
+// Isian Rupiah di form: tebal + miring + garis titik-titik, ribuan diberi titik saat mengetik (Rp 5.000.000)
+const rpInput = 'w-full min-w-0 bg-transparent px-1 py-2 text-sm font-bold italic outline-none';
+function RupiahInput({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+  return (
+    <div className="flex items-center border-b-2 border-dotted border-gray-500 focus-within:border-blue-600">
+      <span className="pl-1 text-sm font-bold italic text-gray-600">Rp</span>
+      <input inputMode="numeric" aria-label={label} placeholder="0" className={rpInput} style={{ border: 0, background: 'transparent' }} value={value ? rupiah(num(value)) : ''} onChange={(e) => onChange(e.target.value.replace(/\D/g, ''))} />
+    </div>
+  );
+}
+
+// Daftar tunjangan (tambah/hapus). `ket` = kolom keterangan (tunjangan tidak tetap).
+function ItemList({ items, onChange, name, ket }: { items: Item[]; onChange: (v: Item[]) => void; name: string; ket?: boolean }) {
+  const up = (i: number, p: Partial<Item>) => onChange(items.map((x, j) => (j === i ? { ...x, ...p } : x)));
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-bold text-gray-700">{name}</p>
+      {items.map((it, i) => (
+        <div key={i} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-lg border p-2 sm:grid-cols-[minmax(0,1fr)_10rem_auto] sm:items-end">
+          <input aria-label={`Nama ${name.toLowerCase()} ${i + 1}`} placeholder="Nama tunjangan" className={inputCls} value={it.label} onChange={(e) => up(i, { label: e.target.value })} />
+          <div className="order-last col-span-2 sm:order-none sm:col-span-1"><RupiahInput label={`Nilai ${name.toLowerCase()} ${i + 1}`} value={it.nilai} onChange={(v) => up(i, { nilai: v })} /></div>
+          <button type="button" onClick={() => onChange(items.filter((_, j) => j !== i))} aria-label={`Hapus ${name.toLowerCase()} ${i + 1}`} className="px-3 min-h-[40px] rounded-lg text-red-600 border border-red-200">✕</button>
+          {ket && <input aria-label={`Keterangan ${name.toLowerCase()} ${i + 1}`} placeholder="Keterangan, mis. per hari hadir" className={`${inputCls} order-last col-span-2 sm:col-span-3`} value={it.ket} onChange={(e) => up(i, { ket: e.target.value })} />}
+        </div>
+      ))}
+      <button type="button" onClick={() => onChange([...items, { label: '', nilai: '', ket: '' }])} className="min-h-[40px] text-sm font-medium text-blue-700">+ Tambah {name.toLowerCase()}</button>
+    </div>
+  );
+}
+
 // ============================================================
 // SECTION: Halaman
 // ============================================================
@@ -133,7 +178,7 @@ export default function SuratKontrakKerja() {
     const d = makeDefault();
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      return saved ? { ...d, ...saved, nomor: orRandomNo(saved.nomor, POLA) } : d;
+      return saved ? { ...d, ...saved, nomor: orRandomNo(saved.nomor, POLA), pasal: migrasiPasal(saved.pasal ?? d.pasal) } : d;
     } catch {
       return d;
     }
@@ -177,10 +222,12 @@ export default function SuratKontrakKerja() {
   const ks = f.kosong;
   const rp = (v: string) => (ks ? `Rp ${TITIK}` : `Rp ${rupiah(num(v))} (${terbilangRupiah(num(v))})`);
   const t = (v: string) => (ks || !v ? TITIK : v);
+  const totTetap = f.tunjTetap.reduce((a, x) => a + num(x.nilai), 0);
+  const totalGaji = num(f.gaji) + totTetap; // upah tetap per bulan = gaji pokok + tunjangan tetap
   const data: Record<string, string> = {
     jabatan: t(f.jabatan), penempatan: t(f.penempatan), mulai: t(fmtTanggal(f.mulai)), selesai: t(fmtTanggal(f.selesai)),
     lama: t(lamaKontrak(f.mulai, f.selesai)), hariKerja: t(f.hariKerja), jamKerja: t(f.jamKerja),
-    gaji: rp(f.gaji), tunjangan: rp(f.tunjangan), tglGaji: t(f.tglGaji), perusahaan: f.instansi,
+    gaji: rp(f.gaji), tunjangan: rp(String(totTetap)), totalGaji: rp(String(totalGaji)), tglGaji: t(f.tglGaji), perusahaan: f.instansi,
   };
   const hari = f.tanggal ? new Date(`${f.tanggal}T00:00:00`).toLocaleDateString('id-ID', { weekday: 'long' }) : '';
   const tugas = ks ? Array(5).fill(TITIK) : lines(f.tugas);
@@ -202,12 +249,29 @@ export default function SuratKontrakKerja() {
     { g: -4, el: <P>Kedua belah pihak sepakat mengikatkan diri dalam Perjanjian Kerja Waktu Tertentu dengan ketentuan sebagai berikut:</P> },
   ];
   const para = { margin: `0 0 ${2 * kk}px`, textAlign: 'justify' } as const;
+  // Rincian upah: label kiri, nilai kanan tebal + miring bergaris titik-titik; kosongan = titik-titik. Satu baris per unit.
+  const nilaiRp = (v: string) => (v && num(v) ? `Rp ${rupiah(num(v))}` : '');
+  const val = (v: string) => (ks || !v ? <Dots w="100%" /> : <span style={{ ...dataStyle, fontWeight: 700, padding: '0 4px 0.22em' }}>{v}</span>);
+  const gRow = (label: ReactNode, v: string | null, indent = 0, bold = false) => (
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) max-content minmax(0,45%)', columnGap: 6 * kk, margin: `0 0 ${3 * kk}px ${(26 + indent) * kk}px`, fontWeight: bold ? 700 : undefined }}>
+      <span>{label}</span>{v !== null && <><span>:</span><span style={{ textAlign: 'right', fontWeight: 400 }}>{val(v)}</span></>}
+    </div>
+  );
+  const sub = (x: Item, j: number) => gRow(`${j + 1}) ${x.label || TITIK}`, [nilaiRp(x.nilai), x.ket].filter(Boolean).join(' '), 14);
+  const gajiRows: ReactNode[] = [
+    gRow('a. Gaji pokok', nilaiRp(f.gaji)),
+    ...(f.tunjTetap.length ? [gRow('b. Tunjangan tetap', null), ...f.tunjTetap.map(sub)] : []),
+    gRow('Jumlah upah tetap per bulan', nilaiRp(String(totalGaji)), 0, true),
+    <div style={{ margin: `0 0 ${3 * kk}px ${26 * kk}px` }}>Terbilang: {ks ? <Dots w="70%" /> : <span style={{ ...dataStyle, fontWeight: 700 }}>({terbilangRupiah(totalGaji)})</span>}</div>,
+    ...(f.tunjTidak.length ? [gRow(`${f.tunjTetap.length ? 'c' : 'b'}. Tunjangan tidak tetap`, null), ...f.tunjTidak.map(sub)] : []),
+  ];
   f.pasal.forEach((p, i) => {
     const ayat = lines(isiToken(p.isi, data));
     const numbered = ayat.length > 1 && !p.tugas;
     // Satu ayat per unit (judul pasal menempel ke ayat pertama); daftar tugas satu poin per unit
     const items: ReactNode[] = ayat.map((a, j) => (numbered ? <NumList lines={[a]} k={kk} mark={() => `(${j + 1})`} /> : <p style={para}>{a}</p>));
     if (p.tugas) items.push(...tugas.map((x, j) => <NumList lines={[x]} k={kk} mark={() => `${j + 1}.`} />));
+    if (p.gaji) items.splice(1, 0, ...gajiRows);
     if (!items.length) items.push(null);
     const head = (
       <>
@@ -272,6 +336,7 @@ export default function SuratKontrakKerja() {
     logo: logo.src, logoOffset: getOffset(f.posisi, 'logo'),
     kopName: f.instansi, kopLines: [f.subKop, f.alamat, f.kontak],
     title: f.judul, nomor, placeDate: '',
+    meta: [{ label: 'Lampiran', value: lampiranTeks(f.lampiranAuto, f.lampiran, ranges.length) }],
     body: flow(ranges[0]),
     signers: [],
   };
@@ -312,6 +377,10 @@ export default function SuratKontrakKerja() {
     </>
   );
   const btn = 'px-3 min-h-[40px] rounded-lg border text-sm font-medium disabled:opacity-40';
+  // Kunci narasi: {kunci} → field form. Tanggal, {lama} & nilai upah tidak ada di sini (tampil apa adanya, diubah di kartunya).
+  const NAR: Record<string, keyof Form> = { jabatan: 'jabatan', penempatan: 'penempatan', hariKerja: 'hariKerja', jamKerja: 'jamKerja', tglGaji: 'tglGaji', perusahaan: 'instansi' };
+  const narVars = Object.fromEntries(Object.entries(NAR).map(([key, fk]) => [key, f[fk] as string]));
+  const onVar = (key: string, v: string) => set(NAR[key], v as never);
 
   return (
     <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
@@ -328,47 +397,43 @@ export default function SuratKontrakKerja() {
             ) : (<>
             <UserData storageKey="data-user:surat-kontrak-kerja" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Surat</h2>
+            <FormSection title="Kop Surat">
               <ImageUpload label="Logo" value={f.logo} onChange={(v) => set('logo', v)} notify={notify} {...bgFor('logo', logo)} />
               <Field label="Nama perusahaan"><AutoTextarea className={inputCls} value={f.instansi} onChange={(e) => set('instansi', e.target.value)} /></Field>
               <Field label="Bidang usaha (baris kedua kop)"><AutoTextarea className={inputCls} value={f.subKop} onChange={(e) => set('subKop', e.target.value)} /></Field>
               <Field label="Alamat lengkap"><AutoTextarea className={inputCls} value={f.alamat} onChange={(e) => set('alamat', e.target.value)} /></Field>
               <Field label="Telepon, email, website"><AutoTextarea className={inputCls} value={f.kontak} onChange={(e) => set('kontak', e.target.value)} /></Field>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Perjanjian</h2>
+            <FormSection title="Data Perjanjian">
               <Field label="Judul"><AutoTextarea className={inputCls} value={f.judul} onChange={(e) => set('judul', e.target.value)} /></Field>
               <Field label="Nomor perjanjian"><NumberFormatInput parts={['Nomor', 'Kode', 'Unit', 'Bulan', 'Tahun']} example={`012/PKWT/HRD/${ROMAN[new Date().getMonth()]}/${new Date().getFullYear()} (bulan angka romawi)`} value={f.nomor} onChange={(v) => set('nomor', v)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
                 <Field label="Kota"><AutoTextarea className={inputCls} value={f.kota} onChange={(e) => set('kota', e.target.value)} /></Field>
                 <Field label="Tanggal perjanjian"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
               </div>
-            </section>
+              <LampiranField auto={f.lampiranAuto} manual={f.lampiran} pages={ranges.length} onAuto={(v) => set('lampiranAuto', v)} onManual={(v) => set('lampiran', v)} />
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Pihak Pertama (Perusahaan)</h2>
+            <FormSection title="Pihak Pertama (Perusahaan)">
               <div className="grid sm:grid-cols-2 gap-2">
                 <Field label="Nama wakil perusahaan"><AutoTextarea className={inputCls} value={f.p1Nama} onChange={(e) => set('p1Nama', e.target.value)} /></Field>
                 <Field label="Jabatan"><AutoTextarea className={inputCls} value={f.p1Jabatan} onChange={(e) => set('p1Jabatan', e.target.value)} /></Field>
               </div>
               <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Pihak Kedua (Karyawan)</h2>
+            <FormSection title="Pihak Kedua (Karyawan)">
               <div className="grid sm:grid-cols-2 gap-2">
                 <Field label="Nama"><AutoTextarea className={inputCls} value={f.nama} onChange={(e) => set('nama', e.target.value)} /></Field>
                 <Field label="NIK"><AutoTextarea className={inputCls} value={f.nik} onChange={(e) => set('nik', e.target.value)} /></Field>
                 <Field label="Tempat, tanggal lahir"><AutoTextarea className={inputCls} value={f.ttl} onChange={(e) => set('ttl', e.target.value)} /></Field>
               </div>
               <Field label="Alamat"><AutoTextarea className={inputCls} value={f.alamatK} onChange={(e) => set('alamatK', e.target.value)} /></Field>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Pekerjaan & Upah</h2>
+            <FormSection title="Pekerjaan & Waktu Kerja">
               <div className="grid sm:grid-cols-2 gap-2">
                 <Field label="Jabatan"><AutoTextarea className={inputCls} value={f.jabatan} onChange={(e) => set('jabatan', e.target.value)} /></Field>
                 <Field label="Penempatan"><AutoTextarea className={inputCls} value={f.penempatan} onChange={(e) => set('penempatan', e.target.value)} /></Field>
@@ -379,14 +444,24 @@ export default function SuratKontrakKerja() {
               <div className="grid sm:grid-cols-2 gap-2">
                 <Field label="Hari kerja"><AutoTextarea className={inputCls} value={f.hariKerja} onChange={(e) => set('hariKerja', e.target.value)} /></Field>
                 <Field label="Jam kerja"><AutoTextarea className={inputCls} value={f.jamKerja} onChange={(e) => set('jamKerja', e.target.value)} /></Field>
-                <Field label="Gaji pokok per bulan (Rp)"><input inputMode="numeric" className={inputCls} value={f.gaji} onChange={(e) => set('gaji', e.target.value.replace(/\D/g, ''))} /></Field>
-                <Field label="Tunjangan per bulan (Rp)"><input inputMode="numeric" className={inputCls} value={f.tunjangan} onChange={(e) => set('tunjangan', e.target.value.replace(/\D/g, ''))} /></Field>
-                <Field label="Tanggal gajian (setiap bulan)"><input inputMode="numeric" className={inputCls} value={f.tglGaji} onChange={(e) => set('tglGaji', e.target.value)} /></Field>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Tugas dan Tanggung Jawab</h2>
+            <FormSection title="Kesepakatan Gaji & Tunjangan">
+              <div className="grid sm:grid-cols-2 gap-2">
+                <Field label="Gaji pokok per bulan"><RupiahInput label="Gaji pokok per bulan" value={f.gaji} onChange={(v) => set('gaji', v)} /></Field>
+                <Field label="Tanggal pembayaran (setiap bulan)"><input inputMode="numeric" className={inputCls} value={f.tglGaji} onChange={(e) => set('tglGaji', e.target.value)} /></Field>
+              </div>
+              <ItemList name="Tunjangan Tetap" items={f.tunjTetap} onChange={(v) => set('tunjTetap', v)} />
+              <div className="rounded-lg bg-indigo-50 p-3 text-sm">
+                <p>Total upah tetap per bulan (gaji pokok + tunjangan tetap): <b><i>Rp {rupiah(totalGaji)}</i></b></p>
+                <p className="text-gray-600 italic">{terbilangRupiah(totalGaji)}</p>
+              </div>
+              <ItemList name="Tunjangan Tidak Tetap" ket items={f.tunjTidak} onChange={(v) => set('tunjTidak', v)} />
+              <p className="text-xs text-gray-500">Rincian ini tampil sebagai tabel di pasal yang bertanda rincian upah (bawaan: Upah dan Tunjangan). Kode {'{gaji}'}, {'{tunjangan}'} (total tunjangan tetap) dan {'{totalGaji}'} tetap bisa dipakai di pasal mana pun.</p>
+            </FormSection>
+
+            <FormSection title="Tugas dan Tanggung Jawab">
               <p className="text-xs text-gray-500">Preset posisi (mengisi jabatan & daftar tugas, tetap bisa diedit):</p>
               <div className="flex flex-wrap gap-2">
                 {Object.keys(PRESET).map((p) => (
@@ -394,19 +469,19 @@ export default function SuratKontrakKerja() {
                 ))}
               </div>
               <Field label="Daftar tugas (satu poin per baris, bernomor otomatis)"><AutoTextarea rows={4} className={inputCls} value={f.tugas} onChange={(e) => set('tugas', e.target.value)} /></Field>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Pasal-pasal</h2>
-              <p className="text-xs text-gray-500">Satu ayat per baris. Kode yang terisi otomatis: {'{jabatan} {penempatan} {mulai} {selesai} {lama} {hariKerja} {jamKerja} {gaji} {tunjangan} {tglGaji} {perusahaan}'}.</p>
+            <FormSection title="Pasal-pasal" lockable>
+              <p className="text-xs text-gray-500">Satu ayat per baris. Kode yang terisi otomatis: {'{jabatan} {penempatan} {mulai} {selesai} {lama} {hariKerja} {jamKerja} {gaji} {tunjangan} {totalGaji} {tglGaji} {perusahaan}'}. Saat narasi terkunci, kotak isian mengubah data form terkait; tanggal, lama kontrak & nilai upah diubah di kartu masing-masing.</p>
               {f.pasal.map((p, i) => (
                 <div key={i} className="space-y-2 rounded-lg border p-3">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold shrink-0">Pasal {i + 1}</span>
                     <AutoTextarea aria-label={`Judul pasal ${i + 1}`} className={inputCls} value={p.judul} onChange={(e) => setPasal(i, { judul: e.target.value })} />
                   </div>
-                  <AutoTextarea aria-label={`Isi pasal ${i + 1}`} rows={2} className={inputCls} value={p.isi} onChange={(e) => setPasal(i, { isi: e.target.value })} />
+                  <NarrativeField label={`Isi pasal ${i + 1}`} rows={2} value={p.isi} onChange={(v) => setPasal(i, { isi: v })} vars={narVars} onVar={onVar} />
                   {p.tugas && <p className="text-xs text-gray-500">Daftar tugas di atas ditampilkan di bawah pasal ini.</p>}
+                  {p.gaji && <p className="text-xs text-gray-500">Tabel Kesepakatan Gaji & Tunjangan ditampilkan setelah ayat pertama pasal ini.</p>}
                   <div className="flex gap-2">
                     <button type="button" className={btn} disabled={i === 0} onClick={() => movePasal(i, -1)} aria-label={`Naikkan pasal ${i + 1}`}>↑</button>
                     <button type="button" className={btn} disabled={i === f.pasal.length - 1} onClick={() => movePasal(i, 1)} aria-label={`Turunkan pasal ${i + 1}`}>↓</button>
@@ -418,10 +493,9 @@ export default function SuratKontrakKerja() {
                 <button type="button" onClick={() => set('pasal', [...f.pasal, { judul: 'Pasal Tambahan', isi: '' }])} className="min-h-[40px] text-sm font-medium text-blue-700">+ Tambah pasal</button>
                 <button type="button" onClick={() => { if (confirm('Kembalikan pasal-pasal ke bawaan?')) set('pasal', PASAL_DEFAULT); }} className="min-h-[40px] text-sm font-medium text-gray-600">Kembalikan pasal bawaan</button>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Saksi (opsional)</h2>
+            <FormSection title="Saksi (opsional)">
               {f.saksi.map((s, i) => (
                 <div key={i} className="flex gap-2">
                   <AutoTextarea aria-label={`Nama saksi ${i + 1}`} placeholder="Nama saksi" className={inputCls} value={s} onChange={(e) => set('saksi', f.saksi.map((x, j) => (j === i ? e.target.value : x)))} />
@@ -430,7 +504,7 @@ export default function SuratKontrakKerja() {
               ))}
               {f.saksi.length < 3 && <button type="button" onClick={() => set('saksi', [...f.saksi, ''])} className="min-h-[40px] text-sm font-medium text-blue-700">+ Tambah saksi</button>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

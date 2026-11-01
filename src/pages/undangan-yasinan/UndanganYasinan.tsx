@@ -13,6 +13,7 @@ import DocOptions, { TITIK } from '../../shared/components/DocOptions';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { Lembar, useTplFonts, type Isi } from './Lipat3';
 import { TEMPLATES, getTpl } from './templates';
+import FormSection from '../../shared/components/FormSection';
 
 // Undangan Yasinan & Tahlilan lipat 3 dalam 1 halaman. Kertas landscape = 3 kolom tegak; kertas vertikal = 3 baris mendatar.
 // Menu berdiri sendiri; 20 template sendiri (templates.ts), bukan LetterLayouts karena bentuknya brosur lipat.
@@ -189,8 +190,7 @@ export default function UndanganYasinan() {
             ) : (<>
             <UserData storageKey="data-user:undangan-yasinan" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Almarhum / Almarhumah</h2>
+            <FormSection title="Almarhum / Almarhumah">
               <div className="flex gap-2" role="radiogroup" aria-label="Sebutan">
                 {(['L', 'P'] as const).map((v) => (
                   <button key={v} type="button" role="radio" aria-checked={f.jk === v} onClick={() => setJk(v)}
@@ -209,10 +209,9 @@ export default function UndanganYasinan() {
                 </Field>
               </div>
               <ImageUpload label="Foto almarhum/ah (opsional)" value={f.logo} onChange={(v) => set('logo', v)} notify={notify} {...bgFor('logo', foto)} />
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Sampul, Penerima & Doa</h2>
+            <FormSection title="Sampul, Penerima & Doa">
               <Field label="Tujuan undangan (mengisi teks di bawah, tetap bisa diubah)">
                 <select className={inputCls} value="" onChange={(e) => {
                   const p = TUJUAN.find((x) => x.id === e.target.value);
@@ -229,10 +228,9 @@ export default function UndanganYasinan() {
               {ta('doaArti', 'Arti doa', 2)}
               {ta('turut', 'Turut mengundang (satu per baris)', 3)}
               {ta('alamat', 'Alamat shohibul hajat', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Isi Undangan</h2>
+            <FormSection title="Isi Undangan">
               {ta('salam', 'Salam pembuka')}
               {ta('pembuka', 'Kalimat pembuka', 3)}
               {ta('pengantar', 'Pengantar waktu & tempat')}
@@ -246,7 +244,7 @@ export default function UndanganYasinan() {
               {ta('anggota', 'Daftar nama keluarga (satu per baris)', 3)}
               <ImageUpload label="Tanda tangan (opsional)" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

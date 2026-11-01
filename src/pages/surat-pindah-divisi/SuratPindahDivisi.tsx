@@ -14,6 +14,7 @@ import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, le
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSigner } from '../../shared/components/LetterLayouts';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
+import FormSection from '../../shared/components/FormSection';
 
 // Surat Pemindahan Divisi: surat dinas dari manajer divisi lama kepada manajer divisi baru
 // tentang perpindahan karyawan antar divisi, serah terima pekerjaan & aset, dan kewajiban melapor.
@@ -227,17 +228,15 @@ export default function SuratPindahDivisi() {
             ) : (<>
             <UserData storageKey="data-user:surat-pindah-divisi" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Surat</h2>
+            <FormSection title="Kop Surat">
               <ImageUpload label="Logo" value={f.logo} onChange={(x) => set('logo', x)} notify={notify} {...bgFor('logo', logo)} />
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
               {text('kontak', 'Telepon, email, website')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Surat</h2>
+            <FormSection title="Data Surat">
               {text('judul', 'Judul surat')}
               <Field label="Nomor surat"><NumberFormatInput parts={['Nomor', 'Kode', 'Unit', 'Bulan', 'Tahun']} example={`021/SPD/HRD/${ROMAN[new Date().getMonth()]}/${new Date().getFullYear()} (bulan angka romawi)`} value={f.nomor} onChange={(x) => set('nomor', x)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
@@ -247,10 +246,9 @@ export default function SuratPindahDivisi() {
                 {text('perihal', 'Perihal (opsional)')}
               </div>
               {text('kepada', 'Kepada Yth. (Manajer divisi baru)', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Karyawan</h2>
+            <FormSection title="Data Karyawan">
               {text('pembuka', 'Kalimat pembuka', 3)}
               <div className="grid sm:grid-cols-3 gap-2">
                 {text('nama', 'Nama karyawan')}
@@ -270,18 +268,16 @@ export default function SuratPindahDivisi() {
                 {text('lokasiBaru', 'Lokasi kerja baru')}
               </div>
               <Field label="Tanggal efektif"><input type="date" className={inputCls} value={f.efektif} onChange={(e) => set('efektif', e.target.value)} /></Field>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Serah Terima & Penutup</h2>
+            <FormSection title="Serah Terima & Penutup">
               {text('serahTerima', 'Pekerjaan & aset yang diserahkan (satu per baris)', 4)}
               {text('melapor', 'Kewajiban melapor ke atasan baru', 3)}
               {text('penutup', 'Kalimat penutup', 2)}
               {text('tembusan', 'Tembusan (opsional)', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penanda Tangan</h2>
+            <FormSection title="Penanda Tangan">
               <p className="text-sm text-gray-700">Tampilkan tanda tangan (boleh ketiganya, dua, atau salah satu):</p>
               <div className="flex flex-wrap gap-x-4">
                 {([['pakaiLama', 'Manajer divisi lama'], ['pakaiBaru', 'Manajer divisi baru'], ['pakaiUtama', 'HRD/Direktur']] as const).map(([key, label]) => (
@@ -310,7 +306,7 @@ export default function SuratPindahDivisi() {
                 <ImageUpload label="Stempel" value={f.stempel} onChange={(x) => set('stempel', x)} notify={notify} {...bgFor('stempel', stempel)} />
               </>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

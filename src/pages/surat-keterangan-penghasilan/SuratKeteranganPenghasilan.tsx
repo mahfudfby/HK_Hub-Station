@@ -15,6 +15,7 @@ import DocOptions, { TITIK, TITIK_PENDEK, isian, nomorTampil } from '../../share
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { num, rupiah, terbilangRupiah } from '../../shared/lib/money';
 import { useBgRemoved } from '../../shared/lib/removeBg';
+import FormSection from '../../shared/components/FormSection';
 
 // Surat Keterangan Penghasilan dari Kelurahan: kop pemerintah, data warga, penghasilan rata-rata per bulan
 // (Rupiah + terbilang), dasar pengantar RT/RW & keperluan; ditandatangani Lurah (opsional ttd pemohon di kiri).
@@ -183,8 +184,7 @@ export default function SuratKeteranganPenghasilan() {
             ) : (<>
             <UserData storageKey="data-user:surat-keterangan-penghasilan" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Kelurahan</h2>
+            <FormSection title="Kop Kelurahan">
               <ImageUpload label="Logo pemerintah daerah" value={f.logo} onChange={(v) => set('logo', v)} notify={notify} {...bgFor('logo', logo)} />
               {text('pemda', 'Pemerintah kota / kabupaten')}
               <div className="grid sm:grid-cols-2 gap-2">
@@ -193,30 +193,27 @@ export default function SuratKeteranganPenghasilan() {
               </div>
               {text('alamatKop', 'Alamat kantor & kode pos')}
               {text('kontak', 'Telepon, email, website')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Surat</h2>
+            <FormSection title="Data Surat">
               {text('judul', 'Judul surat')}
               <Field label="Nomor surat"><NumberFormatInput parts={['Kode', 'Urut', 'Unit', 'Bulan', 'Tahun']} example={`${randomDocNo(POLA.replace('{n3}', '001'))} (kode klasifikasi/urut/unit/bulan romawi/tahun)`} value={f.nomor} onChange={(v) => set('nomor', v)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('kota', 'Kota')}
                 <Field label="Tanggal surat"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Warga</h2>
+            <FormSection title="Data Warga">
               {text('pembuka', 'Kalimat pembuka', 2)}
               <div className="grid sm:grid-cols-2 gap-2">
                 {f.warga.map((r, i) => (
                   <Field key={i} label={r.label}><AutoTextarea className={inputCls} value={r.value} onChange={(e) => setWarga(i, e.target.value)} /></Field>
                 ))}
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penghasilan & Keperluan</h2>
+            <FormSection title="Penghasilan & Keperluan">
               <Field label="Penghasilan rata-rata per bulan (Rp)">
                 <input inputMode="numeric" className={inputCls} value={f.penghasilan} onChange={(e) => set('penghasilan', e.target.value.replace(/\D/g, ''))} />
               </Field>
@@ -229,10 +226,9 @@ export default function SuratKeteranganPenghasilan() {
               </div>
               {text('keperluan', 'Keperluan', 2)}
               {text('penutup', 'Kalimat penutup', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penanda Tangan</h2>
+            <FormSection title="Penanda Tangan">
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('ttdHeading', 'Jabatan (mis. Lurah Sukamaju,)')}
                 {text('ttdNama', 'Nama Lurah')}
@@ -249,7 +245,7 @@ export default function SuratKeteranganPenghasilan() {
                 <ImageUpload label="Tanda tangan pemohon" value={f.ttdPemohon} onChange={(v) => set('ttdPemohon', v)} notify={notify} {...bgFor('ttdPemohon', ttdPemohon)} />
               </>)}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

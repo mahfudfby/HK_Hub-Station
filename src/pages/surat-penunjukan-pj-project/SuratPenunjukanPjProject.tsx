@@ -15,6 +15,7 @@ import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSig
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { rupiah, terbilangRupiah } from '../../shared/lib/money';
+import FormSection from '../../shared/components/FormSection';
 
 // Surat Penunjukan Penanggung Jawab Project: data project (klien, lokasi, nilai kontrak, periode),
 // karyawan yang ditunjuk, daftar tugas (dengan preset), wewenang, pelaporan, tim pendukung.
@@ -264,27 +265,24 @@ export default function SuratPenunjukanPjProject() {
             ) : (<>
             <UserData storageKey="data-user:surat-penunjukan-pj-project" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Surat</h2>
+            <FormSection title="Kop Surat">
               <ImageUpload label="Logo" value={f.logo} onChange={(x) => set('logo', x)} notify={notify} {...bgFor('logo', logo)} />
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
               {text('kontak', 'Telepon, email, website')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Surat</h2>
+            <FormSection title="Data Surat">
               {text('judul', 'Judul surat')}
               <Field label="Nomor surat"><NumberFormatInput parts={['Nomor', 'Kode', 'Kode project', 'Bulan', 'Tahun']} example={`012/SPn-PRJ/GKO/${ROMAN[new Date().getMonth()]}/${new Date().getFullYear()} (bulan angka romawi)`} value={f.nomor} onChange={(x) => set('nomor', x)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('kota', 'Kota')}
                 <Field label="Tanggal ditetapkan"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Yang Ditunjuk</h2>
+            <FormSection title="Yang Ditunjuk">
               {text('pembuka', 'Kalimat pembuka', 2)}
               <div className="grid sm:grid-cols-3 gap-2">
                 {text('nama', 'Nama')}
@@ -295,10 +293,9 @@ export default function SuratPenunjukanPjProject() {
               <div className="flex flex-wrap gap-2">
                 {['Penanggung Jawab Project', 'Project Manager'].map((s) => chip(s, f.sebagai === s, () => set('sebagai', s)))}
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Project</h2>
+            <FormSection title="Data Project">
               {text('project', 'Nama project')}
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('klien', 'Klien / pemberi kerja')}
@@ -312,10 +309,9 @@ export default function SuratPenunjukanPjProject() {
                 <Field label="Tanggal mulai"><input type="date" className={inputCls} value={f.mulai} onChange={(e) => set('mulai', e.target.value)} /></Field>
                 <Field label="Tanggal selesai"><input type="date" className={inputCls} value={f.selesai} onChange={(e) => set('selesai', e.target.value)} /></Field>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Tugas dan Tanggung Jawab</h2>
+            <FormSection title="Tugas dan Tanggung Jawab">
               <p className="text-sm text-gray-700">Isi cepat dari contoh (daftar tetap bisa diedit):</p>
               <div className="flex flex-wrap gap-2">
                 {Object.keys(PRESET).map((p) => chip(p, false, () => set('tugas', PRESET[p])))}
@@ -330,10 +326,9 @@ export default function SuratPenunjukanPjProject() {
               ))}
               <button type="button" onClick={() => set('tugas', [...f.tugas, ''])} className="min-h-[40px] text-sm font-medium text-blue-700">+ Tambah tugas</button>
               {text('wewenang', 'Wewenang (satu poin per baris)', 3)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Pelaporan & Tim</h2>
+            <FormSection title="Pelaporan & Tim">
               <div className="flex flex-wrap gap-2">
                 {['mingguan', 'dua mingguan', 'bulanan'].map((s) => chip(`Laporan ${s}`, f.laporan === s, () => set('laporan', s)))}
               </div>
@@ -351,10 +346,9 @@ export default function SuratPenunjukanPjProject() {
               {text('masaBerlaku', 'Masa berlaku penunjukan', 2)}
               {text('penutup', 'Kalimat penutup', 2)}
               {text('tembusan', 'Tembusan (opsional)', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penanda Tangan</h2>
+            <FormSection title="Penanda Tangan">
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('ttdHeading', 'Salam penutup')}
                 {text('ttdJabatan', 'Jabatan')}
@@ -366,7 +360,7 @@ export default function SuratPenunjukanPjProject() {
               <Switch checked={f.ttdDitunjuk} onChange={(x) => set('ttdDitunjuk', x)} label={'Tampilkan tanda tangan "Yang ditunjuk," di kiri'} />
               {f.ttdDitunjuk && <ImageUpload label="Tanda tangan yang ditunjuk" value={f.ttdPj} onChange={(x) => set('ttdPj', x)} notify={notify} {...bgFor('ttdPj', ttdPj)} />}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

@@ -14,6 +14,7 @@ import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSig
 import DocOptions, { TITIK, TITIK_PENDEK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { useBgRemoved } from '../../shared/lib/removeBg';
+import FormSection from '../../shared/components/FormSection';
 
 // Undangan Musyawarah Desa (Musdes): undangan resmi Pemerintah Desa atau BPD berkop pemerintahan desa.
 // Nomor: 005 = kode klasifikasi arsip "Undangan" (pedoman tata naskah dinas / klasifikasi arsip pemerintahan daerah & desa),
@@ -228,8 +229,7 @@ export default function UndanganMusyawarahDesa() {
             ) : (<>
             <UserData storageKey="data-user:undangan-musyawarah-desa" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Surat</h2>
+            <FormSection title="Kop Surat">
               <div className="grid grid-cols-2 gap-2" role="group" aria-label="Penyelenggara">
                 {([['desa', 'Pemerintah Desa'], ['bpd', 'BPD']] as const).map(([id, label]) => (
                   <button key={id} type="button" onClick={() => pickPenyelenggara(id)} aria-pressed={f.penyelenggara === id}
@@ -247,10 +247,9 @@ export default function UndanganMusyawarahDesa() {
                 <Field label="Kode pos"><AutoTextarea className={inputCls} value={f.kodePos} onChange={(e) => set('kodePos', e.target.value)} /></Field>
                 <Field label="Telepon, email, website"><AutoTextarea className={inputCls} value={f.kontak} onChange={(e) => set('kontak', e.target.value)} /></Field>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Surat</h2>
+            <FormSection title="Data Surat">
               <Field label="Nomor surat"><NumberFormatInput parts={['Klasifikasi', 'Nomor', 'Unit', 'Bulan', 'Tahun']} example={`${randomDocNo(pola(f.penyelenggara))} (005 = kode klasifikasi undangan/nomor urut/${UNIT[f.penyelenggara]}/bulan romawi/tahun)`} value={f.nomor} onChange={(v) => set('nomor', v)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
                 <Field label="Lampiran"><AutoTextarea className={inputCls} value={f.lampiran} onChange={(e) => set('lampiran', e.target.value)} /></Field>
@@ -261,10 +260,9 @@ export default function UndanganMusyawarahDesa() {
               <Field label="Sapaan penerima"><AutoTextarea className={inputCls} value={f.kepadaSapaan} onChange={(e) => set('kepadaSapaan', e.target.value)} /></Field>
               <p className="text-sm font-bold text-gray-700">Kepada Yth. (daftar penerima)</p>
               <ListEditor label="Penerima" items={f.penerima} onChange={(v) => set('penerima', v)} />
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Isi Undangan</h2>
+            <FormSection title="Isi Undangan">
               <Field label="Salam pembuka (kosongkan bila tidak dipakai)"><AutoTextarea className={inputCls} value={f.salamPembuka} onChange={(e) => set('salamPembuka', e.target.value)} /></Field>
               <Field label="Kalimat pembuka"><AutoTextarea rows={2} className={inputCls} value={f.pembuka} onChange={(e) => set('pembuka', e.target.value)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
@@ -276,10 +274,9 @@ export default function UndanganMusyawarahDesa() {
               <ListEditor label="Agenda" items={f.agenda} onChange={(v) => set('agenda', v)} />
               <Field label="Kalimat penutup"><AutoTextarea rows={2} className={inputCls} value={f.penutup} onChange={(e) => set('penutup', e.target.value)} /></Field>
               <Field label="Salam penutup (kosongkan bila tidak dipakai)"><AutoTextarea className={inputCls} value={f.salamPenutup} onChange={(e) => set('salamPenutup', e.target.value)} /></Field>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penanda Tangan</h2>
+            <FormSection title="Penanda Tangan">
               <div className="grid sm:grid-cols-2 gap-2">
                 <Field label="Jabatan"><AutoTextarea className={inputCls} value={f.ttdJabatan} onChange={(e) => set('ttdJabatan', e.target.value)} /></Field>
                 <Field label="Nama"><AutoTextarea className={inputCls} value={f.ttdNama} onChange={(e) => set('ttdNama', e.target.value)} /></Field>
@@ -300,7 +297,7 @@ export default function UndanganMusyawarahDesa() {
               <p className="text-sm font-bold text-gray-700">Tembusan (opsional)</p>
               <ListEditor label="Tembusan" items={f.tembusan} onChange={(v) => set('tembusan', v)} />
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 
