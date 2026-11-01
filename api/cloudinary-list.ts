@@ -1,6 +1,7 @@
 // Vercel Serverless Function — daftar gambar HK Hub di Cloudinary (galeri bersama untuk semua pengguna).
 // Gambar yang dihapus pemilik di Cloudinary otomatis hilang dari daftar ini.
-// Env wajib di Vercel: CLOUDINARY_API_SECRET. Hanya gambar di folder hk-hub-station/** yang ikut.
+// Env wajib di Vercel: CLOUDINARY_API_SECRET. Hanya gambar di folder hk-hub-station/** yang ikut:
+// akun Cloudinary ini dipakai bersama situs portofolio, jadi gambar di folder akar sengaja tidak ditampilkan.
 const CLOUD = process.env.VITE_CLOUDINARY_CLOUD_NAME || 'dl4pyan8v';
 const KEY = process.env.VITE_CLOUDINARY_API_KEY || '654582583389542';
 const ROOT = 'hk-hub-station';
@@ -33,17 +34,6 @@ export default async function handler(req: any, res: any) {
     all.push(...(data.resources || []));
     cursor = data.next_cursor || '';
     if (!cursor) break;
-  }
-  // shortcut: diagnosa sementara (?debug=1) — hanya nama folder & jumlah, tanpa URL; hapus setelah galeri terisi
-  if (req.query?.debug) {
-    const count: Record<string, number> = {};
-    for (const x of all) {
-      const pid = String(x.public_id || '');
-      const f = String(x.asset_folder || x.folder || '(akar)') + ' | id:' + (pid.includes('/') ? pid.slice(0, pid.lastIndexOf('/')) : '-');
-      count[f] = (count[f] || 0) + 1;
-    }
-    res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).json({ total: all.length, hasAssetFolder: all.some((x) => 'asset_folder' in x), folders: count });
   }
   const images = all
     .map((x: any) => {
