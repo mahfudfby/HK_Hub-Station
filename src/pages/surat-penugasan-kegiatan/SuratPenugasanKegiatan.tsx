@@ -4,6 +4,8 @@ import AutoTextarea from '../../shared/components/AutoTextarea';
 import FitPreview from '../../shared/components/FitPreview';
 import NumberFormatInput from '../../shared/components/NumberFormatInput';
 import PositionPad, { fxOf, getOffset, type Offsets } from '../../shared/components/PositionPad';
+import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/CanvasMode';
+import SharedGallery from '../../shared/components/SharedGallery';
 import UserData from '../../shared/components/UserData';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
@@ -249,6 +251,7 @@ export default function SuratPenugasanKegiatan() {
   const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
 
   const [geser, setGeser] = useState('logo');
+  const [canvas, setCanvas] = useCanvasMode();
   const tampilan = (
     <>
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
@@ -272,17 +275,15 @@ export default function SuratPenugasanKegiatan() {
       <div className="max-w-7xl mx-auto">
         <Link to="/" className="inline-block mb-3 text-sm font-medium text-blue-700">&larr; Kembali ke HK Hub Station</Link>
         <h1 className="text-2xl font-bold text-center mb-4">Surat Penugasan Kegiatan</h1>
-        {/* Desktop: tombol unduh di atas; ponsel: di paling bawah */}
-        <div className="hidden lg:flex flex-wrap justify-center gap-3 mb-6">{unduh}</div>
+        <ModeTabs canvas={canvas} onChange={setCanvas} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
+            {canvas ? (
+              <CanvasPanel tampilan={tampilan} unduh={unduh}
+                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+            ) : (<>
             <UserData storageKey="data-user:surat-penugasan-kegiatan" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
-
-            <section className="hidden lg:block space-y-3">
-              <h2 className="font-bold">Tampilan</h2>
-              {tampilan}
-            </section>
 
             <section className="space-y-3">
               <h2 className="font-bold">Kop Surat</h2>
@@ -336,6 +337,7 @@ export default function SuratPenugasanKegiatan() {
               <Field label="Tembusan (opsional)"><AutoTextarea rows={2} className={inputCls} value={f.tembusan} onChange={(e) => set('tembusan', e.target.value)} /></Field>
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
             </section>
+            </>)}
           </div>
 
           <FitPreview>
@@ -345,9 +347,6 @@ export default function SuratPenugasanKegiatan() {
           </FitPreview>
         </div>
 
-        {/* Ponsel: pengaturan tampilan & tombol unduh di paling bawah */}
-        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">{tampilan}</div>
-        <div className="lg:hidden flex flex-wrap justify-center gap-3 mt-6 mb-20">{unduh}</div>
       </div>
       <Toast toast={toast} onClose={closeToast} />
     </div>

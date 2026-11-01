@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { uploadImage } from '../lib/cloudinary';
+import SharedGallery, { IMAGE_LABEL as LABEL } from './SharedGallery';
 
 // "Data User": simpan data umum (nama usaha, alamat, logo, tanda tangan) dengan nama, lalu pakai lagi dari dropdown
 // supaya pengguna cukup mengisi data transaksi. Terpisah dari Template bawaan (gaya): ganti template, Data User tetap menempel.
 // Teks disimpan di perangkat ini; gambar diunggah ke Cloudinary dan yang disimpan hanya link-nya.
 type Saved = { name: string; data: Record<string, unknown> };
-type SharedImage = { url: string; kind: string }; // kind '' = unggahan lama tanpa jenis, boleh dipakai di semua kolom
 
 export const pickKeys = (obj: Record<string, unknown>, keys: readonly string[]) =>
   Object.fromEntries(keys.filter((k) => k in obj).map((k) => [k, obj[k]]));
@@ -15,7 +15,6 @@ console.assert(JSON.stringify(pickKeys({ a: 1, b: 2, c: 3 }, ['a', 'c', 'x'])) =
 const isDataImage = (v: unknown): v is string => typeof v === 'string' && v.startsWith('data:image/');
 const isRemoteImage = (v: unknown): v is string => typeof v === 'string' && /^https:\/\/res\.cloudinary\.com\//.test(v);
 console.assert(isDataImage('data:image/png;base64,AA') && !isDataImage('https://x') && isRemoteImage('https://res.cloudinary.com/a/b.png') && !isRemoteImage('data:image/png'), 'image kinds');
-const LABEL: Record<string, string> = { logo: 'Logo', ttd: 'Tanda tangan', stempel: 'Stempel', managerSignature: 'Tanda tangan manajer', signature: 'Tanda tangan' };
 
 // Gambar terhapus di Cloudinary -> 404. Gagal jaringan (offline) dianggap masih ada agar tidak terhapus karena salah sangka.
 async function imageGone(url: string) {
@@ -50,20 +49,6 @@ export default function UserData({ storageKey, keys, data, onApply }: {
   const [name, setName] = useState('');
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
-  const [shared, setShared] = useState<SharedImage[]>([]);
-  const imageKeys = keys.filter((k) => k in LABEL);
-
-  // Galeri bersama: semua gambar Data User di Cloudinary, untuk semua pengguna, sampai dihapus pemilik di Cloudinary
-  useEffect(() => {
-    if (!imageKeys.length) return;
-    let on = true;
-    fetch('/api/cloudinary-list')
-      .then((r) => (r.ok ? r.json() : { images: [] }))
-      .then((d) => { if (on) setShared(Array.isArray(d.images) ? d.images : []); })
-      .catch(() => {}); // galeri opsional; gagal = tidak tampil
-    return () => { on = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Halaman dibuka: gambar di isian saat ini (hasil Data User sebelumnya) dicek, bila terhapus segera diberi tahu
   useEffect(() => {
@@ -156,24 +141,7 @@ export default function UserData({ storageKey, keys, data, onApply }: {
           className="w-full min-w-0 p-2 border border-gray-300 rounded-lg text-sm" />
         <button type="button" onClick={save} disabled={!name.trim() || busy} className="shrink-0 px-3 rounded-lg bg-blue-600 text-sm font-semibold text-white disabled:opacity-50">{busy ? 'Mengunggah…' : 'Simpan'}</button>
       </div>
-      {shared.length > 0 && imageKeys.map((k) => {
-        const imgs = shared.filter((g) => g.kind === k || g.kind === '');
-        if (!imgs.length) return null;
-        return (
-          <div key={k}>
-            <p className="text-xs font-bold text-gray-700">Galeri {LABEL[k].toLowerCase()} ({imgs.length})</p>
-            <div className="mt-1 flex gap-2 overflow-x-auto pb-1">
-              {imgs.map((g) => (
-                <button key={g.url} type="button" title={`Pakai sebagai ${LABEL[k].toLowerCase()}`} aria-label={`Pakai gambar ini sebagai ${LABEL[k].toLowerCase()}`}
-                  onClick={() => { onApply({ [k]: g.url }); setMsg(`${LABEL[k]} dari galeri dipasang.`); }}
-                  className={`h-14 w-14 shrink-0 rounded-lg border bg-white p-1 ${(data as Record<string, unknown>)[k] === g.url ? 'border-blue-600 ring-2 ring-blue-600' : 'border-gray-300'}`}>
-                  <img src={g.url.replace('/upload/', '/upload/w_112,h_112,c_fit/')} alt="" loading="lazy" className="h-full w-full object-contain" />
-                </button>
-              ))}
-            </div>
-          </div>
-        );
-      })}
+      <SharedGallery keys={keys} data={data} onApply={onApply} onPicked={setMsg} />
       {msg && <p className={`text-xs ${msg.includes('terhapus dari Cloudinary') ? 'font-bold text-red-700' : 'text-gray-700'}`} role="status">{msg}</p>}
     </section>
   );

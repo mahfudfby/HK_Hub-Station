@@ -4,6 +4,8 @@ import AutoTextarea from './AutoTextarea';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import FitPreview from './FitPreview';
+import { CanvasPanel, ModeTabs, useCanvasMode } from './CanvasMode';
+import SharedGallery from './SharedGallery';
 import { TextSizeSlider, useFitScale } from './TextScale';
 import PositionPad, { fxOf, getOffset, type Offset, type Offsets } from './PositionPad';
 import { Toast, type ToastState } from './Feedback';
@@ -629,13 +631,12 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
     </Field>
   );
   const seg = (on: boolean) => `px-3 py-2 rounded-lg border text-sm font-medium min-h-[44px] ${on ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`;
-  // Analog geser tanda tangan/stempel: desktop di atas form, ponsel di kotak bawah
+  // Analog geser tanda tangan/stempel (halaman Edit Canvas)
   const [geser, setGeser] = useState('ttd');
   const posPad = (
     <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
       active={geser} onActive={setGeser} value={d.posisi} onChange={(v) => set('posisi', v)} />
   );
-  // Pilihan kertas & orientasi: di form (desktop) dan di paling bawah (ponsel)
   const paperField = (
     <Field label="Ukuran kertas">
       <select className={inputCls} value={d.paper} onChange={(e) => set('paper', e.target.value as PaperId)}>
@@ -667,47 +668,51 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
     </div>
   );
 
+  const [canvas, setCanvas] = useCanvasMode();
+  const tampilan = (
+    <>
+      <TextSizeSlider value={d.skala} onChange={(v) => set('skala', v)} effective={k} />
+      {posPad}
+      <Field label="Template">
+        <select className={inputCls} value={tplOf(d.template).id} onChange={(e) => set('template', e.target.value)}>
+          {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
+        </select>
+      </Field>
+      {fontField}
+      {paperField}
+      {orientButtons}
+      {accentField}
+      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 min-h-[44px]">
+        <input type="checkbox" className="h-5 w-5" checked={d.bingkai} onChange={(e) => set('bingkai', e.target.checked)} /> Bingkai kotak di tepi kertas
+      </label>
+    </>
+  );
+  const unduh = (
+    <>
+      <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
+      <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
+      <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
+      <button onClick={reset} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
         <Link to="/" className="inline-block mb-3 text-sm font-medium text-blue-700">&larr; Kembali ke HK Hub Station</Link>
         <h1 className="text-2xl font-bold text-center mb-4">Generator {kind === 'invoice' ? 'Invoice' : 'Faktur Penjualan'}</h1>
-        {/* Desktop: tombol unduh di atas; ponsel: di paling bawah */}
-        <div className="hidden lg:flex flex-wrap justify-center gap-3 mb-6">
-          <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
-          <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
-          <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
-          <button onClick={reset} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
-        </div>
+        <ModeTabs canvas={canvas} onChange={setCanvas} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
+            {canvas ? (
+              <CanvasPanel tampilan={tampilan} unduh={unduh}
+                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={d} onApply={(u) => setD((p) => ({ ...p, ...u }))} onPicked={(msg) => notify('success', msg)} />} />
+            ) : (<>
             <UserData storageKey={`data-user:${kind}`} keys={USER_KEYS} data={d} onApply={(u) => setD((p) => ({ ...p, ...u }))} />
-            <section className="space-y-3">
-              <h2 className="font-bold">Gaya &amp; Kertas</h2>
-              <div className="hidden lg:block"><TextSizeSlider value={d.skala} onChange={(v) => set('skala', v)} effective={k} /></div>
-              <div className="hidden lg:block">{posPad}</div>
-              <div className="hidden lg:block">
-              <Field label="Template">
-                <select className={inputCls} value={tplOf(d.template).id} onChange={(e) => set('template', e.target.value)}>
-                  {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
-                </select>
-              </Field>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
-                <div className="hidden lg:block">{paperField}</div>
-                <div className="hidden lg:block">{orientButtons}</div>
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 min-h-[44px] sm:col-span-3">
-                  <input type="checkbox" className="h-5 w-5" checked={d.bingkai} onChange={(e) => set('bingkai', e.target.checked)} /> Bingkai kotak di tepi kertas
-                </label>
-                <div className="hidden lg:block">{accentField}</div>
-              </div>
-            </section>
-
             <section className="space-y-3">
               <h2 className="font-bold">Penjual</h2>
               {txt('penjual', 'Nama usaha')}
-              <div className="hidden lg:block">{fontField}</div>
               {txt('penjualAlamat', 'Alamat', 2)}
               <div className="grid sm:grid-cols-2 gap-2">
                 {txt('penjualKontak', 'Telepon / email')}
@@ -794,6 +799,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
               <ImageUpload label="Stempel" value={d.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
               <p className="text-xs text-gray-500">Semua isian &amp; gambar hanya disimpan di perangkat ini.</p>
             </section>
+            </>)}
           </div>
 
           <FitPreview>
@@ -803,28 +809,6 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
           </FitPreview>
         </div>
 
-        {/* Ponsel: ukuran teks & pilihan di paling bawah, dekat tombol unduh */}
-        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">
-          <TextSizeSlider value={d.skala} onChange={(v) => set('skala', v)} effective={k} />
-          {posPad}
-          {paperField}
-          {orientButtons}
-          {accentField}
-          {fontField}
-          <Field label="Template">
-            <select className={inputCls} value={tplOf(d.template).id} onChange={(e) => set('template', e.target.value)}>
-              {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
-            </select>
-          </Field>
-        </div>
-
-        {/* Tombol unduh di paling bawah */}
-        <div className="lg:hidden flex flex-wrap justify-center gap-3 mt-6 mb-20">
-          <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
-          <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
-          <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
-          <button onClick={reset} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
-        </div>
       </div>
       <Toast toast={toast} onClose={closeToast} />
     </div>

@@ -1,4 +1,6 @@
 import UserData from '../../shared/components/UserData';
+import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/CanvasMode';
+import SharedGallery from '../../shared/components/SharedGallery';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import AutoTextarea from '../../shared/components/AutoTextarea';
@@ -319,7 +321,8 @@ export default function InvoiceTokoOnline() {
     <Field label={label}><input type="number" min={0} className={inputCls} value={n[key] as string} onChange={(e) => set(key, e.target.value as never)} /></Field>
   );
 
-  // Pengaturan tampilan: di form (desktop) dan di paling bawah (ponsel), seperti menu lain
+  const USER_KEYS = ['logo', 'posisi', 'logoTeks', 'judul', 'penjual', 'metode', 'kurir', 'biayaLayanan', 'proteksi', 'catatanBiaya', 'infoToko', 'catatan', 'ttdNama', 'ttd', 'stempel'] as const;
+  const [canvas, setCanvas] = useCanvasMode();
   const [geser, setGeser] = useState('logo');
   const tampilan = (
     <>
@@ -359,27 +362,29 @@ export default function InvoiceTokoOnline() {
       </div>
     </>
   );
+  const unduh = (
+    <>
+      <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
+      <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
+      <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
+      <button onClick={reset} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
+    </>
+  );
 
   return (
     <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
         <Link to="/" className="inline-block mb-3 text-sm font-medium text-blue-700">&larr; Kembali ke HK Hub Station</Link>
         <h1 className="text-2xl font-bold text-center mb-4">Custom Invoices Toko Online</h1>
-        {/* Desktop: tombol unduh di atas; ponsel: di paling bawah */}
-        <div className="hidden lg:flex flex-wrap justify-center gap-3 mb-6">
-          <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
-          <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
-          <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
-          <button onClick={reset} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
-        </div>
+        <ModeTabs canvas={canvas} onChange={setCanvas} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
-            <UserData storageKey="data-user:toko-online" keys={['logo', 'posisi', 'logoTeks', 'judul', 'penjual', 'metode', 'kurir', 'biayaLayanan', 'proteksi', 'catatanBiaya', 'infoToko', 'catatan', 'ttdNama', 'ttd', 'stempel']} data={n} onApply={(u) => setN((p) => ({ ...p, ...u }))} />
-            <section className="hidden lg:block space-y-3">
-              <h2 className="font-bold">Tampilan</h2>
-              {tampilan}
-            </section>
+            {canvas ? (
+              <CanvasPanel tampilan={tampilan} unduh={unduh}
+                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={n} onApply={(u) => setN((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+            ) : (<>
+            <UserData storageKey="data-user:toko-online" keys={USER_KEYS} data={n} onApply={(u) => setN((p) => ({ ...p, ...u }))} />
 
             <section className="space-y-3">
               <h2 className="font-bold">Toko</h2>
@@ -455,6 +460,7 @@ export default function InvoiceTokoOnline() {
               <ImageUpload label="Stempel" value={n.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
               <p className="text-xs text-gray-500">Semua isian &amp; gambar hanya disimpan di perangkat ini.</p>
             </section>
+            </>)}
           </div>
 
           <FitPreview>
@@ -464,15 +470,6 @@ export default function InvoiceTokoOnline() {
           </FitPreview>
         </div>
 
-        {/* Ponsel: pengaturan tampilan di paling bawah, dekat tombol unduh */}
-        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">{tampilan}</div>
-
-        <div className="lg:hidden flex flex-wrap justify-center gap-3 mt-6 mb-20">
-          <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
-          <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
-          <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
-          <button onClick={reset} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
-        </div>
       </div>
       <Toast toast={toast} onClose={closeToast} />
     </div>

@@ -3,6 +3,8 @@ import AutoTextarea from '../../shared/components/AutoTextarea';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import FitPreview from '../../shared/components/FitPreview';
+import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/CanvasMode';
+import SharedGallery from '../../shared/components/SharedGallery';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { ExportButton, Field, ImageUpload, inputCls, fmtTanggal, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { useBgRemoved } from '../../shared/lib/removeBg';
@@ -344,10 +346,10 @@ export default function Resi80() {
   const fileName = `resi-${(r.noResi || 'pengiriman').replace(/[^\w-]+/g, '-').toLowerCase()}`;
   const { exporting, run } = useLetterExport(() => ref.current!.firstElementChild as HTMLElement, fileName, notify,
     (page) => (r.ukuran === 'label' ? { w: MM, h: LABEL_MM_H } : { w: MM, h: Math.ceil((MM * page.offsetHeight) / W) }), 2);
-  // Pilihan ukuran kertas: di form (desktop) dan di paling bawah (ponsel)
+  // Pilihan ukuran kertas (halaman Edit Canvas)
   const ukuranPicker = (
     <>
-      <h2 className="font-bold">Ukuran kertas</h2>
+      <h3 className="text-sm font-semibold text-gray-700">Ukuran kertas</h3>
       <div className="flex gap-2" role="radiogroup" aria-label="Ukuran kertas">
         {([['label', 'Label 80×100mm'], ['continuous', 'Continuous 80mm']] as [Ukuran, string][]).map(([v, l]) => (
           <button key={v} type="button" role="radio" aria-checked={r.ukuran === v} onClick={() => set('ukuran', v)}
@@ -374,34 +376,43 @@ export default function Resi80() {
     notify('info', 'Form dikosongkan untuk pengiriman baru.');
   };
 
+  const [canvas, setCanvas] = useCanvasMode();
+  const userKeys = ['logo', 'toko', 'ekspedisi', 'layanan', 'pengirim', 'pengirimTelp', 'pengirimAlamat', 'samarkanHp'] as const;
+  const tampilan = (
+    <>
+      <TextSizeSlider value={r.skala} onChange={(v) => set('skala', v)} effective={k} />
+      <Field label="Template resi">
+        <select className={inputCls} value={tplOf(r.template).id} onChange={(e) => set('template', e.target.value)}>
+          {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
+        </select>
+      </Field>
+      {ukuranPicker}
+    </>
+  );
+  const unduh = (
+    <>
+      <p className="w-full text-sm text-gray-600">Cetak ke printer thermal Bluetooth: unduh PNG lalu buka dengan aplikasi RawBT.</p>
+      <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={logo.busy} onRun={run} />
+      <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={logo.busy} onRun={run} />
+      <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={logo.busy} onRun={run} />
+      <button onClick={kirimBaru} className="px-5 py-2 rounded-lg bg-white border font-semibold">Pengiriman Baru</button>
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
       <div className="max-w-6xl mx-auto">
         <Link to="/" className="inline-block mb-3 text-sm font-medium text-blue-700">&larr; Kembali ke HK Hub Station</Link>
         <h1 className="text-2xl font-bold text-center mb-4">Resi Pengiriman 80mm</h1>
-        {/* Desktop: tombol unduh di atas; ponsel: di paling bawah */}
-        <p className="hidden lg:block mb-2 text-center text-sm text-gray-600">Cetak ke printer thermal Bluetooth: unduh PNG lalu buka dengan aplikasi RawBT.</p>
-        <div className="hidden lg:flex flex-wrap justify-center gap-3 mb-6">
-          <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={logo.busy} onRun={run} />
-          <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={logo.busy} onRun={run} />
-          <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={logo.busy} onRun={run} />
-          <button onClick={kirimBaru} className="px-5 py-2 rounded-lg bg-white border font-semibold">Pengiriman Baru</button>
-        </div>
+        <ModeTabs canvas={canvas} onChange={setCanvas} />
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
-            <UserData storageKey="data-user:resi" keys={['logo', 'toko', 'ekspedisi', 'layanan', 'pengirim', 'pengirimTelp', 'pengirimAlamat', 'samarkanHp']} data={r} onApply={(u) => setR((p) => ({ ...p, ...u }))} />
-            <section className="space-y-3">
-              <div className="hidden lg:block"><TextSizeSlider value={r.skala} onChange={(v) => set('skala', v)} effective={k} /></div>
-              <div className="hidden lg:block">
-              <Field label="Template resi">
-                <select className={inputCls} value={tplOf(r.template).id} onChange={(e) => set('template', e.target.value)}>
-                  {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
-                </select>
-              </Field>
-              </div>
-              <div className="hidden lg:block space-y-3">{ukuranPicker}</div>
-            </section>
+            {canvas ? (
+              <CanvasPanel tampilan={tampilan} unduh={unduh}
+                galeri={<SharedGallery showEmpty keys={userKeys} data={r} onApply={(u) => setR((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+            ) : (<>
+            <UserData storageKey="data-user:resi" keys={userKeys} data={r} onApply={(u) => setR((p) => ({ ...p, ...u }))} />
 
             <section className="space-y-3">
               <h2 className="font-bold">Toko &amp; Ekspedisi</h2>
@@ -463,6 +474,7 @@ export default function Resi80() {
               <button type="button" onClick={() => set('items', [...r.items, { nama: '', qty: '1' }])} className="text-sm font-medium text-blue-700">+ Tambah isi paket</button>
               {txt('catatan', 'Catatan (opsional)', 2)}
             </section>
+            </>)}
           </div>
 
           <div className="bg-white rounded-2xl shadow p-4 min-w-0">
@@ -475,25 +487,6 @@ export default function Resi80() {
           </div>
         </div>
 
-        {/* Ponsel: ukuran teks & pilihan di paling bawah, dekat tombol unduh */}
-        <div className="lg:hidden mt-6 rounded-2xl bg-white p-4 shadow space-y-3">
-          <TextSizeSlider value={r.skala} onChange={(v) => set('skala', v)} effective={k} />
-          {ukuranPicker}
-          <Field label="Template resi">
-            <select className={inputCls} value={tplOf(r.template).id} onChange={(e) => set('template', e.target.value)}>
-              {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
-            </select>
-          </Field>
-        </div>
-
-        {/* Tombol unduh di paling bawah */}
-        <p className="lg:hidden mt-6 text-center text-sm text-gray-600">Cetak ke printer thermal Bluetooth: unduh PNG lalu buka dengan aplikasi RawBT.</p>
-        <div className="lg:hidden flex flex-wrap justify-center gap-3 mt-3 mb-20">
-          <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={logo.busy} onRun={run} />
-          <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={logo.busy} onRun={run} />
-          <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={logo.busy} onRun={run} />
-          <button onClick={kirimBaru} className="px-5 py-2 rounded-lg bg-white border font-semibold">Pengiriman Baru</button>
-        </div>
       </div>
       <Toast toast={toast} onClose={closeToast} />
     </div>
