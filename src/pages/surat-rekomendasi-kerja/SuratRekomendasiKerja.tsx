@@ -14,6 +14,7 @@ import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, le
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc } from '../../shared/components/LetterLayouts';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
+import FormSection from '../../shared/components/FormSection';
 
 // Surat Rekomendasi Kerja: surat referensi dari atasan/perusahaan untuk (mantan) karyawan,
 // berisi penilaian kompetensi, sikap & pencapaian. Tata letak dari LetterLayouts.
@@ -195,17 +196,15 @@ export default function SuratRekomendasiKerja() {
             ) : (<>
             <UserData storageKey="data-user:surat-rekomendasi-kerja" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Surat</h2>
+            <FormSection title="Kop Surat">
               <ImageUpload label="Logo" value={f.logo} onChange={(x) => set('logo', x)} notify={notify} {...bgFor('logo', logo)} />
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
               {text('kontak', 'Telepon, email, website')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Surat</h2>
+            <FormSection title="Data Surat">
               {text('judul', 'Judul surat')}
               <Field label="Nomor surat"><NumberFormatInput parts={['Nomor', 'Kode', 'Unit', 'Bulan', 'Tahun']} example={`018/REK/HRD/${ROMAN[new Date().getMonth()]}/${new Date().getFullYear()} (bulan angka romawi)`} value={f.nomor} onChange={(x) => set('nomor', x)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
@@ -215,29 +214,26 @@ export default function SuratRekomendasiKerja() {
               {text('perihal', 'Perihal (opsional)')}
               {text('kepada', 'Kepada Yth. (perusahaan tujuan)', 2)}
               <button type="button" className={btn(f.kepada === UMUM)} onClick={() => set('kepada', UMUM)}>Pihak yang Berkepentingan</button>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Pemberi Rekomendasi</h2>
+            <FormSection title="Pemberi Rekomendasi">
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('pNama', 'Nama')}
                 {text('pJabatan', 'Jabatan')}
                 {text('hubungan', 'Hubungan kerja (mis. atasan langsung)')}
                 {text('lamaKenal', 'Lama mengenal')}
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Yang Direkomendasikan</h2>
+            <FormSection title="Yang Direkomendasikan">
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('nama', 'Nama')}
                 {text('jabatan', 'Jabatan terakhir')}
               </div>
               {text('periode', 'Periode kerja (mis. Agustus 2023 s.d. Oktober 2026)')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penilaian</h2>
+            <FormSection title="Penilaian">
               {text('kompetensi', 'Kompetensi & keahlian (satu per baris)', 4)}
               {text('sikap', 'Sikap & integritas', 3)}
               {text('pencapaian', 'Pencapaian (satu per baris, opsional)', 3)}
@@ -246,20 +242,18 @@ export default function SuratRekomendasiKerja() {
                 {TINGKAT.map((x) => <button key={x} type="button" aria-pressed={f.tingkat === x} className={btn(f.tingkat === x)} onClick={() => set('tingkat', x)}>{x[0].toUpperCase() + x.slice(1)}</button>)}
               </div>
               {text('tujuan', 'Lanjutan kalimat rekomendasi', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kontak & Penutup</h2>
+            <FormSection title="Kontak & Penutup">
               <p className="text-xs text-gray-500">Kesediaan dihubungi (kosongkan keduanya bila tidak perlu).</p>
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('telepon', 'Telepon')}
                 {text('email', 'Email')}
               </div>
               {text('penutup', 'Kalimat penutup', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penanda Tangan</h2>
+            <FormSection title="Penanda Tangan">
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('ttdHeading', 'Salam penutup')}
                 {text('ttdId', 'NIK karyawan (opsional)')}
@@ -267,7 +261,7 @@ export default function SuratRekomendasiKerja() {
               <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel (opsional)" value={f.stempel} onChange={(x) => set('stempel', x)} notify={notify} {...bgFor('stempel', stempel)} />
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

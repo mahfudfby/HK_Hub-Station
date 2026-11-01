@@ -14,6 +14,7 @@ import { code128 } from '../../shared/lib/code128';
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { cssFamily, useGoogleFonts, type WebFont } from '../../shared/lib/fonts';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
+import FormSection from '../../shared/components/FormSection';
 
 // Resi / label pengiriman untuk printer thermal 80mm (gaya label marketplace, tanpa merek).
 // Lebar 288px × skala 2 = PNG 576px = lebar titik cetak printer 80mm. Barcode Code 128 dibuat otomatis dari nomor.
@@ -443,8 +444,7 @@ export default function Resi80() {
             ) : (<>
             <UserData storageKey="data-user:resi" keys={userKeys} data={r} onApply={(u) => setR((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Toko &amp; Ekspedisi</h2>
+            <FormSection title="Toko &amp; Ekspedisi">
               <ImageUpload label="Upload logo toko" value={r.logo} onChange={(v) => set('logo', v)} notify={notify}
                 bg={logoBg} onBg={setLogoBg} shown={logo.src} bgBusy={logo.busy} />
               {txt('toko', 'Nama toko')}
@@ -452,20 +452,18 @@ export default function Resi80() {
                 {txt('ekspedisi', 'Ekspedisi / kurir')}
                 {txt('layanan', 'Layanan (REG/YES/dll.)')}
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Nomor (barcode otomatis)</h2>
+            <FormSection title="Nomor (barcode otomatis)">
               <div className="grid grid-cols-2 gap-2">
                 {txt('noResi', 'No. resi')}
                 {txt('noPesanan', 'No. pesanan')}
               </div>
               <Field label="Tanggal kirim"><input type="date" className={inputCls} value={r.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
               <p className="text-xs text-gray-500">Barcode Code 128 dibuat otomatis dari nomor dan bisa dipindai. Maks. ±19 karakter.</p>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penerima</h2>
+            <FormSection title="Penerima">
               <div className="grid grid-cols-2 gap-2">
                 {txt('penerima', 'Nama')}
                 {txt('penerimaTelp', 'No. HP')}
@@ -473,19 +471,17 @@ export default function Resi80() {
               {txt('penerimaAlamat', 'Alamat lengkap', 2)}
               {txt('penerimaKota', 'Kota, provinsi, kode pos')}
               {check('samarkanHp', 'Samarkan nomor HP (tampil 4 digit terakhir)')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Pengirim</h2>
+            <FormSection title="Pengirim">
               <div className="grid grid-cols-2 gap-2">
                 {txt('pengirim', 'Nama')}
                 {txt('pengirimTelp', 'No. HP')}
               </div>
               {txt('pengirimAlamat', 'Alamat / kota asal')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Paket</h2>
+            <FormSection title="Paket">
               <div className="grid grid-cols-2 gap-2">
                 {txt('berat', 'Berat')}
                 {txt('koli', 'Jumlah koli')}
@@ -502,7 +498,7 @@ export default function Resi80() {
               ))}
               <button type="button" onClick={() => set('items', [...r.items, { nama: '', qty: '1' }])} className="text-sm font-medium text-blue-700">+ Tambah isi paket</button>
               {txt('catatan', 'Catatan (opsional)', 2)}
-            </section>
+            </FormSection>
             </>)}
           </div>
 

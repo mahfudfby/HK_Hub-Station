@@ -15,6 +15,7 @@ import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSig
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { terbilangRupiah } from '../../shared/lib/money';
+import FormSection from '../../shared/components/FormSection';
 
 // Surat Izin Tidak Masuk Kerja: permohonan izin dari karyawan kepada atasan/HRD.
 // Kop bisa kop perusahaan (formulir perusahaan) atau kop pribadi karyawan. Tata letak dari LetterLayouts.
@@ -212,8 +213,7 @@ export default function SuratIzinTidakMasukKerja() {
             ) : (<>
             <UserData storageKey="data-user:surat-izin-tidak-masuk-kerja" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Surat</h2>
+            <FormSection title="Kop Surat">
               <Switch checked={f.kopPribadi} onChange={(x) => set('kopPribadi', x)} label="Pakai kop pribadi karyawan" hint="Mati = kop perusahaan (formulir perusahaan)." />
               {f.kopPribadi ? <>
                 <p className="text-xs text-gray-500">Nama di kop memakai nama karyawan (bagian Data Karyawan).</p>
@@ -226,10 +226,9 @@ export default function SuratIzinTidakMasukKerja() {
                 {text('alamat', 'Alamat lengkap')}
                 {text('kontak', 'Telepon, email, website')}
               </>}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Surat</h2>
+            <FormSection title="Data Surat">
               {text('judul', 'Judul surat')}
               <Field label="Nomor surat (opsional, tampil bila Pakai nomor dokumen aktif)"><NumberFormatInput parts={['Nomor', 'Kode', 'Bulan', 'Tahun']} example={`014/IZN/${ROMAN[new Date().getMonth()]}/${new Date().getFullYear()} (bulan angka romawi)`} value={f.nomor} onChange={(x) => set('nomor', x)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
@@ -239,10 +238,9 @@ export default function SuratIzinTidakMasukKerja() {
                 {text('perihal', 'Perihal (opsional)')}
               </div>
               {text('kepada', 'Kepada Yth. (atasan/HRD)', 3)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Karyawan</h2>
+            <FormSection title="Data Karyawan">
               {text('pembuka', 'Kalimat pembuka', 2)}
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('nama', 'Nama karyawan')}
@@ -250,10 +248,9 @@ export default function SuratIzinTidakMasukKerja() {
                 {text('jabatan', 'Jabatan')}
                 {text('divisi', 'Divisi/Bagian')}
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Izin</h2>
+            <FormSection title="Izin">
               <p className="text-xs text-gray-500">Pilihan cepat alasan (tetap bisa diedit):</p>
               <div className="flex flex-wrap gap-2">
                 {ALASAN.map(([label, alasan, lampiran]) => (
@@ -269,10 +266,9 @@ export default function SuratIzinTidakMasukKerja() {
               </div>
               {text('pengganti', 'Pengganti tugas selama izin (opsional)', 2)}
               {text('penutup', 'Kalimat penutup', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penanda Tangan</h2>
+            <FormSection title="Penanda Tangan">
               <p className="text-sm text-gray-700">Karyawan selalu tampil. Tampilkan juga:</p>
               <div className="flex flex-wrap gap-x-4">
                 {([['pakaiAtasan', 'Mengetahui, Atasan Langsung'], ['pakaiHrd', 'Menyetujui, HRD']] as const).map(([key, label]) => (
@@ -294,7 +290,7 @@ export default function SuratIzinTidakMasukKerja() {
                 <ImageUpload label="Stempel perusahaan" value={f.stempel} onChange={(x) => set('stempel', x)} notify={notify} {...bgFor('stempel', stempel)} />
               </>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

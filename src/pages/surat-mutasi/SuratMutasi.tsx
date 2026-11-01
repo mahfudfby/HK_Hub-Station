@@ -14,6 +14,7 @@ import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSig
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import DocOptions, { TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
+import FormSection from '../../shared/components/FormSection';
 
 // Surat Pemindahan / Mutasi Karyawan: posisi lama vs baru, tanggal efektif, alasan, hak & kewajiban.
 // Menu berdiri sendiri (file, form & penyimpanan terpisah). Tata letak dari LetterLayouts.
@@ -213,17 +214,15 @@ export default function SuratMutasi() {
             ) : (<>
             <UserData storageKey="data-user:surat-mutasi" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Surat</h2>
+            <FormSection title="Kop Surat">
               <ImageUpload label="Logo" value={f.logo} onChange={(v) => set('logo', v)} notify={notify} {...bgFor('logo', logo)} />
               <Field label="Nama perusahaan"><AutoTextarea className={inputCls} value={f.instansi} onChange={(e) => set('instansi', e.target.value)} /></Field>
               <Field label="Bidang usaha (baris kedua kop)"><AutoTextarea className={inputCls} value={f.subKop} onChange={(e) => set('subKop', e.target.value)} /></Field>
               <Field label="Alamat lengkap"><AutoTextarea className={inputCls} value={f.alamat} onChange={(e) => set('alamat', e.target.value)} /></Field>
               <Field label="Telepon, email, website"><AutoTextarea className={inputCls} value={f.kontak} onChange={(e) => set('kontak', e.target.value)} /></Field>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Surat</h2>
+            <FormSection title="Data Surat">
               <Field label="Judul surat"><AutoTextarea className={inputCls} value={f.judul} onChange={(e) => set('judul', e.target.value)} /></Field>
               <div className="flex flex-wrap gap-2">
                 {['SURAT KEPUTUSAN MUTASI', 'SURAT PEMINDAHAN'].map((j) => (
@@ -242,10 +241,9 @@ export default function SuratMutasi() {
                 <Field label="Perihal (opsional)"><AutoTextarea className={inputCls} value={f.perihal} onChange={(e) => set('perihal', e.target.value)} /></Field>
               </div>
               <Field label="Kepada Yth. (opsional)"><AutoTextarea rows={2} className={inputCls} value={f.kepada} onChange={(e) => set('kepada', e.target.value)} /></Field>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Isi Mutasi</h2>
+            <FormSection title="Isi Mutasi">
               <Field label="Alasan / dasar mutasi (opsional, satu poin per baris)"><AutoTextarea rows={2} className={inputCls} value={f.dasar} onChange={(e) => set('dasar', e.target.value)} /></Field>
               <Field label="Kalimat pembuka"><AutoTextarea rows={2} className={inputCls} value={f.pembuka} onChange={(e) => set('pembuka', e.target.value)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
@@ -265,10 +263,9 @@ export default function SuratMutasi() {
               <Field label="Tanggal efektif"><input type="date" className={inputCls} value={f.efektif} onChange={(e) => set('efektif', e.target.value)} /></Field>
               <Field label="Hak & kewajiban (satu poin per baris)"><AutoTextarea rows={3} className={inputCls} value={f.hak} onChange={(e) => set('hak', e.target.value)} /></Field>
               <Field label="Kalimat penutup"><AutoTextarea rows={2} className={inputCls} value={f.penutup} onChange={(e) => set('penutup', e.target.value)} /></Field>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penanda Tangan</h2>
+            <FormSection title="Penanda Tangan">
               <div className="grid sm:grid-cols-2 gap-2">
                 <Field label="Salam penutup"><AutoTextarea className={inputCls} value={f.ttdHeading} onChange={(e) => set('ttdHeading', e.target.value)} /></Field>
                 <Field label="Jabatan"><AutoTextarea className={inputCls} value={f.ttdJabatan} onChange={(e) => set('ttdJabatan', e.target.value)} /></Field>
@@ -294,7 +291,7 @@ export default function SuratMutasi() {
               <button type="button" onClick={() => set('penandaLain', [...f.penandaLain, { heading: 'Mengetahui,', nama: '', jabatan: 'Manajer HRD' }])} className="min-h-[40px] text-sm font-medium text-blue-700">+ Tambah penanda tangan</button>
               <Field label="Tembusan (opsional)"><AutoTextarea rows={2} className={inputCls} value={f.tembusan} onChange={(e) => set('tembusan', e.target.value)} /></Field>
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

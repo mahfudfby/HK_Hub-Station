@@ -14,6 +14,7 @@ import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, le
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc } from '../../shared/components/LetterLayouts';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
+import FormSection from '../../shared/components/FormSection';
 
 // Undangan Interview / Panggilan Kerja: surat HRD/Recruitment kepada kandidat pelamar berisi
 // tahap seleksi, jadwal, lokasi (tatap muka) atau tautan (online), perlengkapan & konfirmasi kehadiran.
@@ -204,17 +205,15 @@ export default function UndanganInterview() {
             ) : (<>
             <UserData storageKey="data-user:undangan-interview" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Surat</h2>
+            <FormSection title="Kop Surat">
               <ImageUpload label="Logo" value={f.logo} onChange={(x) => set('logo', x)} notify={notify} {...bgFor('logo', logo)} />
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
               {text('kontak', 'Telepon, email, website')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Surat</h2>
+            <FormSection title="Data Surat">
               <Field label="Nomor surat"><NumberFormatInput parts={['Nomor', 'Unit', 'Kode', 'Bulan', 'Tahun']} example={`012/HRD/INT/${ROMAN[new Date().getMonth()]}/${new Date().getFullYear()} (bulan angka romawi)`} value={f.nomor} onChange={(x) => set('nomor', x)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('kota', 'Kota')}
@@ -222,20 +221,18 @@ export default function UndanganInterview() {
                 {text('perihal', 'Perihal')}
                 {text('judul', 'Judul di tengah (opsional)')}
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kandidat</h2>
+            <FormSection title="Kandidat">
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('kandidat', 'Nama kandidat (Sdr./Sdri.)')}
                 {text('kontakKandidat', 'Email / telepon kandidat')}
               </div>
               {text('posisiLamar', 'Posisi yang dilamar')}
               {text('pembuka', 'Kalimat pembuka', 3)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Tahap & Jadwal</h2>
+            <FormSection title="Tahap & Jadwal">
               <Field label="Tahap seleksi (pilih atau ketik sendiri)">
                 <input list="tahap-seleksi" className={inputCls} value={f.tahap} onChange={(e) => set('tahap', e.target.value)} />
                 <datalist id="tahap-seleksi">{TAHAP.map((t) => <option key={t} value={t} />)}</datalist>
@@ -267,20 +264,18 @@ export default function UndanganInterview() {
                 {text('cp', 'Contact person (opsional)')}
                 {text('dressCode', 'Dress code (opsional)')}
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Berkas & Konfirmasi</h2>
+            <FormSection title="Berkas & Konfirmasi">
               {text('berkas', 'Berkas/perlengkapan yang dibawa (satu per baris)', 4)}
               <div className="grid sm:grid-cols-2 gap-2">
                 <Field label="Batas konfirmasi kehadiran"><input type="date" className={inputCls} value={f.batasKonfirmasi} onChange={(e) => set('batasKonfirmasi', e.target.value)} /></Field>
                 {text('kontakKonfirmasi', 'Konfirmasi melalui')}
               </div>
               {text('penutup', 'Kalimat penutup', 3)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penanda Tangan (HRD/Recruitment)</h2>
+            <FormSection title="Penanda Tangan (HRD/Recruitment)">
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('ttdHeading', 'Salam penutup')}
                 {text('ttdJabatan', 'Jabatan')}
@@ -290,7 +285,7 @@ export default function UndanganInterview() {
               <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel" value={f.stempel} onChange={(x) => set('stempel', x)} notify={notify} {...bgFor('stempel', stempel)} />
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

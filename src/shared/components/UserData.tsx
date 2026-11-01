@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import FormSection from './FormSection';
 import { uploadImage } from '../lib/cloudinary';
 import SharedGallery, { IMAGE_LABEL as LABEL } from './SharedGallery';
 
@@ -125,8 +126,7 @@ export default function UserData({ storageKey, keys, data, onApply }: {
   };
 
   return (
-    <section className="space-y-2 rounded-xl border border-gray-300 p-3">
-      <h2 className="font-bold">Data User</h2>
+    <FormSection title="Data User" className="rounded-xl border border-gray-300 p-3">
       <p className="text-xs text-gray-600">Simpan data umum (nama usaha, alamat, logo, tanda tangan) agar tidak perlu diketik ulang. Template tampilan dipilih terpisah.</p>
       <div className="flex gap-2">
         <select aria-label="Pilih data user" className="w-full min-w-0 p-2 border border-gray-300 rounded-lg text-sm" value={sel} onChange={(e) => apply(e.target.value)}>
@@ -149,6 +149,6 @@ export default function UserData({ storageKey, keys, data, onApply }: {
         </div>
       )}
       {msg && <p className={`text-xs ${msg.includes('terhapus dari Cloudinary') ? 'font-bold text-red-700' : 'text-gray-700'}`} role="status">{msg}</p>}
-    </section>
+    </FormSection>
   );
 }

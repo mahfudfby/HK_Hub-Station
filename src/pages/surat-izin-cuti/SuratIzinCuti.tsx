@@ -14,6 +14,7 @@ import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, le
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSigner } from '../../shared/components/LetterLayouts';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
+import FormSection from '../../shared/components/FormSection';
 
 // Surat Izin Cuti / Formulir Cuti Karyawan: permohonan cuti dari karyawan, disetujui atasan langsung
 // dan diketahui HRD. Jumlah hari & sisa cuti dihitung otomatis; status persetujuan berupa kotak centang.
@@ -234,17 +235,15 @@ export default function SuratIzinCuti() {
             ) : (<>
             <UserData storageKey="data-user:surat-izin-cuti" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Surat</h2>
+            <FormSection title="Kop Surat">
               <ImageUpload label="Logo" value={f.logo} onChange={(x) => set('logo', x)} notify={notify} {...bgFor('logo', logo)} />
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
               {text('kontak', 'Telepon, email, website')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Surat</h2>
+            <FormSection title="Data Surat">
               {text('judul', 'Judul formulir')}
               <Field label="Nomor surat"><NumberFormatInput parts={['Nomor', 'Kode', 'Unit', 'Bulan', 'Tahun']} example={`021/CUTI/HRD/${ROMAN[new Date().getMonth()]}/${new Date().getFullYear()} (bulan angka romawi)`} value={f.nomor} onChange={(x) => set('nomor', x)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
@@ -252,20 +251,18 @@ export default function SuratIzinCuti() {
                 {date('tanggal', 'Tanggal pengajuan')}
               </div>
               {text('pembuka', 'Kalimat pembuka', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Karyawan</h2>
+            <FormSection title="Data Karyawan">
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('nama', 'Nama karyawan')}
                 {text('nik', 'NIK karyawan')}
                 {text('jabatan', 'Jabatan')}
                 {text('divisi', 'Divisi')}
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Rincian Cuti</h2>
+            <FormSection title="Rincian Cuti">
               <Field label="Jenis cuti (pilih atau ketik sendiri)">
                 <input list="jenis-cuti" className={`${inputCls} min-h-[40px]`} value={f.jenis} onChange={(e) => set('jenis', e.target.value)} />
                 <datalist id="jenis-cuti">{JENIS.map((s) => <option key={s} value={s} />)}</datalist>
@@ -289,10 +286,9 @@ export default function SuratIzinCuti() {
               </div>
               {text('lampiran', 'Lampiran (opsional, mis. surat keterangan dokter)')}
               {text('penutup', 'Kalimat penutup', 3)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Status Persetujuan</h2>
+            <FormSection title="Status Persetujuan">
               <Field label="Kotak yang dicentang">
                 <select className={`${inputCls} min-h-[40px]`} value={f.persetujuan} onChange={(e) => set('persetujuan', e.target.value as Form['persetujuan'])}>
                   <option value="">Kosong (diisi tangan)</option>
@@ -300,10 +296,9 @@ export default function SuratIzinCuti() {
                 </select>
               </Field>
               {text('catatan', 'Catatan atasan/HRD (opsional; kosong = garis titik-titik)', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penanda Tangan</h2>
+            <FormSection title="Penanda Tangan">
               <p className="text-sm text-gray-700">Tampilkan tanda tangan (boleh ketiganya, dua, atau salah satu):</p>
               <div className="flex flex-wrap gap-x-4">
                 {([['pakaiPemohon', 'Pemohon'], ['pakaiAtasan', 'Atasan langsung'], ['pakaiHrd', 'HRD']] as const).map(([key, label]) => (
@@ -327,7 +322,7 @@ export default function SuratIzinCuti() {
                 <ImageUpload label="Stempel" value={f.stempel} onChange={(x) => set('stempel', x)} notify={notify} {...bgFor('stempel', stempel)} />
               </>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

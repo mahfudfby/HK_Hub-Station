@@ -12,6 +12,7 @@ import { Dots, ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputC
 import DocOptions, { TITIK } from '../../shared/components/DocOptions';
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSigner } from '../../shared/components/LetterLayouts';
 import { useBgRemoved } from '../../shared/lib/removeBg';
+import FormSection from '../../shared/components/FormSection';
 
 // Surat Pengunduran Diri (resign profesional): surat pribadi berkop karyawan, tanpa nomor dokumen.
 // Menu berdiri sendiri (form & penyimpanan terpisah). Bahan bersama: tata letak (LetterLayouts), kertas/ekspor (LetterKit).
@@ -178,8 +179,7 @@ export default function SuratPengunduranDiri() {
             ) : (<>
             <UserData storageKey="data-user:surat-pengunduran-diri" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Pribadi</h2>
+            <FormSection title="Kop Pribadi">
               <ImageUpload label="Pas foto / inisial (opsional)" value={f.logo} onChange={(v) => set('logo', v)} notify={notify} {...bgFor('logo', logo)} />
               <Field label="Nama lengkap & gelar"><AutoTextarea className={inputCls} value={f.nama} onChange={(e) => set('nama', e.target.value)} /></Field>
               <Field label="Profesi / tagline"><AutoTextarea className={inputCls} value={f.profesi} onChange={(e) => set('profesi', e.target.value)} /></Field>
@@ -189,10 +189,9 @@ export default function SuratPengunduranDiri() {
                 <Field label="Email"><AutoTextarea className={inputCls} value={f.email} onChange={(e) => set('email', e.target.value)} /></Field>
               </div>
               <Field label="LinkedIn / portofolio (opsional)"><AutoTextarea className={inputCls} value={f.web} onChange={(e) => set('web', e.target.value)} /></Field>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Tujuan & Data Karyawan</h2>
+            <FormSection title="Tujuan & Data Karyawan">
               <Field label="Kepada Yth."><AutoTextarea className={inputCls} value={f.kepada} onChange={(e) => set('kepada', e.target.value)} /></Field>
               <Field label="Nama perusahaan"><AutoTextarea className={inputCls} value={f.perusahaan} onChange={(e) => set('perusahaan', e.target.value)} /></Field>
               <Field label="Alamat perusahaan"><AutoTextarea className={inputCls} value={f.alamatTujuan} onChange={(e) => set('alamatTujuan', e.target.value)} /></Field>
@@ -204,10 +203,9 @@ export default function SuratPengunduranDiri() {
                 <Field label="Kota"><AutoTextarea className={inputCls} value={f.kota} onChange={(e) => set('kota', e.target.value)} /></Field>
                 <Field label="Tanggal surat"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Isi Surat</h2>
+            <FormSection title="Isi Surat">
               <Field label="Salam pembuka"><AutoTextarea className={inputCls} value={f.salam} onChange={(e) => set('salam', e.target.value)} /></Field>
               <p className="text-sm font-bold text-gray-700">Alasan (pilihan cepat)</p>
               <div className="flex flex-wrap gap-2">
@@ -220,10 +218,9 @@ export default function SuratPengunduranDiri() {
               <Field label="Komitmen serah terima"><AutoTextarea rows={3} className={inputCls} value={f.serahTerima} onChange={(e) => set('serahTerima', e.target.value)} /></Field>
               <Field label="Terima kasih & permohonan maaf"><AutoTextarea rows={3} className={inputCls} value={f.terimaKasih} onChange={(e) => set('terimaKasih', e.target.value)} /></Field>
               <Field label="Kalimat penutup"><AutoTextarea rows={2} className={inputCls} value={f.penutup} onChange={(e) => set('penutup', e.target.value)} /></Field>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Tanda Tangan</h2>
+            <FormSection title="Tanda Tangan">
               <Field label="Salam penutup"><AutoTextarea className={inputCls} value={f.ttdHeading} onChange={(e) => set('ttdHeading', e.target.value)} /></Field>
               <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <label className="flex items-center gap-2 min-h-[40px] text-sm font-medium">
@@ -238,7 +235,7 @@ export default function SuratPengunduranDiri() {
                 <ImageUpload label="Tanda tangan atasan" value={f.ttdAtasan} onChange={(v) => set('ttdAtasan', v)} notify={notify} {...bgFor('ttdAtasan', ttdAtasan)} />
               </>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

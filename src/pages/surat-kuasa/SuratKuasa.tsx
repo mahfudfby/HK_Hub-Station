@@ -14,6 +14,7 @@ import { InfoRows, LayoutLetter, LayoutPicker, P, SignBlock, type LayoutDoc, typ
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import DocOptions, { TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
+import FormSection from '../../shared/components/FormSection';
 
 // Surat Kuasa: kuasa khusus perorangan atau perusahaan (pengambilan dokumen, administrasi, gaji, kuasa perusahaan).
 // Menu berdiri sendiri; tata letak dari LetterLayouts (20 template), kertas/ekspor dari LetterKit.
@@ -229,8 +230,7 @@ export default function SuratKuasa() {
             ) : (<>
             <UserData storageKey="data-user:surat-kuasa" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Jenis Kuasa</h2>
+            <FormSection title="Jenis Kuasa">
               <div className="grid grid-cols-2 gap-2" role="group" aria-label="Pilihan cepat jenis kuasa">
                 {JENIS.map((j) => (
                   <button key={j.id} type="button" onClick={() => pickJenis(j)} aria-pressed={f.jenis === j.id}
@@ -238,55 +238,49 @@ export default function SuratKuasa() {
                 ))}
               </div>
               <p className="text-xs text-gray-500">Memilih jenis mengisi keperluan & rincian kuasa; isinya tetap bisa diubah.</p>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Surat</h2>
+            <FormSection title="Kop Surat">
               <ImageUpload label="Logo (opsional)" value={f.logo} onChange={(v) => set('logo', v)} notify={notify} {...bgFor('logo', logo)} />
               <Field label="Nama perusahaan / nama pemberi kuasa"><AutoTextarea className={inputCls} value={f.instansi} onChange={(e) => set('instansi', e.target.value)} /></Field>
               <Field label="Baris kedua kop (bidang usaha / keterangan)"><AutoTextarea className={inputCls} value={f.subKop} onChange={(e) => set('subKop', e.target.value)} /></Field>
               <Field label="Alamat lengkap"><AutoTextarea className={inputCls} value={f.alamat} onChange={(e) => set('alamat', e.target.value)} /></Field>
               <Field label="Telepon, email, website"><AutoTextarea className={inputCls} value={f.kontak} onChange={(e) => set('kontak', e.target.value)} /></Field>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Surat</h2>
+            <FormSection title="Data Surat">
               <Field label="Judul surat"><AutoTextarea className={inputCls} value={f.judul} onChange={(e) => set('judul', e.target.value)} /></Field>
               <Field label="Nomor surat"><NumberFormatInput parts={['Nomor', 'Kode', 'Bulan', 'Tahun']} example={`${randomDocNo(POLA)} (nomor urut/SK/bulan romawi/tahun)`} value={f.nomor} onChange={(v) => set('nomor', v)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
                 <Field label="Kota"><AutoTextarea className={inputCls} value={f.kota} onChange={(e) => set('kota', e.target.value)} /></Field>
                 <Field label="Tanggal surat"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Pemberi Kuasa</h2>
+            <FormSection title="Pemberi Kuasa">
               <PersonEditor p={f.pemberi} onChange={(v) => set('pemberi', v)} />
               <ImageUpload label="Tanda tangan pemberi kuasa" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel (opsional, untuk perusahaan)" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penerima Kuasa</h2>
+            <FormSection title="Penerima Kuasa">
               <PersonEditor p={f.penerima} onChange={(v) => set('penerima', v)} />
               <ImageUpload label="Tanda tangan penerima kuasa" value={f.ttdPenerima} onChange={(v) => set('ttdPenerima', v)} notify={notify} {...bgFor('ttdPenerima', ttdPenerima)} />
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Isi Kuasa</h2>
+            <FormSection title="Isi Kuasa">
               <Field label="Kuasa KHUSUS untuk (keperluan)"><AutoTextarea rows={2} className={inputCls} value={f.keperluan} onChange={(e) => set('keperluan', e.target.value)} /></Field>
               <p className="text-sm font-bold text-gray-700">Rincian hal yang dikuasakan</p>
               <ListEditor label="Rincian" items={f.rincian} onChange={(v) => set('rincian', v)} />
               <Field label="Masa berlaku"><AutoTextarea rows={2} className={inputCls} value={f.berlaku} onChange={(e) => set('berlaku', e.target.value)} /></Field>
               <Field label="Kalimat penutup"><AutoTextarea rows={2} className={inputCls} value={f.penutup} onChange={(e) => set('penutup', e.target.value)} /></Field>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Saksi (opsional)</h2>
+            <FormSection title="Saksi (opsional)">
               <ListEditor label="Saksi" items={f.saksi} onChange={(v) => set('saksi', v.slice(0, 3))} />
               <p className="text-xs text-gray-500">Maksimal 3 saksi. Ruang tanda tangan Pemberi Kuasa sudah cukup untuk meterai.</p>
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

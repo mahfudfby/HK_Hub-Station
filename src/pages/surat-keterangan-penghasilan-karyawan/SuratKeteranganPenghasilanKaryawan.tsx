@@ -15,6 +15,7 @@ import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSig
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { num, rupiah, terbilangRupiah } from '../../shared/lib/money';
+import FormSection from '../../shared/components/FormSection';
 
 // Surat Keterangan Penghasilan Karyawan: dikeluarkan perusahaan (HRD/Finance) untuk karyawannya,
 // sebagai syarat KPR, kredit, beasiswa anak, atau visa. Beda dengan versi kelurahan (surat-keterangan-penghasilan):
@@ -249,17 +250,15 @@ export default function SuratKeteranganPenghasilanKaryawan() {
             ) : (<>
             <UserData storageKey="data-user:surat-keterangan-penghasilan-karyawan" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Surat</h2>
+            <FormSection title="Kop Surat">
               <ImageUpload label="Logo" value={f.logo} onChange={(x) => set('logo', x)} notify={notify} {...bgFor('logo', logo)} />
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
               {text('kontak', 'Telepon, email, website')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Surat</h2>
+            <FormSection title="Data Surat">
               {text('judul', 'Judul surat')}
               <Field label="Nomor surat"><NumberFormatInput parts={['Nomor', 'Kode', 'Unit', 'Bulan', 'Tahun']} example={`034/SKP/HRD/${ROMAN[new Date().getMonth()]}/${new Date().getFullYear()} (bulan angka romawi)`} value={f.nomor} onChange={(x) => set('nomor', x)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
@@ -267,10 +266,9 @@ export default function SuratKeteranganPenghasilanKaryawan() {
                 <Field label="Tanggal surat"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
               </div>
               {text('kepada', 'Kepada Yth. (bank/instansi tujuan, opsional)', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Karyawan</h2>
+            <FormSection title="Data Karyawan">
               {text('pembuka', 'Kalimat pembuka', 2)}
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('nama', 'Nama karyawan')}
@@ -281,10 +279,9 @@ export default function SuratKeteranganPenghasilanKaryawan() {
                 {text('status', 'Status kepegawaian')}
                 <Field label="Mulai bekerja"><input type="date" className={inputCls} value={f.mulai} onChange={(e) => set('mulai', e.target.value)} /></Field>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Rincian Penghasilan per Bulan</h2>
+            <FormSection title="Rincian Penghasilan per Bulan">
               {text('pengantarGaji', 'Kalimat pengantar rincian', 2)}
               <KompEditor label="komponen" rows={f.penghasilan} onChange={(x) => set('penghasilan', x)} />
               <p className="text-sm font-semibold text-gray-700">Total bruto: Rp {rupiah(total(f.penghasilan))}</p>
@@ -294,16 +291,14 @@ export default function SuratKeteranganPenghasilanKaryawan() {
                 <p className="text-sm font-semibold text-gray-700">Take home pay: Rp {rupiah(thp)}</p>
               </>}
               <p className="text-sm text-gray-600">{terbilangRupiah(thp)}</p>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Keperluan & Penutup</h2>
+            <FormSection title="Keperluan & Penutup">
               {text('keperluan', 'Keperluan surat (KPR, kredit, beasiswa, visa, dll.)', 2)}
               {text('pernyataan', 'Pernyataan kebenaran data & penutup', 3)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penanda Tangan</h2>
+            <FormSection title="Penanda Tangan">
               <div className="flex flex-wrap gap-x-4">
                 {([['pakaiUtama', 'HRD/Finance'], ['pakaiDirektur', 'Mengetahui, Direktur']] as const).map(([key, label]) => (
                   <div key={key}><Switch checked={f[key]} onChange={(x) => set(key, x)} label={label} /></div>
@@ -326,7 +321,7 @@ export default function SuratKeteranganPenghasilanKaryawan() {
                 <ImageUpload label="Tanda tangan direktur" value={f.ttdDir} onChange={(x) => set('ttdDir', x)} notify={notify} {...bgFor('ttdDir', ttdDir)} />
               </>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

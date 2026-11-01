@@ -16,6 +16,8 @@ import { usePagesExport } from '../surat-kontrak-kerja/exportPages';
 import { usePagination } from '../surat-kontrak-kerja/usePagination';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
+import FormSection, { NarrativeField } from '../../shared/components/FormSection';
+import { LampiranField, lampiranTeks } from '../surat-kontrak-kerja/Lampiran';
 
 // Surat Perjanjian Kerahasiaan (NDA) Karyawan: pasal-pasal bisa diedit/ditambah/dihapus/diurutkan,
 // dokumen panjang berlanjut otomatis ke halaman berikut (paginasi milik Kontrak Kerja). Tata letak dari LetterLayouts.
@@ -28,7 +30,7 @@ type Form = {
   gaya: string; paper: string; landscape: boolean; skala: number; posisi: Offsets;
   pakaiNomor: boolean; kosong: boolean;
   logo: string; instansi: string; subKop: string; alamat: string; kontak: string;
-  judul: string; nomor: string; kota: string; tanggal: string;
+  judul: string; nomor: string; kota: string; tanggal: string; lampiranAuto: boolean; lampiran: string;
   p1Nama: string; p1Jabatan: string;
   nama: string; nik: string; jabatan: string; alamatK: string;
   tahun: string; pengadilan: string; pasal: Pasal[];
@@ -55,7 +57,7 @@ const makeDefault = (): Form => ({
   logo: '', instansi: 'PT ARTHA TEKNOLOGI NUSANTARA', subKop: 'Konsultan & Pengembang Sistem Informasi Bisnis',
   alamat: 'Jl. Gatot Subroto Kav. 32, Kel. Kuningan Timur, Kec. Setiabudi, Jakarta Selatan, DKI Jakarta 12950',
   kontak: 'Telp. (021) 5277-8899 • legal@arthatek.co.id • www.arthatek.co.id',
-  judul: 'PERJANJIAN KERAHASIAAN', nomor: randomDocNo(POLA), kota: 'Jakarta', tanggal: new Date().toISOString().slice(0, 10),
+  judul: 'PERJANJIAN KERAHASIAAN', nomor: randomDocNo(POLA), kota: 'Jakarta', tanggal: new Date().toISOString().slice(0, 10), lampiranAuto: true, lampiran: '',
   p1Nama: 'Bambang Suryadi', p1Jabatan: 'Direktur Utama',
   nama: 'Fitri Handayani', nik: '3174056203950004', jabatan: 'Staf Keuangan',
   alamatK: 'Jl. Melati No. 21, RT 002/RW 005, Kel. Pejaten Barat, Pasar Minggu, Jakarta Selatan',
@@ -225,6 +227,7 @@ export default function SuratPerjanjianKerahasiaan() {
     logo: logo.src, logoOffset: getOffset(f.posisi, 'logo'),
     kopName: f.instansi, kopLines: [f.subKop, f.alamat, f.kontak],
     title: f.judul, nomor, placeDate: '',
+    meta: [{ label: 'Lampiran', value: lampiranTeks(f.lampiranAuto, f.lampiran, ranges.length) }],
     body: flow(ranges[0]),
     signers: [],
   };
@@ -268,6 +271,10 @@ export default function SuratPerjanjianKerahasiaan() {
     <Field label={label}><AutoTextarea rows={rows} className={inputCls} value={f[key] as string} onChange={(e) => set(key, e.target.value as never)} /></Field>
   );
   const btn = 'px-3 min-h-[40px] rounded-lg border text-sm font-medium disabled:opacity-40';
+  // Kunci narasi: {kunci} di pasal → field form yang mengisinya
+  const NAR: Record<string, keyof Form> = { perusahaan: 'instansi', karyawan: 'nama', jabatan: 'jabatan', tahun: 'tahun', pengadilan: 'pengadilan', kota: 'kota' };
+  const narVars = Object.fromEntries(Object.entries(NAR).map(([key, fk]) => [key, f[fk] as string]));
+  const onVar = (key: string, v: string) => set(NAR[key], v as never);
 
   return (
     <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
@@ -284,17 +291,15 @@ export default function SuratPerjanjianKerahasiaan() {
             ) : (<>
             <UserData storageKey="data-user:surat-perjanjian-kerahasiaan" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Surat</h2>
+            <FormSection title="Kop Surat">
               <ImageUpload label="Logo" value={f.logo} onChange={(v) => set('logo', v)} notify={notify} {...bgFor('logo', logo)} />
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
               {text('kontak', 'Telepon, email, website')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Perjanjian</h2>
+            <FormSection title="Data Perjanjian">
               {text('judul', 'Judul')}
               <Field label="Nomor perjanjian"><NumberFormatInput parts={['Nomor', 'Kode', 'Unit', 'Bulan', 'Tahun']} example={`009/NDA/HRD/${ROMAN[new Date().getMonth()]}/${new Date().getFullYear()} (bulan angka romawi)`} value={f.nomor} onChange={(v) => set('nomor', v)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
@@ -303,38 +308,36 @@ export default function SuratPerjanjianKerahasiaan() {
                 {text('tahun', 'Berlaku setelah keluar (tahun), mis. 2 (dua)')}
                 {text('pengadilan', 'Tempat penyelesaian sengketa')}
               </div>
-            </section>
+              <LampiranField auto={f.lampiranAuto} manual={f.lampiran} pages={ranges.length} onAuto={(v) => set('lampiranAuto', v)} onManual={(v) => set('lampiran', v)} />
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Pihak Pertama (Perusahaan)</h2>
+            <FormSection title="Pihak Pertama (Perusahaan)">
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('p1Nama', 'Nama wakil perusahaan')}
                 {text('p1Jabatan', 'Jabatan')}
               </div>
               <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Pihak Kedua (Karyawan)</h2>
+            <FormSection title="Pihak Kedua (Karyawan)">
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('nama', 'Nama')}
                 {text('nik', 'NIK')}
                 {text('jabatan', 'Jabatan')}
               </div>
               {text('alamatK', 'Alamat')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Pasal-pasal</h2>
-              <p className="text-xs text-gray-500">Satu ayat per baris. Kode yang terisi otomatis: {'{perusahaan} {karyawan} {jabatan} {tahun} {pengadilan} {kota}'}.</p>
+            <FormSection title="Pasal-pasal" lockable>
+              <p className="text-xs text-gray-500">Satu ayat per baris. Kode yang terisi otomatis: {'{perusahaan} {karyawan} {jabatan} {tahun} {pengadilan} {kota}'}. Saat narasi terkunci, kotak isian langsung mengubah data form terkait.</p>
               {f.pasal.map((p, i) => (
                 <div key={i} className="space-y-2 rounded-lg border p-3">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold shrink-0">Pasal {i + 1}</span>
                     <AutoTextarea aria-label={`Judul pasal ${i + 1}`} className={inputCls} value={p.judul} onChange={(e) => setPasal(i, { judul: e.target.value })} />
                   </div>
-                  <AutoTextarea aria-label={`Isi pasal ${i + 1}`} rows={2} className={inputCls} value={p.isi} onChange={(e) => setPasal(i, { isi: e.target.value })} />
+                  <NarrativeField label={`Isi pasal ${i + 1}`} rows={2} value={p.isi} onChange={(v) => setPasal(i, { isi: v })} vars={narVars} onVar={onVar} />
                   <div className="flex gap-2">
                     <button type="button" className={btn} disabled={i === 0} onClick={() => movePasal(i, -1)} aria-label={`Naikkan pasal ${i + 1}`}>↑</button>
                     <button type="button" className={btn} disabled={i === f.pasal.length - 1} onClick={() => movePasal(i, 1)} aria-label={`Turunkan pasal ${i + 1}`}>↓</button>
@@ -346,10 +349,9 @@ export default function SuratPerjanjianKerahasiaan() {
                 <button type="button" onClick={() => set('pasal', [...f.pasal, { judul: 'Pasal Tambahan', isi: '' }])} className="min-h-[40px] text-sm font-medium text-blue-700">+ Tambah pasal</button>
                 <button type="button" onClick={() => { if (confirm('Kembalikan pasal-pasal ke bawaan?')) set('pasal', PASAL_DEFAULT); }} className="min-h-[40px] text-sm font-medium text-gray-600">Kembalikan pasal bawaan</button>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Saksi (opsional)</h2>
+            <FormSection title="Saksi (opsional)">
               {f.saksi.map((s, i) => (
                 <div key={i} className="flex gap-2">
                   <AutoTextarea aria-label={`Nama saksi ${i + 1}`} placeholder="Nama saksi" className={inputCls} value={s} onChange={(e) => set('saksi', f.saksi.map((x, j) => (j === i ? e.target.value : x)))} />
@@ -358,7 +360,7 @@ export default function SuratPerjanjianKerahasiaan() {
               ))}
               {f.saksi.length < 3 && <button type="button" onClick={() => set('saksi', [...f.saksi, ''])} className="min-h-[40px] text-sm font-medium text-blue-700">+ Tambah saksi</button>}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

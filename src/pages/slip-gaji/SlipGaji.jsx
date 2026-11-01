@@ -1,4 +1,5 @@
 import UserData from '../../shared/components/UserData';
+import FormSection from '../../shared/components/FormSection';
 import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/CanvasMode';
 import SharedGallery from '../../shared/components/SharedGallery';
 import NumberFormatInput from '../../shared/components/NumberFormatInput';
@@ -447,21 +448,19 @@ function InfoRow({ label, value, highlight = false }) {
 // ============================================================
 function CompanyForm({ form, onChange, onLogoChange, logoBg }) {
   return (
-    <div className="space-y-4 mb-8">
-      <p className="block text-sm font-bold text-gray-700">Detail Perusahaan</p>
+    <FormSection title="Detail Perusahaan">
       <TextField id="inputCompanyName" label="Nama Perusahaan" name="companyName" value={form.companyName} onChange={onChange} />
       <TextField id="inputAddressLine1" label="Alamat Baris 1" name="addressLine1" value={form.addressLine1} onChange={onChange} placeholder="Jalan dan Nomor" />
       <TextField id="inputAddressLine2" label="Alamat Baris 2" name="addressLine2" value={form.addressLine2} onChange={onChange} placeholder="Kecamatan, Kota" />
       <TextField id="inputAddressLine3" label="Alamat Baris 3" name="addressLine3" value={form.addressLine3} onChange={onChange} placeholder="Negara & Kode Pos" />
       <FileField id="inputCompanyLogoFile" label="Upload Logo (Opsional)" onChange={onLogoChange} wrapClass="pt-4" {...logoBg} />
-    </div>
+    </FormSection>
   );
 }
 
 function EmployeeForm({ form, onChange, statusText }) {
   return (
-    <div className="space-y-4 mb-8">
-      <p className="block text-sm font-bold text-gray-700">Detail Karyawan &amp; Transfer</p>
+    <FormSection title="Detail Karyawan &amp; Transfer">
       <div className="input-group">
         <label className="text-sm font-medium text-gray-700">No. Slip Gaji (ID)</label>
         <NumberFormatInput sep="-" parts={['Kode', 'Urut']} value={form.slipID} onChange={(v) => onChange({ target: { name: 'slipID', value: v } })} />
@@ -487,14 +486,13 @@ function EmployeeForm({ form, onChange, statusText }) {
         Tarif PPh 21 Progresif:{' '}
         <span>{`PTKP ${statusText} diterapkan, dan tarif progresif PPh 21 (5% - 35%) digunakan.`}</span>
       </p>
-    </div>
+    </FormSection>
   );
 }
 
 function EarningsForm({ form, onChange }) {
   return (
-    <>
-      <h3 className="text-lg font-medium mt-6 mb-4 text-gray-700">Penerimaan (Earnings)</h3>
+    <FormSection title="Penerimaan (Earnings)">
       <div className="space-y-2">
         <MoneyField itemClass="earnings-item" id="inputBasicSalary" label="Gaji Pokok" name="basicSalary" value={form.basicSalary} onChange={onChange} />
         <MoneyField itemClass="earnings-item" id="inputAllowance" label="Tunjangan" name="allowance" value={form.allowance} onChange={onChange} />
@@ -503,14 +501,13 @@ function EarningsForm({ form, onChange }) {
         <MoneyField itemClass="earnings-item" id="inputMealAllowance" label="Uang Makan" name="mealAllowance" value={form.mealAllowance} onChange={onChange} />
         <MoneyField itemClass="earnings-item" id="inputBonus" label="Bonus" name="bonus" value={form.bonus} onChange={onChange} />
       </div>
-    </>
+    </FormSection>
   );
 }
 
 function DeductionsForm({ form, onChange, calc }) {
   return (
-    <>
-      <h3 className="text-lg font-medium mt-6 mb-4 text-gray-700">Potongan (Deductions)</h3>
+    <FormSection title="Potongan (Deductions)">
       <div className="space-y-2">
         <MoneyField itemClass="deduction-item" id="inputLoanDeduction" label="Pinjaman Karyawan" name="loanDeduction" value={form.loanDeduction} onChange={onChange} />
         <ReadOnlyMoney id="inputBPJS" label="BPJS Kes. + JP" value={formatPlain(calc.bpjsKesAndJP)} />
@@ -518,7 +515,7 @@ function DeductionsForm({ form, onChange, calc }) {
         <ReadOnlyMoney id="inputPPH21" label="PPh 21" value={formatPlain(calc.pph21)} />
         <MoneyField itemClass="deduction-item" id="inputOtherDeduction" label="Lain-lain (Manual)" name="otherDeduction" value={form.otherDeduction} onChange={onChange} />
       </div>
-    </>
+    </FormSection>
   );
 }
 
@@ -1043,19 +1040,20 @@ export default function SlipGaji() {
                   galeri={<SharedGallery showEmpty keys={userKeys} data={userData} onApply={applyUser} onPicked={(m) => pushToast('success', m)} />} />
               </div>
             ) : (<>
-            <h2 className="text-xl font-semibold mb-6 border-b pb-2 text-gray-700">Formulir Input Data Slip Gaji</h2>
+            <div className="space-y-6">
+            <h2 className="text-xl font-semibold border-b pb-2 text-gray-700">Formulir Input Data Slip Gaji</h2>
             <UserData storageKey="data-user:slip-gaji" keys={userKeys} data={userData} onApply={applyUser} />
             <CompanyForm form={form} onChange={handleChange} onLogoChange={handleLogoChange} logoBg={bgProps('logo', logoShown)} />
             <EmployeeForm form={form} onChange={handleChange} statusText={statusText} />
             <EarningsForm form={form} onChange={handleChange} />
             <DeductionsForm form={form} onChange={handleChange} calc={calc} />
 
-            <h3 className="text-lg font-medium mt-8 mb-4 border-t pt-4 text-gray-700">Detail Tanda Tangan</h3>
-            <div className="space-y-4">
+            <FormSection title="Detail Tanda Tangan">
               <FileField id="inputReceiverSignatureFile" label="Tanda Tangan Karyawan (Opsional)" onChange={handleSignatureChange} {...bgProps('signature', signatureShown)} />
               <TextField id="inputManagerName" label="Nama Direktur / Manager" name="managerName" value={form.managerName ?? ''} onChange={handleChange} />
               <TextField id="inputManagerTitle" label="Jabatan Penandatangan" name="managerTitle" value={form.managerTitle ?? ''} onChange={handleChange} placeholder="Direktur / Manager" />
               <FileField id="inputManagerSignatureFile" label="Tanda Tangan Direktur / Manager (Opsional)" onChange={handleManagerSignatureChange} {...bgProps('manager', managerShown)} />
+            </FormSection>
             </div>
             </>)}
           </div>

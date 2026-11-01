@@ -14,6 +14,7 @@ import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutSig
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import DocOptions, { TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
+import FormSection from '../../shared/components/FormSection';
 
 // Surat Pendelegasian Tugas: pimpinan perusahaan mendelegasikan tugas & wewenang kepada pegawai untuk periode tertentu.
 // Menu berdiri sendiri; tata letak dari LetterLayouts (20 template), kertas/ekspor dari LetterKit.
@@ -202,27 +203,24 @@ export default function SuratPendelegasianTugas() {
             ) : (<>
             <UserData storageKey="data-user:surat-pendelegasian-tugas" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Surat</h2>
+            <FormSection title="Kop Surat">
               <ImageUpload label="Logo" value={f.logo} onChange={(v) => set('logo', v)} notify={notify} {...bgFor('logo', logo)} />
               <Field label="Nama perusahaan"><AutoTextarea className={inputCls} value={f.instansi} onChange={(e) => set('instansi', e.target.value)} /></Field>
               <Field label="Bidang usaha / unit (baris kedua kop)"><AutoTextarea className={inputCls} value={f.subKop} onChange={(e) => set('subKop', e.target.value)} /></Field>
               <Field label="Alamat lengkap"><AutoTextarea className={inputCls} value={f.alamat} onChange={(e) => set('alamat', e.target.value)} /></Field>
               <Field label="Telepon, email, website"><AutoTextarea className={inputCls} value={f.kontak} onChange={(e) => set('kontak', e.target.value)} /></Field>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Surat</h2>
+            <FormSection title="Data Surat">
               <Field label="Judul surat"><AutoTextarea className={inputCls} value={f.judul} onChange={(e) => set('judul', e.target.value)} /></Field>
               <Field label="Nomor surat"><NumberFormatInput parts={['Nomor', 'Kode', 'Unit', 'Bulan', 'Tahun']} example={`${randomDocNo(POLA)} (nomor urut/SDT/kode unit/bulan romawi/tahun)`} value={f.nomor} onChange={(v) => set('nomor', v)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
                 <Field label="Kota"><AutoTextarea className={inputCls} value={f.kota} onChange={(e) => set('kota', e.target.value)} /></Field>
                 <Field label="Tanggal surat"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Pemberi Delegasi</h2>
+            <FormSection title="Pemberi Delegasi">
               <div className="grid sm:grid-cols-2 gap-2">
                 <Field label="Nama"><AutoTextarea className={inputCls} value={f.pemberiNama} onChange={(e) => set('pemberiNama', e.target.value)} /></Field>
                 <Field label="Jabatan"><AutoTextarea className={inputCls} value={f.pemberiJabatan} onChange={(e) => set('pemberiJabatan', e.target.value)} /></Field>
@@ -230,20 +228,18 @@ export default function SuratPendelegasianTugas() {
               <Field label="NIK (opsional)"><AutoTextarea className={inputCls} value={f.pemberiId} onChange={(e) => set('pemberiId', e.target.value)} /></Field>
               <ImageUpload label="Tanda tangan pemberi" value={f.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel perusahaan" value={f.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penerima Delegasi</h2>
+            <FormSection title="Penerima Delegasi">
               <div className="grid sm:grid-cols-2 gap-2">
                 <Field label="Nama"><AutoTextarea className={inputCls} value={f.penerimaNama} onChange={(e) => set('penerimaNama', e.target.value)} /></Field>
                 <Field label="Jabatan"><AutoTextarea className={inputCls} value={f.penerimaJabatan} onChange={(e) => set('penerimaJabatan', e.target.value)} /></Field>
               </div>
               <Field label="NIK (opsional)"><AutoTextarea className={inputCls} value={f.penerimaId} onChange={(e) => set('penerimaId', e.target.value)} /></Field>
               <ImageUpload label="Tanda tangan penerima" value={f.ttdPenerima} onChange={(v) => set('ttdPenerima', v)} notify={notify} {...bgFor('ttdPenerima', ttdPenerima)} />
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Isi Pendelegasian</h2>
+            <FormSection title="Isi Pendelegasian">
               <Field label="Kalimat pembuka"><AutoTextarea rows={2} className={inputCls} value={f.pembuka} onChange={(e) => set('pembuka', e.target.value)} /></Field>
               <p className="text-sm font-bold text-gray-700">Tugas / wewenang yang didelegasikan</p>
               <ListEditor label="Tugas" items={f.tugas} onChange={(v) => set('tugas', v)} />
@@ -253,10 +249,9 @@ export default function SuratPendelegasianTugas() {
               </div>
               <Field label="Batasan wewenang"><AutoTextarea rows={2} className={inputCls} value={f.batasan} onChange={(e) => set('batasan', e.target.value)} /></Field>
               <Field label="Kalimat penutup"><AutoTextarea rows={2} className={inputCls} value={f.penutup} onChange={(e) => set('penutup', e.target.value)} /></Field>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Mengetahui (opsional)</h2>
+            <FormSection title="Mengetahui (opsional)">
               <label className="flex items-center gap-2 min-h-[40px] text-sm font-medium">
                 <input type="checkbox" className="w-5 h-5" checked={f.mengetahui} onChange={(e) => set('mengetahui', e.target.checked)} /> Tampilkan "Mengetahui," atasan
               </label>
@@ -269,7 +264,7 @@ export default function SuratPendelegasianTugas() {
                 <ImageUpload label="Tanda tangan atasan" value={f.ttdMengetahui} onChange={(v) => set('ttdMengetahui', v)} notify={notify} {...bgFor('ttdMengetahui', ttdMengetahui)} />
               </>)}
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

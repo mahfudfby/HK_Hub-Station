@@ -13,6 +13,7 @@ import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, mm
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { num, rupiah } from '../../shared/lib/money';
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
+import FormSection from '../../shared/components/FormSection';
 
 // Bahan bersama dua menu berdiri sendiri: Invoice Toko Online (/invoice-olshop) & Receipt Pesanan Toko Online (/receipt-olshop).
 // Dokumen milik penjual sendiri: identitas toko (logo + nama) diisi pengguna; tanpa merek/logo marketplace mana pun.
@@ -534,16 +535,14 @@ export default function OrderPage({ cfg }: { cfg: Cfg }) {
             ) : (<>
             <UserData storageKey={`data-user:${cfg.slug}`} keys={USER_KEYS} data={d} onApply={(u) => setD((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Toko (Penjual)</h2>
+            <FormSection title="Toko (Penjual)">
               <ImageUpload label="Logo toko" value={d.logo} onChange={(v) => set('logo', v)} notify={notify} {...bgFor('logo', logo)} />
               {txt('toko', 'Nama toko')}
               {txt('alamatToko', 'Alamat toko', 2)}
               {txt('kontakToko', 'Kontak (WA, email, media sosial)')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">{inv ? 'Data Invoice' : 'Data Pesanan'}</h2>
+            <FormSection title={<>{inv ? 'Data Invoice' : 'Data Pesanan'}</>}>
               <div className="grid sm:grid-cols-2 gap-2">
                 {txt('judul', 'Judul dokumen')}
                 {txt('nomor', inv ? 'No. invoice' : 'No. pesanan / struk')}
@@ -561,20 +560,18 @@ export default function OrderPage({ cfg }: { cfg: Cfg }) {
                 {txt('kurir', 'Kurir / jasa kirim')}
                 {!inv && txt('resi', 'No. resi (opsional)')}
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">{inv ? 'Ditagihkan Kepada' : 'Pembeli & Alamat Pengiriman'}</h2>
+            <FormSection title={<>{inv ? 'Ditagihkan Kepada' : 'Pembeli & Alamat Pengiriman'}</>}>
               <div className="grid sm:grid-cols-2 gap-2">
                 {txt('pembeli', 'Nama pembeli')}
                 {!inv && txt('penerima', 'Nama penerima')}
                 <Field label="No. telepon"><input type="tel" className={inputCls} value={d.telp} onChange={(e) => set('telp', e.target.value)} /></Field>
               </div>
               {txt('alamat', inv ? 'Alamat pembeli' : 'Alamat pengiriman lengkap', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Produk</h2>
+            <FormSection title="Produk">
               {d.items.map((it, i) => (
                 <div key={i} className="rounded-xl border border-gray-200 p-3 space-y-2">
                   <div className="flex gap-2">
@@ -592,10 +589,9 @@ export default function OrderPage({ cfg }: { cfg: Cfg }) {
                 </div>
               ))}
               {add(() => set('items', [...d.items, blankItem()]), '+ Tambah produk')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Voucher, Biaya &amp; Total</h2>
+            <FormSection title="Voucher, Biaya &amp; Total">
               {d.potongan.map((p, i) => (
                 <div key={i} className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)_auto] gap-2 items-start">
                   <input aria-label={`Nama voucher ${i + 1}`} placeholder="Nama voucher / diskon" className={inputCls} value={p.label} onChange={(e) => setAt('potongan', i, { label: e.target.value })} />
@@ -611,10 +607,9 @@ export default function OrderPage({ cfg }: { cfg: Cfg }) {
               </div>
               <div className="text-right text-sm text-gray-700">Subtotal Rp{rupiah(c.subtotal)} · Total belanja Rp{rupiah(c.belanja)}</div>
               <div className="text-right font-bold">Total tagihan: Rp{rupiah(c.tagihan)}</div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">{inv ? 'Instruksi Pembayaran' : 'Metode Pembayaran'}</h2>
+            <FormSection title={<>{inv ? 'Instruksi Pembayaran' : 'Metode Pembayaran'}</>}>
               {inv ? (<>
                 {d.rekening.map((r, i) => (
                   <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 items-start">
@@ -636,22 +631,20 @@ export default function OrderPage({ cfg }: { cfg: Cfg }) {
                 ))}
                 {add(() => set('bayar', [...d.bayar, { metode: '', nilai: '' }]), '+ Tambah metode pembayaran')}
               </>)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Catatan</h2>
+            <FormSection title="Catatan">
               {txt('catatan', 'Catatan (opsional)', 2)}
               {txt('catatanKecil', 'Keterangan kecil miring (mis. harga sudah termasuk pajak)', 2)}
               {txt('penutup', 'Kalimat kaki dokumen', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Tanda Tangan &amp; Stempel Toko (opsional)</h2>
+            <FormSection title="Tanda Tangan &amp; Stempel Toko (opsional)">
               {txt('ttdNama', 'Nama di bawah tanda tangan (kosong = nama toko)')}
               <ImageUpload label="Tanda tangan" value={d.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel / cap toko" value={d.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

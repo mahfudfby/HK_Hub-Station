@@ -14,6 +14,7 @@ import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, le
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc } from '../../shared/components/LetterLayouts';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
+import FormSection from '../../shared/components/FormSection';
 
 // Surat Keterangan Kerja (Paklaring): keterangan resmi dari HRD/Direktur bahwa seseorang
 // pernah/masih bekerja, lengkap dengan jabatan, divisi & masa kerja (dihitung otomatis).
@@ -195,27 +196,24 @@ export default function SuratKeteranganKerja() {
             ) : (<>
             <UserData storageKey="data-user:surat-keterangan-kerja" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Kop Surat</h2>
+            <FormSection title="Kop Surat">
               <ImageUpload label="Logo" value={f.logo} onChange={(x) => set('logo', x)} notify={notify} {...bgFor('logo', logo)} />
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
               {text('kontak', 'Telepon, email, website')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Surat</h2>
+            <FormSection title="Data Surat">
               {text('judul', 'Judul surat')}
               <Field label="Nomor surat"><NumberFormatInput parts={['Nomor', 'Kode', 'Unit', 'Bulan', 'Tahun']} example={`021/SKK/HRD/${ROMAN[new Date().getMonth()]}/${new Date().getFullYear()} (bulan angka romawi)`} value={f.nomor} onChange={(x) => set('nomor', x)} /></Field>
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('kota', 'Kota')}
                 <Field label="Tanggal surat"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Data Karyawan</h2>
+            <FormSection title="Data Karyawan">
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('nama', 'Nama karyawan')}
                 {text('nik', 'NIK karyawan')}
@@ -235,19 +233,17 @@ export default function SuratKeteranganKerja() {
                 {!aktif && <Field label="Tanggal berakhir"><input type="date" className={inputCls} value={f.berakhir} onChange={(e) => set('berakhir', e.target.value)} /></Field>}
               </div>
               <p className="text-sm text-gray-700">Masa kerja (otomatis): <b>{masa || '-'}</b></p>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Isi Keterangan</h2>
+            <FormSection title="Isi Keterangan">
               {text('kinerja', 'Penilaian kinerja (opsional)', 3)}
               {!aktif && text('alasan', 'Alasan berhenti (opsional), lanjutan "berhenti bekerja karena …"', 2)}
               {text('keperluan', 'Keperluan surat (opsional), lanjutan "diberikan untuk …"', 2)}
               {!aktif && text('harapan', 'Ucapan terima kasih & harapan sukses (opsional)', 2)}
               {text('penutup', 'Kalimat penutup', 2)}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Penanda Tangan</h2>
+            <FormSection title="Penanda Tangan">
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('ttdJabatan', 'Jabatan (HRD/Direktur)')}
                 {text('ttdNama', 'Nama')}
@@ -256,7 +252,7 @@ export default function SuratKeteranganKerja() {
               <ImageUpload label="Tanda tangan" value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel" value={f.stempel} onChange={(x) => set('stempel', x)} notify={notify} {...bgFor('stempel', stempel)} />
               <p className="text-xs text-gray-500">Teks disimpan otomatis di perangkat ini; gambar Data User disimpan di Cloudinary.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

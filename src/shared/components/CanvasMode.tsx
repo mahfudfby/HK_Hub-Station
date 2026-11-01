@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FileText, Palette } from 'lucide-react';
+import FormSection from './FormSection';
 
 // Setiap menu punya dua halaman:
 // - "Isi Formulir": isian + preview dokumen
@@ -42,15 +43,13 @@ export function ModeTabs({ canvas, onChange }: { canvas: boolean; onChange: (can
 export function CanvasPanel({ tampilan, galeri, unduh }: { tampilan?: ReactNode; galeri?: ReactNode; unduh: ReactNode }) {
   return (
     <>
-      <section className="space-y-3">
-        <h2 className="font-bold">Download & Simpan</h2>
+      <FormSection title="Download & Simpan">
         <div className="flex flex-wrap gap-3">{unduh}</div>
-      </section>
+      </FormSection>
       {tampilan && (
-        <section className="space-y-3">
-          <h2 className="font-bold">Tampilan</h2>
+        <FormSection title="Tampilan">
           {tampilan}
-        </section>
+        </FormSection>
       )}
       {galeri && (
         <section className="space-y-2">

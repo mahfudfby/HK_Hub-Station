@@ -15,6 +15,7 @@ import { useBgRemoved } from '../lib/removeBg';
 import { num, rupiah, terbilangRupiah } from '../lib/money';
 import { orRandomNo, randomDocNo } from '../lib/docNumber';
 import { cssFamily, loadGoogleFont, useGoogleFonts, type WebFont } from '../lib/fonts';
+import FormSection from './FormSection';
 
 // Generator Invoice & Faktur Penjualan: satu mesin, beberapa template gaya, ukuran kertas & orientasi bebas.
 
@@ -729,8 +730,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
                 galeri={<SharedGallery showEmpty keys={USER_KEYS} data={d} onApply={(u) => setD((p) => ({ ...p, ...u }))} onPicked={(msg) => notify('success', msg)} />} />
             ) : (<>
             <UserData storageKey={`data-user:${kind}`} keys={USER_KEYS} data={d} onApply={(u) => setD((p) => ({ ...p, ...u }))} />
-            <section className="space-y-3">
-              <h2 className="font-bold">Penjual</h2>
+            <FormSection title="Penjual">
               {txt('penjual', 'Nama usaha')}
               {txt('penjualAlamat', 'Alamat', 2)}
               <div className="grid sm:grid-cols-2 gap-2">
@@ -738,10 +738,9 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
                 {txt('penjualNpwp', 'NPWP (opsional)')}
               </div>
               <ImageUpload label="Logo" value={d.logo} onChange={(v) => set('logo', v)} notify={notify} {...bgFor('logo', logo)} />
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">{L.kepada}</h2>
+            <FormSection title={<>{L.kepada}</>}>
               {txt('pembeli', 'Nama pembeli / perusahaan')}
               {txt('pembeliAlamat', 'Alamat', 2)}
               {txt('pembeliKontak', 'Telepon / email')}
@@ -752,10 +751,9 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
                 <Field label="Tanggal"><input type="date" className={inputCls} value={d.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
                 <Field label="Jatuh tempo"><input type="date" className={inputCls} value={d.jatuhTempo} onChange={(e) => set('jatuhTempo', e.target.value)} /></Field>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Barang / Jasa</h2>
+            <FormSection title="Barang / Jasa">
               {d.items.map((it, i) => (
                 <div key={i} className="rounded-xl border border-gray-200 p-3 space-y-2">
                   <div className="flex gap-2">
@@ -779,10 +777,9 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
                 <Field label="Ongkir (Rp)"><input type="number" min={0} className={inputCls} value={d.ongkir} onChange={(e) => set('ongkir', e.target.value)} /></Field>
               </div>
               <div className="text-right font-bold">Total: Rp {rupiah(c.total)}</div>
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Pembayaran, Catatan &amp; Tanda Tangan</h2>
+            <FormSection title="Pembayaran, Catatan &amp; Tanda Tangan">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Field label="Metode bayar">
                   <select className={inputCls} value={d.metode} onChange={(e) => set('metode', e.target.value as Doc['metode'])}>
@@ -817,7 +814,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
               <ImageUpload label="Tanda tangan" value={d.ttd} onChange={(v) => set('ttd', v)} notify={notify} {...bgFor('ttd', ttd)} />
               <ImageUpload label="Stempel" value={d.stempel} onChange={(v) => set('stempel', v)} notify={notify} {...bgFor('stempel', stempel)} />
               <p className="text-xs text-gray-500">Semua isian &amp; gambar hanya disimpan di perangkat ini.</p>
-            </section>
+            </FormSection>
             </>)}
           </div>
 

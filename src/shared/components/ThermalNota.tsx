@@ -14,6 +14,7 @@ import { orRandomNo, randomDocNo } from '../lib/docNumber';
 import { cssFamily, useGoogleFonts, type WebFont } from '../lib/fonts';
 import { TextSizeSlider, useFitScale } from './TextScale';
 import DocOptions, { nomorTampil, TITIK } from './DocOptions';
+import FormSection from './FormSection';
 
 // Nota pembelian untuk printer thermal 58mm / 80mm.
 // Lebar nota × skala 2 = lebar titik cetak printer: 58mm → 192px → PNG 384px (±32 karakter/baris),
@@ -545,17 +546,15 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
                 galeri={<SharedGallery showEmpty keys={userKeys} data={n} onApply={(u) => setN((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
             ) : (<>
             <UserData storageKey={`data-user:nota-${mm}`} keys={userKeys} data={n} onApply={(u) => setN((p) => ({ ...p, ...u }))} />
-            <section className="space-y-3">
-              <h2 className="font-bold">Toko</h2>
+            <FormSection title="Toko">
               <ImageUpload label="Upload logo (tampil di atas nota)" value={n.logo} onChange={(v) => set('logo', v)} notify={notify}
                 bg={logoBg} onBg={setLogoBg} shown={logo.src} bgBusy={logo.busy} />
               {txt('toko', 'Nama toko')}
               {txt('alamat', 'Alamat', 2)}
               {txt('telp', 'Telepon')}
-            </section>
+            </FormSection>
 
-            <section className="space-y-3">
-              <h2 className="font-bold">Transaksi</h2>
+            <FormSection title="Transaksi">
               <div className="grid grid-cols-2 gap-2">
                 <Field label="No. nota"><NumberFormatInput sep="-" parts={['Kode', 'Urut']} value={n.nomor} onChange={(v) => set('nomor', v)} /></Field>
                 <Field label="Tanggal & jam"><input type="datetime-local" className={inputCls} value={n.waktu} onChange={(e) => set('waktu', e.target.value)} /></Field>
@@ -608,7 +607,7 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
                 {n.metode === 'Tunai' && <> • Kembali <b className={c.kembali < 0 ? 'text-red-600' : ''}>Rp {rupiah(c.kembali)}</b></>}
               </div>
               {txt('footer', 'Pesan bawah nota', 2)}
-            </section>
+            </FormSection>
             </>)}
           </div>
 
