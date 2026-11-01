@@ -15,6 +15,7 @@ import { removeBackground, useBgRemoved } from '../../shared/lib/removeBg';
 import DocOptions, { TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import FormSection from '../../shared/components/FormSection';
+import KontakFields from '../../shared/components/KontakFields';
 
 // Surat Pemindahan / Mutasi Karyawan: posisi lama vs baru, tanggal efektif, alasan, hak & kewajiban.
 // Menu berdiri sendiri (file, form & penyimpanan terpisah). Tata letak dari LetterLayouts.
@@ -247,7 +248,7 @@ export default function SuratMutasi() {
               <Field label="Nama perusahaan"><AutoTextarea className={inputCls} value={f.instansi} onChange={(e) => set('instansi', e.target.value)} /></Field>
               <Field label="Bidang usaha (baris kedua kop)"><AutoTextarea className={inputCls} value={f.subKop} onChange={(e) => set('subKop', e.target.value)} /></Field>
               <Field label="Alamat lengkap"><AutoTextarea className={inputCls} value={f.alamat} onChange={(e) => set('alamat', e.target.value)} /></Field>
-              <Field label="Telepon, email, website"><AutoTextarea className={inputCls} value={f.kontak} onChange={(e) => set('kontak', e.target.value)} /></Field>
+              <KontakFields value={f.kontak} onChange={(v) => set('kontak', v)} />
             </FormSection>
 
             <FormSection title="Data Surat">

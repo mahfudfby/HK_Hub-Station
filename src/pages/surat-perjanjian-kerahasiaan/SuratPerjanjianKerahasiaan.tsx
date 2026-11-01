@@ -18,6 +18,7 @@ import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import FormSection, { NarrativeField } from '../../shared/components/FormSection';
 import { LampiranField, lampiranTeks } from '../surat-kontrak-kerja/Lampiran';
+import KontakFields from '../../shared/components/KontakFields';
 
 // Surat Perjanjian Kerahasiaan (NDA) Karyawan: pasal-pasal bisa diedit/ditambah/dihapus/diurutkan,
 // dokumen panjang berlanjut otomatis ke halaman berikut (paginasi milik Kontrak Kerja). Tata letak dari LetterLayouts.
@@ -310,7 +311,7 @@ export default function SuratPerjanjianKerahasiaan() {
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
-              {text('kontak', 'Telepon, email, website')}
+              <KontakFields value={f.kontak} onChange={(v) => set('kontak', v)} />
             </FormSection>
 
             <FormSection title="Data Perjanjian">

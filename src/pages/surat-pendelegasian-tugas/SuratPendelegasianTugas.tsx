@@ -15,6 +15,7 @@ import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import DocOptions, { TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import FormSection from '../../shared/components/FormSection';
+import KontakFields from '../../shared/components/KontakFields';
 
 // Surat Pendelegasian Tugas: pimpinan perusahaan mendelegasikan tugas & wewenang kepada pegawai untuk periode tertentu.
 // Menu berdiri sendiri; tata letak dari LetterLayouts (20 template), kertas/ekspor dari LetterKit.
@@ -208,7 +209,7 @@ export default function SuratPendelegasianTugas() {
               <Field label="Nama perusahaan"><AutoTextarea className={inputCls} value={f.instansi} onChange={(e) => set('instansi', e.target.value)} /></Field>
               <Field label="Bidang usaha / unit (baris kedua kop)"><AutoTextarea className={inputCls} value={f.subKop} onChange={(e) => set('subKop', e.target.value)} /></Field>
               <Field label="Alamat lengkap"><AutoTextarea className={inputCls} value={f.alamat} onChange={(e) => set('alamat', e.target.value)} /></Field>
-              <Field label="Telepon, email, website"><AutoTextarea className={inputCls} value={f.kontak} onChange={(e) => set('kontak', e.target.value)} /></Field>
+              <KontakFields value={f.kontak} onChange={(v) => set('kontak', v)} />
             </FormSection>
 
             <FormSection title="Data Surat">

@@ -15,6 +15,7 @@ import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc } from '../../s
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import FormSection from '../../shared/components/FormSection';
+import KontakFields from '../../shared/components/KontakFields';
 
 // Undangan Interview / Panggilan Kerja: surat HRD/Recruitment kepada kandidat pelamar berisi
 // tahap seleksi, jadwal, lokasi (tatap muka) atau tautan (online), perlengkapan & konfirmasi kehadiran.
@@ -210,7 +211,7 @@ export default function UndanganInterview() {
               {text('instansi', 'Nama perusahaan')}
               {text('subKop', 'Bidang usaha (baris kedua kop)')}
               {text('alamat', 'Alamat lengkap')}
-              {text('kontak', 'Telepon, email, website')}
+              <KontakFields value={f.kontak} onChange={(v) => set('kontak', v)} />
             </FormSection>
 
             <FormSection title="Data Surat">
@@ -226,7 +227,7 @@ export default function UndanganInterview() {
             <FormSection title="Kandidat">
               <div className="grid sm:grid-cols-2 gap-2">
                 {text('kandidat', 'Nama kandidat (Sdr./Sdri.)')}
-                {text('kontakKandidat', 'Email / telepon kandidat')}
+                <KontakFields label="Kontak kandidat (opsional)" value={f.kontakKandidat} onChange={(v) => set('kontakKandidat', v)} />
               </div>
               {text('posisiLamar', 'Posisi yang dilamar')}
               {text('pembuka', 'Kalimat pembuka', 3)}

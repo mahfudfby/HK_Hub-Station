@@ -19,6 +19,7 @@ import { usePagination } from '../surat-kontrak-kerja/usePagination';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { num, rupiah, terbilangRupiah } from '../../shared/lib/money';
+import KontakFields from '../../shared/components/KontakFields';
 
 // Surat Perjanjian Hutang Piutang: pemberi pinjaman (PIHAK PERTAMA) & peminjam (PIHAK KEDUA), pasal-pasal
 // bisa diedit, jadwal cicilan otomatis, saksi opsional, dan lampiran foto bukti di halaman terpisah.
@@ -517,7 +518,7 @@ export default function SuratPerjanjianHutangPiutang() {
                 {txt('Nama perusahaan', 'instansi')}
                 {txt('Bidang usaha (baris kedua kop)', 'subKop')}
                 {txt('Alamat lengkap', 'alamat')}
-                {txt('Telepon, email, website', 'kontak')}
+                <KontakFields value={f.kontak} onChange={(v) => set('kontak', v)} />
               </>) : (
                 <p className="text-xs text-gray-500">Kop pribadi memakai nama, pekerjaan, alamat & telepon Pihak Pertama (pemberi pinjaman).</p>
               )}

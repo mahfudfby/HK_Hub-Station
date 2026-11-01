@@ -14,6 +14,7 @@ import { useBgRemoved } from '../../shared/lib/removeBg';
 import { num, rupiah } from '../../shared/lib/money';
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import FormSection from '../../shared/components/FormSection';
+import KontakFields from '../../shared/components/KontakFields';
 
 // Bahan bersama dua menu berdiri sendiri: Invoice Toko Online (/invoice-olshop) & Receipt Pesanan Toko Online (/receipt-olshop).
 // Dokumen milik penjual sendiri: identitas toko (logo + nama) diisi pengguna; tanpa merek/logo marketplace mana pun.
@@ -539,7 +540,7 @@ export default function OrderPage({ cfg }: { cfg: Cfg }) {
               <ImageUpload label="Logo toko" value={d.logo} onChange={(v) => set('logo', v)} notify={notify} {...bgFor('logo', logo)} />
               {txt('toko', 'Nama toko')}
               {txt('alamatToko', 'Alamat toko', 2)}
-              {txt('kontakToko', 'Kontak (WA, email, media sosial)')}
+              <KontakFields label="Kontak toko (opsional)" value={d.kontakToko} onChange={(v) => set('kontakToko', v)} />
             </FormSection>
 
             <FormSection title={<>{inv ? 'Data Invoice' : 'Data Pesanan'}</>}>

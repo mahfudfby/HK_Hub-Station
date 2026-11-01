@@ -15,6 +15,7 @@ import DocOptions, { TITIK, TITIK_PENDEK, isian, nomorTampil } from '../../share
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import FormSection from '../../shared/components/FormSection';
+import KontakFields from '../../shared/components/KontakFields';
 
 // Undangan Musyawarah Desa (Musdes): undangan resmi Pemerintah Desa atau BPD berkop pemerintahan desa.
 // Nomor: 005 = kode klasifikasi arsip "Undangan" (pedoman tata naskah dinas / klasifikasi arsip pemerintahan daerah & desa),
@@ -245,7 +246,7 @@ export default function UndanganMusyawarahDesa() {
               <Field label="Alamat kantor desa"><AutoTextarea className={inputCls} value={f.alamat} onChange={(e) => set('alamat', e.target.value)} /></Field>
               <div className="grid sm:grid-cols-[1fr_2fr] gap-2">
                 <Field label="Kode pos"><AutoTextarea className={inputCls} value={f.kodePos} onChange={(e) => set('kodePos', e.target.value)} /></Field>
-                <Field label="Telepon, email, website"><AutoTextarea className={inputCls} value={f.kontak} onChange={(e) => set('kontak', e.target.value)} /></Field>
+                <KontakFields value={f.kontak} onChange={(v) => set('kontak', v)} />
               </div>
             </FormSection>
 
