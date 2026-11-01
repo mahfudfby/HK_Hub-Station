@@ -34,6 +34,17 @@ export default async function handler(req: any, res: any) {
     cursor = data.next_cursor || '';
     if (!cursor) break;
   }
+  // shortcut: diagnosa sementara (?debug=1) — hanya nama folder & jumlah, tanpa URL; hapus setelah galeri terisi
+  if (req.query?.debug) {
+    const count: Record<string, number> = {};
+    for (const x of all) {
+      const pid = String(x.public_id || '');
+      const f = String(x.asset_folder ?? x.folder ?? (pid.includes('/') ? pid.slice(0, pid.lastIndexOf('/')) : '(root)'));
+      count[f] = (count[f] || 0) + 1;
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(200).json({ total: all.length, hasAssetFolder: all.some((x) => 'asset_folder' in x), folders: count });
+  }
   const images = all
     .map((x: any) => {
       const pid = String(x.public_id || '');
