@@ -55,6 +55,25 @@ Cloudinary (foto), html2canvas + jsPDF (ekspor). Deploy Vercel dari branch `main
 
 Kategori baru = tambah di `CATEGORIES` **dan** di tabel ini.
 
+## WAJIB: 20 template varian tata letak
+Setiap menu baru **wajib punya 20 template** yang tata letaknya berbeda total
+(posisi kop, judul, blok data, tabel, tanda tangan, bingkai/ornamen), tetapi
+**isi datanya sama persis**: satu objek data dari form dirender oleh 20 komponen layout.
+Pengguna memilih template lewat dropdown, data tidak berubah saat ganti template.
+- **Surat** (A4/A5/F4): pakai `LETTER_LAYOUTS` (20 layout) dari `shared/components/LetterLayouts`:
+  susun data ke `LayoutDoc`, render `<LayoutLetter layout={f.gaya} doc={doc} … />`,
+  pilih dengan `<LayoutPicker value={f.gaya} onChange={…} />`. Simpan id terpilih di form (`gaya`).
+- **Nota thermal**: `ThermalNota` (`TEMPLATES`, 20). Jenis dokumen lain (resi, receipt,
+  undangan lipat) membuat `TEMPLATES` sendiri di folder menunya, contoh
+  `pages/resi-80mm/Resi80.tsx`, `pages/receipt-olshop/OrderDoc.tsx`, `pages/undangan-yasinan/templates.ts`.
+- Format daftar: `{ id, name: '01. Nama', desc: 'ciri tata letak', render }`, id unik kebab-case,
+  nama bernomor 01–20, template pertama = default.
+- Wajib self-check di bawah daftar:
+  `console.assert(TEMPLATES.length === 20 && new Set(TEMPLATES.map((t) => t.id)).size === 20, '<slug>: 20 template unik');`
+  Lebih baik lagi, juga assert bahwa kombinasi properti tata letaknya unik (lihat `ThermalNota.tsx`)
+  supaya tidak ada dua template yang cuma beda warna.
+- Beda warna/font saja **tidak dihitung** sebagai varian; yang dihitung adalah beda penataan & posisi.
+
 ## Aturan isi menu
 - **Wajib ekspor PDF, PNG, dan Print** (semua menu sudah punya ketiganya).
   Surat: `useLetterExport` / `ExportButton` dari `shared/components/LetterKit`.
@@ -77,7 +96,8 @@ nota thermal → `src/pages/tiket-travel-58mm/` (cukup 5 baris memakai `ThermalS
 | Kebutuhan | Pakai |
 |---|---|
 | Field, upload gambar, pilih kertas, ekspor, format tanggal | `shared/components/LetterKit` |
-| Tata letak surat, blok tanda tangan, baris info | `shared/components/LetterLayouts` |
+| 20 tata letak surat, blok tanda tangan, baris info | `shared/components/LetterLayouts` |
+| 20 gaya kop/judul/font surat (tambahan, bukan pengganti layout) | `shared/components/LetterStyles` |
 | Opsi nomor surat / template kosong (`isian`, `nomorTampil`, `Switch`) | `shared/components/DocOptions` |
 | Seksi form & narasi yang bisa diedit | `shared/components/FormSection` |
 | Pratinjau pas layar, skala teks | `FitPreview`, `TextScale` (`useFitScale`) |
