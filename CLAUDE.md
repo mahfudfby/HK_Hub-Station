@@ -125,8 +125,17 @@ nota thermal → `src/pages/tiket-travel-58mm/` (cukup 5 baris memakai `ThermalS
 - Isian selalu Bahasa Indonesia; pilihan English memanggil `/api/translate` (cache di `shared/lib/translate.ts`).
   Nama, perusahaan, institusi, email, situs, alamat TIDAK diterjemahkan; bulan/periode diterjemahkan lokal (`periodeEn`).
 - ATS: tanpa foto, hitam putih. PDF/PNG biasa berupa gambar; tombol "PDF Teks Asli (ATS)" memakai cetak browser (teks asli).
-- Tombol "Unduh DOCX (bisa diedit)": `shared/lib/cvDocx.ts` (zip lewat `fflate`, tanpa pustaka berat) membuat Word satu kolom
-  dari data yang sama dalam bahasa terpilih, agar terjemahan bisa dikoreksi manual. Tanpa foto/tata letak template.
+- **ATURAN DOCX (wajib untuk menu yang punya preview dokumen): isi file Word 100% persis preview, memakai Shape dan Text Box.**
+  Tombol "Unduh DOCX (bisa diedit)" memakai `shared/lib/cvDocx.ts` yang MEMBACA DOM halaman preview (`[data-page]`):
+  tiap kotak/garis/foto/bulatan menjadi Shape (DrawingML `wps`, terjangkar ke halaman), tiap blok teks menjadi Text Box
+  di posisi yang sama (teks tetap bisa diedit, mis. koreksi terjemahan). Jangan membuat DOCX satu-kolom terpisah dari preview.
+  - Template baru otomatis ikut karena konverter membaca hasil render, bukan data. Syaratnya: layout pakai CSS biasa
+    (posisi, warna polos, border, `background-image` untuk foto); tanpa gradient/filter/transform pada isi halaman.
+  - Ukuran huruf wajib kelipatan 0,5 pt (`halfPt` di CvTemplates) karena Word hanya mengenal setengah-poin; font Arimo→Arial, Tinos→Times New Roman.
+  - Teks satu baris = Text Box tanpa bungkus; teks banyak baris = Text Box selebar kolom (bungkus baris Word bisa berbeda tipis).
+  - Dokumen memakai `compatibilityMode 15` (settings.xml) agar Shape/Text Box tidak diabaikan Word. Zip lewat `fflate` (tanpa pustaka berat).
+  - Setelah mengubah template/konverter: uji di browser untuk SEMUA template bahwa kata di DOCX = kata di preview dan XML valid
+    (buka dev server, pilih tiap template, panggil `buildCvDocx(pages, W, H)`, baca `word/document.xml`). Belum bisa diuji di Word asli dari lingkungan kerja ini.
 - Data contoh wajib orang fiktif, bukan data pribadi nyata.
 
 ## Git & rilis — EKSEKUSI MANDIRI OTOMATIS
