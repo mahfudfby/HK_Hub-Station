@@ -85,19 +85,20 @@ export function ImageUpload({ label, value, onChange, notify, bg, onBg, shown, b
   };
   return (
     <Field label={label}>
-      {/* Kotak 3D hanya untuk upload; toggle Hapus BG di luar kotak */}
-      <div className="flex flex-wrap items-center gap-3">
-      <div className="upload-box flex flex-1 min-w-0 flex-wrap items-center gap-3">
+      {/* Kotak 3D hanya untuk upload: baris 1 = preview, baris 2 = Pilih File + Hapus. Toggle Hapus BG & Greyscale di bawah kotak */}
+      <div className="flex flex-col gap-2">
+      <div className="upload-box flex flex-col items-start gap-3">
         {busy ? (
           <span className="h-14 w-14 flex items-center justify-center border rounded text-blue-600"><Spinner className="h-6 w-6" /></span>
         ) : (
           value && <img src={shown} alt={label} className="h-14 w-14 object-contain border rounded bg-[repeating-conic-gradient(#e5e7eb_0_25%,#fff_0_50%)] bg-[length:12px_12px]" />
         )}
-        {/* min-w agar input pindah baris (bukan menyusut) di layar sempit, sehingga tidak menimpa tombol Hapus */}
-        <input type="file" accept="image/*" disabled={busy} onChange={(e) => read(e.target.files?.[0])} className="text-sm flex-1 min-w-[11rem] max-w-full" />
-        {value && (
-          <button type="button" onClick={remove} className="text-sm text-red-600 min-h-[44px] px-2">Hapus</button>
-        )}
+        <div className="flex w-full min-w-0 items-center gap-2">
+          <input type="file" accept="image/*" disabled={busy} onChange={(e) => read(e.target.files?.[0])} className="text-sm min-w-0 flex-1" />
+          {value && (
+            <button type="button" onClick={remove} className="shrink-0 text-sm text-red-600 min-h-[44px] px-2">Hapus</button>
+          )}
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-x-3">
         <BgToggle checked={bg} onChange={onBg} busy={bgBusy} />

@@ -374,15 +374,21 @@ function FileField({ id, label, onChange, wrapClass = '', bg, onBg, bgBusy, grey
   return (
     <div className={`input-group ${wrapClass}`}>
       <label htmlFor={id} className="text-sm font-medium text-gray-700">{label}</label>
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="upload-box flex-1 min-w-0">
-          <input
-            type="file" id={id} accept="image/*" onChange={onChange}
-            className="p-2 border border-gray-300 rounded-lg bg-gray-50 w-full"
-          />
+      <div className="flex flex-col gap-2">
+        <div className="upload-box flex flex-col items-start gap-3">
+          {grey?.value && <img src={grey.value} alt={label} className="h-14 w-14 object-contain border rounded bg-[repeating-conic-gradient(#e5e7eb_0_25%,#fff_0_50%)] bg-[length:12px_12px]" />}
+          <div className="flex w-full min-w-0 items-center gap-2">
+            <input
+              type="file" id={id} accept="image/*" onChange={onChange}
+              className="p-2 border border-gray-300 rounded-lg bg-gray-50 min-w-0 flex-1"
+            />
+            {grey?.value && <button type="button" onClick={() => grey.onChange('')} className="shrink-0 text-sm text-red-600 min-h-[44px] px-2">Hapus</button>}
+          </div>
         </div>
-        <BgToggle checked={bg} onChange={onBg} busy={bgBusy} />
-        {grey && <GreyToggle value={grey.value} onChange={grey.onChange} notify={grey.notify} />}
+        <div className="flex flex-wrap items-center gap-x-3">
+          <BgToggle checked={bg} onChange={onBg} busy={bgBusy} />
+          {grey && <GreyToggle value={grey.value} onChange={grey.onChange} notify={grey.notify} />}
+        </div>
       </div>
     </div>
   );

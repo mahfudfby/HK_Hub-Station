@@ -81,7 +81,8 @@ Pengguna memilih template lewat dropdown, data tidak berubah saat ganti template
   `SharedGallery` tanpa muat ulang. Label kolom WAJIB memuat kata logo / stempel / ttd / tanda tangan agar masuk kategori yang benar.
   Kolom upload baru di luar `ImageUpload` yang punya `BgToggle` wajib ikut memasang `<GreyToggle value onChange notify />`.
   (Pengecualian: logo SPBU memang selalu dipaksa hitam-putih untuk thermal.)
-- Tata letak baris kontrol upload di ponsel: input file memakai `min-w-[11rem]` supaya pindah baris, bukan menyusut dan menimpa tombol Hapus.
+- Tata letak kolom upload (semua menu, ponsel & desktop): kotak `.upload-box` 2 baris — baris 1 preview foto, baris 2 input file + tombol Hapus berjejer (`min-w-0 flex-1`);
+  toggle Hapus BG & Greyscale DI BAWAH kotak. Jangan menaruh toggle sejajar kotak upload (menimpa di layar sempit).
 - Struk parkir (`ThermalStruk kind="parkir"`): teks DURASI bisa dimatikan (`pakaiDurasi`, untuk parkir flat); tidak ada baris "Bayar";
   baris golongan+tarif diberi jarak satu baris di atas dan bawah. Berlaku untuk semua tampilan struk parkir.
 - **Wajib ekspor PDF, PNG, dan Print** (semua menu sudah punya ketiganya).
