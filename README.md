@@ -1,5 +1,7 @@
 # SPBU — Hub SPA (Linktree-style)
 
+> **Wajib baca [CLAUDE.md](CLAUDE.md) sebelum membuat/mengubah menu** — aturan lengkap pembuatan menu baru.
+
 Aturan: **1 slug = 1 folder** di `src/pages/`. Root hanya `public/` dan `src/`.
 
 ## Tambah SPA baru
