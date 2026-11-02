@@ -165,7 +165,7 @@ export default function CvMenu({ mode }: { mode: 'creative' | 'ats' }) {
   const unduhDocx = async () => {
     setDocxBusy(true);
     try {
-      saveFile(await buildCvDocx(getPages(), pg.W, pg.H), `${fileName}.docx`);
+      saveFile(await buildCvDocx(getPages(), pg.W, pg.H, en ? 'en-US' : 'id-ID'), `${fileName}.docx`);
       notify('success', `${fileName}.docx berhasil diunduh. Tiap bagian berupa Shape & Text Box di Word; klik teksnya untuk mengoreksi terjemahan.`);
     } catch (err: any) {
       notify('error', `Gagal membuat DOCX: ${err?.message || 'proses gagal.'}`);
