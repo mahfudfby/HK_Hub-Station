@@ -1,5 +1,8 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import BgToggle from './BgToggle';
+import { addSharedImage } from './SharedGallery';
+import { galleryFolder, uploadImage } from '../lib/cloudinary';
+import GreyToggle from './GreyToggle';
 import { Spinner, type ToastType } from './Feedback';
 import { unfitPreview } from './FitPreview';
 import { canvasToBlob, saveFile } from '../lib/saveFile';
@@ -48,6 +51,8 @@ export function ImageUpload({ label, value, onChange, notify, bg, onBg, shown, b
   bg: boolean; onBg: (v: boolean) => void; shown: string; bgBusy: boolean;
 }) {
   const [busy, setBusy] = useState(false);
+  const cur = useRef(value);
+  cur.current = value;
   const read = (file?: File) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) return notify('error', `${label}: file "${file.name}" bukan gambar.`);
@@ -55,9 +60,18 @@ export function ImageUpload({ label, value, onChange, notify, bg, onBg, shown, b
     notify('loading', `Memuat ${label.toLowerCase()}…`);
     const r = new FileReader();
     r.onload = () => {
-      onChange(String(r.result));
+      const data = String(r.result);
+      onChange(data);
       notify('success', `${label} berhasil dipasang.`);
       setBusy(false);
+      // Masuk Galeri Foto otomatis sesuai kategori kolom (logo / stempel / tanda tangan / lainnya)
+      const folder = galleryFolder(label, 'upload');
+      uploadImage(file, folder).then(({ url }) => {
+        const kat = folder.split('/')[1];
+        addSharedImage({ url, kind: kat === 'tanda-tangan' ? 'ttd' : kat === 'lainnya' ? '' : kat });
+        if (cur.current === data) onChange(url); // pakai link galeri agar tidak terunggah ganda saat Data User disimpan
+        notify('success', 'Foto masuk Galeri Foto.');
+      }).catch(() => { /* galeri opsional: gagal unggah = foto tetap terpasang di form */ });
     };
     r.onerror = () => {
       notify('error', `${label} gagal dibaca.`);
@@ -79,12 +93,16 @@ export function ImageUpload({ label, value, onChange, notify, bg, onBg, shown, b
         ) : (
           value && <img src={shown} alt={label} className="h-14 w-14 object-contain border rounded bg-[repeating-conic-gradient(#e5e7eb_0_25%,#fff_0_50%)] bg-[length:12px_12px]" />
         )}
-        <input type="file" accept="image/*" disabled={busy} onChange={(e) => read(e.target.files?.[0])} className="text-sm flex-1 min-w-0" />
+        {/* min-w agar input pindah baris (bukan menyusut) di layar sempit, sehingga tidak menimpa tombol Hapus */}
+        <input type="file" accept="image/*" disabled={busy} onChange={(e) => read(e.target.files?.[0])} className="text-sm flex-1 min-w-[11rem] max-w-full" />
         {value && (
-          <button type="button" onClick={remove} className="text-sm text-red-600">Hapus</button>
+          <button type="button" onClick={remove} className="text-sm text-red-600 min-h-[44px] px-2">Hapus</button>
         )}
       </div>
-      <BgToggle checked={bg} onChange={onBg} busy={bgBusy} />
+      <div className="flex flex-wrap items-center gap-x-3">
+        <BgToggle checked={bg} onChange={onBg} busy={bgBusy} />
+        <GreyToggle value={value} onChange={onChange} notify={notify} />
+      </div>
       </div>
     </Field>
   );

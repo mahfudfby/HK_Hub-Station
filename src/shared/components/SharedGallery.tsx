@@ -46,6 +46,14 @@ const loadShared = () =>
     .then((d) => (Array.isArray(d.images) ? d.images : []))
     .catch(() => [])); // galeri opsional; gagal (mis. dev lokal tanpa /api) = kosong
 
+// Foto yang baru diunggah dari kolom form langsung masuk galeri (kategori sesuai kolom), tanpa muat ulang halaman.
+const listeners = new Set<(v: SharedImage[]) => void>();
+export async function addSharedImage(img: SharedImage) {
+  const next = [img, ...(await loadShared()).filter((g) => g.url !== img.url)];
+  cache = Promise.resolve(next);
+  listeners.forEach((f) => f(next));
+}
+
 export default function SharedGallery({ keys, data, onApply, onPicked, showEmpty = false }: {
   keys: readonly string[]; // kolom isian menu; hanya kolom gambar yang dipakai
   data: object;
@@ -60,7 +68,9 @@ export default function SharedGallery({ keys, data, onApply, onPicked, showEmpty
   useEffect(() => {
     let on = true;
     if (imageKeys.length) loadShared().then((v) => on && setShared(v));
-    return () => { on = false; };
+    const sub = (v: SharedImage[]) => { if (on) setShared(v); };
+    listeners.add(sub);
+    return () => { on = false; listeners.delete(sub); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   if (!imageKeys.length) return null;
