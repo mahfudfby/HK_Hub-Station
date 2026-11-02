@@ -854,7 +854,7 @@ export default function SlipGaji() {
   const managerShown = useBgRemoved(managerSignature, bg.manager, bgError);
   const bgBusy = logoShown.busy || signatureShown.busy || managerShown.busy;
   const bgProps = (key, shown) => ({ bg: bg[key], onBg: (v) => setBg((p) => ({ ...p, [key]: v })), bgBusy: shown.busy });
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState(''); // '' | 'PNG' | 'PDF'
   const [printing, setPrinting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [toasts, setToasts] = useState([]);
@@ -962,7 +962,7 @@ export default function SlipGaji() {
   // --- Handler: Export PNG ---
   const handleExport = async () => {
     if (exporting || printing || !slipRef.current) return;
-    setExporting(true);
+    setExporting('PNG');
     try {
       const canvas = await captureSlip();
       const fileName = `${slipFileName()}.png`;
@@ -973,7 +973,30 @@ export default function SlipGaji() {
       console.error('Error saat ekspor:', error);
       pushToast('error', `Gagal mengekspor slip gaji: ${error && error.message ? error.message : 'proses render gambar gagal.'}`);
     } finally {
-      setExporting(false);
+      setExporting('');
+    }
+  };
+
+  // --- Handler: Export PDF (halaman = ukuran kertas; kertas gulung: tinggi mengikuti isi) ---
+  const handleExportPdf = async () => {
+    if (exporting || printing || !slipRef.current) return;
+    setExporting('PDF');
+    try {
+      const canvas = await captureSlip();
+      const { jsPDF } = await import('jspdf');
+      const w = paperMm.w;
+      const h = paperDef.roll ? Math.ceil((w * canvas.height) / canvas.width) : paperMm.h;
+      const pdf = new jsPDF({ unit: 'mm', format: [w, h], orientation: w > h ? 'landscape' : 'portrait' });
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, w, h); // JPEG: PNG membuat PDF ±8 MB
+      const fileName = `${slipFileName()}.pdf`;
+      saveFile(pdf.output('blob'), fileName);
+      pushToast('success', `Slip gaji diekspor sebagai ${fileName}.`);
+    } catch (error) {
+      if (isStaleChunkError(error) && reloadForNewVersion()) return pushToast('success', 'Aplikasi baru saja diperbarui. Memuat ulang… lalu coba lagi.');
+      console.error('Error saat ekspor PDF:', error);
+      pushToast('error', `Gagal mengekspor PDF slip gaji: ${error && error.message ? error.message : 'proses render gagal.'}`);
+    } finally {
+      setExporting('');
     }
   };
 
@@ -1004,8 +1027,15 @@ export default function SlipGaji() {
         type="button" onClick={handleExport} disabled={exporting || printing || bgBusy}
         className="slip-btn bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md inline-flex items-center gap-2"
       >
-        {exporting ? <span className="slip-spinner" aria-hidden="true" /> : <IconDownload />}
-        {exporting ? 'Memproses... Harap tunggu.' : 'Export Slip Gaji sebagai PNG'}
+        {exporting === 'PNG' ? <span className="slip-spinner" aria-hidden="true" /> : <IconDownload />}
+        {exporting === 'PNG' ? 'Memproses... Harap tunggu.' : 'Export Slip Gaji sebagai PNG'}
+      </button>
+      <button
+        type="button" onClick={handleExportPdf} disabled={exporting || printing || bgBusy}
+        className="slip-btn bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md inline-flex items-center gap-2"
+      >
+        {exporting === 'PDF' ? <span className="slip-spinner" aria-hidden="true" /> : <IconDownload />}
+        {exporting === 'PDF' ? 'Memproses... Harap tunggu.' : 'Export Slip Gaji sebagai PDF'}
       </button>
       <button
         type="button" onClick={handlePrint} disabled={exporting || printing || bgBusy}
