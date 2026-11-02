@@ -1,6 +1,7 @@
 // Ekspor CV ke Word (.docx) yang meniru PREVIEW halaman demi halaman: setiap kotak/garis/foto menjadi Shape,
 // setiap blok teks menjadi Text Box di posisi yang sama (teks tetap bisa diedit, mis. mengoreksi terjemahan).
 // Cara kerja: membaca DOM halaman preview (posisi, warna, border, foto, font) lalu menulis DrawingML (wps) terjangkar ke halaman.
+// Word mengabaikan perataan kanan/tengah bila Text Box "tanpa bungkus" (wrap="none"), jadi semua kotak memakai wrap="square".
 // shortcut: ukuran huruf sudah kelipatan 0,5 pt (halfPt di CvTemplates) agar sama dengan Word; pembungkusan baris di Word
 // memakai font Arial/Times (metrik sama dengan Arimo/Tinos) tetapi tetap bisa berbeda tipis; ratakan manual bila perlu.
 
@@ -99,7 +100,7 @@ function textBox(d: Doc, el: HTMLElement, cs: CSSStyleDeclaration, r: R, page: H
   const shift = rule === 'exact' && !flexCenter ? (lh - fsPx * f.mf) / 2 : 0;
   let box: R = { x: c.x, y: c.y - shift, w: c.w, h: c.h + lh };
   if (flexCenter) box = { x: c.x, y: c.y, w: c.w, h: c.h };
-  else if (!multi) { // satu baris: tanpa bungkus; lebarkan agar selisih font tidak memecah baris
+  else if (!multi) { // satu baris: lebarkan kotak (rata kanan/tengah tetap di tepi aslinya) agar selisih font tidak memecah baris
     const pad = Math.max(24, c.w * 0.25);
     box = align === 'left' ? { ...box, w: c.w + pad } : align === 'right' ? { ...box, x: box.x - pad, w: c.w + pad } : { ...box, x: box.x - pad, w: c.w + pad * 2 };
   }
@@ -110,7 +111,7 @@ function textBox(d: Doc, el: HTMLElement, cs: CSSStyleDeclaration, r: R, page: H
   const runs = text.split('­').map((t) => `<w:r>${rpr}<w:t xml:space="preserve">${esc(t)}</w:t></w:r>`).join(`<w:r>${rpr}<w:softHyphen/></w:r>`);
   const para = `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="${tw(lh)}" w:lineRule="${rule}"/><w:jc w:val="${align}"/></w:pPr>${runs}</w:p>`;
   const sp = d.spPr(box, 'rect', '', '<a:noFill/>', '<a:ln><a:noFill/></a:ln>');
-  const body = `<wps:txbx><w:txbxContent>${para}</w:txbxContent></wps:txbx><wps:bodyPr rot="0" vert="horz" wrap="${multi ? 'square' : 'none'}" lIns="0" tIns="0" rIns="0" bIns="0" anchor="${flexCenter ? 'ctr' : 't'}" anchorCtr="0"><a:noAutofit/></wps:bodyPr>`;
+  const body = `<wps:txbx><w:txbxContent>${para}</w:txbxContent></wps:txbx><wps:bodyPr rot="0" vert="horz" wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" anchor="${flexCenter ? 'ctr' : 't'}" anchorCtr="0"><a:noAutofit/></wps:bodyPr>`;
   return d.anchor(box, 'text', sp, body);
 }
 
@@ -175,11 +176,11 @@ async function walk(d: Doc, el: HTMLElement, page: HTMLElement, pr: DOMRect, s: 
 const FILES = {
   '_rels/.rels': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`,
   'word/settings.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>`,
-  'word/styles.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="20"/><w:lang w:val="id-ID"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style></w:styles>`,
+  'word/styles.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="20"/><w:lang w:val="LANG"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style></w:styles>`,
 };
 
 // pages: elemen [data-page] dari preview; W/H: ukuran halaman (px)
-export async function buildCvDocx(pages: HTMLElement[], W: number, H: number): Promise<Blob> {
+export async function buildCvDocx(pages: HTMLElement[], W: number, H: number, lang: 'id-ID' | 'en-US' = 'id-ID'): Promise<Blob> {
   const { zipSync, strToU8 } = await import('fflate');
   const d = new Doc();
   const body: string[] = [];
@@ -197,7 +198,7 @@ export async function buildCvDocx(pages: HTMLElement[], W: number, H: number): P
   const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>${imgs.map((m) => `<Relationship Id="${m.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${m.name}"/>`).join('')}</Relationships>`;
   const files: Record<string, Uint8Array> = {
     '[Content_Types].xml': strToU8(types), '_rels/.rels': strToU8(FILES['_rels/.rels']), 'word/document.xml': strToU8(doc), 'word/_rels/document.xml.rels': strToU8(rels),
-    'word/styles.xml': strToU8(FILES['word/styles.xml']), 'word/settings.xml': strToU8(FILES['word/settings.xml']),
+    'word/styles.xml': strToU8(FILES['word/styles.xml'].replace('LANG', lang)), 'word/settings.xml': strToU8(FILES['word/settings.xml']),
   };
   imgs.forEach((m) => (files[`word/media/${m.name}`] = m.bytes));
   return new Blob([zipSync(files)], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });

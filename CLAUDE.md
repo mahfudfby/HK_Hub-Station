@@ -132,7 +132,12 @@ nota thermal → `src/pages/tiket-travel-58mm/` (cukup 5 baris memakai `ThermalS
   - Template baru otomatis ikut karena konverter membaca hasil render, bukan data. Syaratnya: layout pakai CSS biasa
     (posisi, warna polos, border, `background-image` untuk foto); tanpa gradient/filter/transform pada isi halaman.
   - Ukuran huruf wajib kelipatan 0,5 pt (`halfPt` di CvTemplates) karena Word hanya mengenal setengah-poin; font Arimo→Arial, Tinos→Times New Roman.
-  - Teks satu baris = Text Box tanpa bungkus; teks banyak baris = Text Box selebar kolom (bungkus baris Word bisa berbeda tipis).
+  - SEMUA Text Box memakai `wrap="square"`. JANGAN pakai `wrap="none"`: Word mengabaikan rata kanan/tengah pada kotak tanpa bungkus
+    sehingga teks menempel ke kiri (terbukti saat uji di Word: nama perusahaan bergeser & inisial foto tidak di tengah).
+    Teks satu baris: kotak dilebarkan (cadangan ≥ 24 px / 25%) ke sisi yang berlawanan dengan perataan, tepi aslinya tetap.
+  - Teks banyak baris = Text Box selebar kolom (bungkus baris Word bisa berbeda tipis).
+  - Bahasa dokumen mengikuti pilihan CV (`en-US` / `id-ID`) agar Word tidak meminta alat pemeriksa bahasa yang tidak terpasang.
+  - Status uji di Word asli (Windows, Word 2016+): file terbuka tanpa error, Shape & Text Box tampil dan teks bisa diedit.
   - Dokumen memakai `compatibilityMode 15` (settings.xml) agar Shape/Text Box tidak diabaikan Word. Zip lewat `fflate` (tanpa pustaka berat).
   - Setelah mengubah template/konverter: uji di browser untuk SEMUA template bahwa kata di DOCX = kata di preview dan XML valid
     (buka dev server, pilih tiap template, panggil `buildCvDocx(pages, W, H)`, baca `word/document.xml`). Belum bisa diuji di Word asli dari lingkungan kerja ini.
