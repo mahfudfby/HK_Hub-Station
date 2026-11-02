@@ -91,7 +91,18 @@ nota thermal → `src/pages/tiket-travel-58mm/` (cukup 5 baris memakai `ThermalS
 | Nota/struk thermal | `ThermalNota`, `ThermalStruk` |
 | Faktur/invoice | `SalesDoc` |
 
-## Git & rilis
-- Branch baru per perubahan, pesan commit Bahasa Indonesia (gaya: "Menu X; perbaikan Y").
-- Buat PR lalu **langsung merge ke `main`** (Vercel deploy otomatis), tanpa menunggu.
-- Jangan commit `node_modules`, `dist`, `.env*`.
+## Git & rilis — EKSEKUSI MANDIRI OTOMATIS
+Setelah perubahan selesai dan `npm run build` lolos, **langsung jalankan semuanya sendiri
+tanpa bertanya/meminta izin lagi**:
+1. Branch baru (`git checkout -b <nama-singkat>`), commit dengan pesan Bahasa Indonesia
+   (gaya: "Menu X; perbaikan Y").
+2. `git push -u origin <branch>` lalu `gh pr create`.
+3. **Langsung merge** ke `main`: `gh pr merge --squash --delete-branch` (tidak menunggu review).
+4. Vercel otomatis deploy produksi dari `main`; pastikan statusnya `success` lewat
+   `gh api repos/mahfudfby/HK_Hub-Station/deployments` → `.../deployments/<id>/statuses`
+   (jangan polling situs langsung).
+5. `git checkout main && git pull`, lalu laporkan hasilnya (link PR + status deploy).
+
+Berhenti dan tanya **hanya** bila build gagal, deploy gagal, atau perubahan berisiko
+menghapus data pengguna.
+- Jangan commit `node_modules`, `dist`, `.env*`, atau file lokal yang tidak terkait perubahan.
