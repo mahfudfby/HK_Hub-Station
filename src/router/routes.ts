@@ -124,11 +124,11 @@ export const routes = [
     desc: 'Nota kasir untuk printer thermal 80mm (PNG 576px siap RawBT), PDF & Print.',
   },
   {
-    path: '/struk-parkir-58mm/*',
+    path: '/e-parkir-58mm/*',
     cat: 'nota',
-    component: lazy(() => import('../pages/struk-parkir-58mm')),
-    title: 'Struk Parkir 58mm',
-    desc: 'Karcis parkir thermal 58mm: lokasi, jam masuk/keluar, durasi otomatis, nopol, golongan & tarif, sisa saldo kartu. PNG 384px siap RawBT, PDF & Print.',
+    component: lazy(() => import('../pages/e-parkir-58mm')),
+    title: 'E-Parkir Mall & Gedung 58mm',
+    desc: 'Struk e-parkir mall/gedung thermal 58mm: bayar selalu kartu cashless (tap) dengan sisa saldo, waktu masuk/keluar, durasi otomatis, golongan & tarif. PNG 384px siap RawBT, PDF & Print.',
   },
   {
     path: '/tiket-travel-58mm/*',
