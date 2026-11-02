@@ -15,6 +15,8 @@ import { usePagination } from '../../pages/surat-kontrak-kerja/usePagination';
 import { usePagesExport } from '../../pages/surat-kontrak-kerja/exportPages';
 import { useBgRemoved } from '../lib/removeBg';
 import { cached, translateAll } from '../lib/translate';
+import { buildCvDocx } from '../lib/cvDocx';
+import { saveFile } from '../lib/saveFile';
 
 // Menu CV bersama (Creative & ATS): isian bahasa Indonesia, hasil bisa otomatis diterjemahkan ke Inggris.
 // 20 template per menu (CvTemplates). Banyak halaman: tiap kolom dipecah sendiri oleh usePagination.
@@ -159,6 +161,18 @@ export default function CvMenu({ mode }: { mode: 'creative' | 'ats' }) {
       setPrinting(false);
     }
   };
+  const [docxBusy, setDocxBusy] = useState(false);
+  const unduhDocx = async () => {
+    setDocxBusy(true);
+    try {
+      saveFile(await buildCvDocx(f, tr, LBL[f.bahasa], en, f.paper !== 'Letter'), `${fileName}.docx`);
+      notify('success', `${fileName}.docx berhasil diunduh. Buka di Word untuk mengoreksi terjemahan.`);
+    } catch (err: any) {
+      notify('error', `Gagal membuat DOCX: ${err?.message || 'proses gagal.'}`);
+    } finally {
+      setDocxBusy(false);
+    }
+  };
   const busy = foto.busy || (en && tst.s === 'busy');
 
   const [canvas, setCanvas] = useCanvasMode();
@@ -184,6 +198,9 @@ export default function CvMenu({ mode }: { mode: 'creative' | 'ats' }) {
       <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
       <button type="button" onClick={cetakTeks} disabled={busy || printing || !!exporting} className="px-5 py-2 rounded-lg bg-emerald-700 text-white font-semibold disabled:opacity-60">
         {printing ? 'Menyiapkan…' : 'PDF Teks Asli (ATS)'}
+      </button>
+      <button type="button" onClick={unduhDocx} disabled={busy || docxBusy || !!exporting} className="px-5 py-2 rounded-lg bg-indigo-700 text-white font-semibold disabled:opacity-60">
+        {docxBusy ? 'Menyiapkan…' : 'Unduh DOCX (bisa diedit)'}
       </button>
       <button onClick={reset} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
     </>

@@ -125,6 +125,8 @@ nota thermal → `src/pages/tiket-travel-58mm/` (cukup 5 baris memakai `ThermalS
 - Isian selalu Bahasa Indonesia; pilihan English memanggil `/api/translate` (cache di `shared/lib/translate.ts`).
   Nama, perusahaan, institusi, email, situs, alamat TIDAK diterjemahkan; bulan/periode diterjemahkan lokal (`periodeEn`).
 - ATS: tanpa foto, hitam putih. PDF/PNG biasa berupa gambar; tombol "PDF Teks Asli (ATS)" memakai cetak browser (teks asli).
+- Tombol "Unduh DOCX (bisa diedit)": `shared/lib/cvDocx.ts` (zip lewat `fflate`, tanpa pustaka berat) membuat Word satu kolom
+  dari data yang sama dalam bahasa terpilih, agar terjemahan bisa dikoreksi manual. Tanpa foto/tata letak template.
 - Data contoh wajib orang fiktif, bukan data pribadi nyata.
 
 ## Git & rilis — EKSEKUSI MANDIRI OTOMATIS
