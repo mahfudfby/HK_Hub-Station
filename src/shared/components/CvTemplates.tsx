@@ -85,12 +85,17 @@ export type Flows = { top: ReactNode; main: Unit[]; side: Unit[] };
 export type Env = { cv: Cv; T: Tpl; p: Pal; k: number; foto: string; en: boolean; tr: (s: string) => string; L: Lbl; W: number; H: number };
 type Col = { ink: string; muted: string; accent: string; on: string };
 
+// Ukuran huruf dibulatkan ke kelipatan 0,5 pt (satuan Word) supaya hasil DOCX persis sama dengan preview
+export const halfPt = (px: number) => Math.round(px * 1.5) / 1.5;
+console.assert(Math.abs(halfPt(13) - 13.3333) < 0.01 && halfPt(12) === 12, 'halfPt');
+
 export const FONT = { sans: 'Arimo, Arial, Helvetica, sans-serif', serif: 'Tinos, "Times New Roman", Times, serif' };
 const TWO: Lay[] = ['ref', 'kiri', 'kanan', 'pita', 'sama'];
 
 export function buildFlows(e: Env): Flows {
   const { cv, T, p, k, tr, en, L, foto } = e;
   const z = (n: number) => Math.round(n * k * 100) / 100;
+  const fs = (n: number) => halfPt(n * k);
   const m = marginPx;
   let gid = 0;
   let secNo = 0;
@@ -121,11 +126,11 @@ export function buildFlows(e: Env): Flows {
     const n = String(++secNo).padStart(2, '0');
     const base = { fontWeight: 700, lineHeight: 1.2 } as const;
     switch (T.head) {
-      case 'bar': return <div style={{ ...base, fontSize: z(17), textTransform: 'uppercase', letterSpacing: z(1), color: c.ink, borderLeft: `${z(6)}px solid ${c.accent}`, paddingLeft: z(10), marginBottom: z(10) }}>{title}</div>;
-      case 'box': return <div style={{ ...base, fontSize: z(13.5), textTransform: 'uppercase', letterSpacing: z(1.2), background: c.accent, color: c.on, padding: `${z(5)}px ${z(10)}px`, marginBottom: z(10) }}>{title}</div>;
-      case 'caps': return <div style={{ marginBottom: z(10) }}><div style={{ width: z(32), height: z(3), background: c.accent, marginBottom: z(6) }} /><div style={{ ...base, fontSize: z(14), textTransform: 'uppercase', letterSpacing: z(2.2), color: c.ink }}>{title}</div></div>;
-      case 'num': return <div style={{ display: 'flex', alignItems: 'baseline', columnGap: z(10), borderBottom: `${z(1.5)}px solid ${c.accent}`, paddingBottom: z(5), marginBottom: z(10) }}><span style={{ ...base, fontSize: z(20), color: c.accent }}>{n}</span><span style={{ ...base, fontSize: z(16), textTransform: 'uppercase', letterSpacing: z(1), color: c.ink }}>{title}</span></div>;
-      default: return <div style={{ ...base, fontSize: z(T.hs ?? 19), letterSpacing: z(0.6), color: c.ink, borderBottom: `${z(3)}px solid ${c.ink}`, paddingBottom: z(6), marginBottom: z(10) }}>{title}</div>;
+      case 'bar': return <div style={{ ...base, fontSize: fs(17), textTransform: 'uppercase', letterSpacing: z(1), color: c.ink, borderLeft: `${z(6)}px solid ${c.accent}`, paddingLeft: z(10), marginBottom: z(10) }}>{title}</div>;
+      case 'box': return <div style={{ ...base, fontSize: fs(13.5), textTransform: 'uppercase', letterSpacing: z(1.2), background: c.accent, color: c.on, padding: `${z(5)}px ${z(10)}px`, marginBottom: z(10) }}>{title}</div>;
+      case 'caps': return <div style={{ marginBottom: z(10) }}><div style={{ width: z(32), height: z(3), background: c.accent, marginBottom: z(6) }} /><div style={{ ...base, fontSize: fs(14), textTransform: 'uppercase', letterSpacing: z(2.2), color: c.ink }}>{title}</div></div>;
+      case 'num': return <div style={{ display: 'flex', alignItems: 'baseline', columnGap: z(10), borderBottom: `${z(1.5)}px solid ${c.accent}`, paddingBottom: z(5), marginBottom: z(10) }}><span style={{ ...base, fontSize: fs(20), color: c.accent }}>{n}</span><span style={{ ...base, fontSize: fs(16), textTransform: 'uppercase', letterSpacing: z(1), color: c.ink }}>{title}</span></div>;
+      default: return <div style={{ ...base, fontSize: fs(T.hs ?? 19), letterSpacing: z(0.6), color: c.ink, borderBottom: `${z(3)}px solid ${c.ink}`, paddingBottom: z(6), marginBottom: z(10) }}>{title}</div>;
     }
   };
 
@@ -135,12 +140,12 @@ export function buildFlows(e: Env): Flows {
     : <span aria-hidden style={{ display: 'block', width: z(6), height: z(6), background: c.accent, borderRadius: T.bul === 'dot' ? '50%' : 0, marginTop: z(7) }} />;
   const bullet = (c: Col, text: string, o: { bold?: boolean; size?: number; ind?: number } = {}): ReactNode => (
     <div style={{ display: 'grid', gridTemplateColumns: T.bul === 'none' ? 'minmax(0,1fr)' : `${z(16)}px minmax(0,1fr)`, marginLeft: o.ind ?? 0 }}>
-      {mark(c)}<div style={{ fontSize: z(o.size ?? 13), fontWeight: o.bold ? 700 : 400, overflowWrap: 'anywhere' }}>{text}</div>
+      {mark(c)}<div style={{ fontSize: fs(o.size ?? 13), fontWeight: o.bold ? 700 : 400, overflowWrap: 'anywhere' }}>{text}</div>
     </div>
   );
   // Daftar butir: satu unit per butir (bisa terpotong antarhalaman); inline / 2 kolom: satu blok
   const list = (c: Col, items: string[], wide: boolean): ReactNode[] => {
-    if (T.list === 'inline') return [<div style={{ fontSize: z(13), overflowWrap: 'anywhere' }}>{items.join(', ')}</div>];
+    if (T.list === 'inline') return [<div style={{ fontSize: fs(13), overflowWrap: 'anywhere' }}>{items.join(', ')}</div>];
     const rows = items.map((t, i) => <div key={i}>{bullet(c, t)}</div>);
     return T.list === 'cols2' && wide ? [<div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', columnGap: z(20) }}>{rows}</div>] : rows;
   };
@@ -155,23 +160,23 @@ export function buildFlows(e: Env): Flows {
     const bold = { fontWeight: 700, color: c.ink } as const;
     if (T.job === 'split') return (
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', columnGap: z(16), alignItems: 'start' }}>
-        <div><div style={{ ...bold, fontSize: z(18), lineHeight: 1.2, letterSpacing: z(0.3) }}>{pos}</div>{bid && <div style={{ fontSize: z(13.5) }}>{bid}</div>}</div>
-        <div style={{ ...bold, fontSize: z(12.5), textAlign: 'right', textDecoration: 'underline' }}><div>{j.perusahaan}</div><div>{per}</div></div>
+        <div><div style={{ ...bold, fontSize: fs(18), lineHeight: 1.2, letterSpacing: z(0.3) }}>{pos}</div>{bid && <div style={{ fontSize: fs(13.5) }}>{bid}</div>}</div>
+        <div style={{ ...bold, fontSize: fs(12.5), textAlign: 'right', textDecoration: 'underline' }}><div>{j.perusahaan}</div><div>{per}</div></div>
       </div>
     );
-    if (T.job === 'stack') return <div><div style={{ ...bold, fontSize: z(16) }}>{pos}</div><div style={{ fontSize: z(13) }}>{sub}</div><div style={{ color: c.muted, fontSize: z(12.5) }}>{per}</div></div>;
+    if (T.job === 'stack') return <div><div style={{ ...bold, fontSize: fs(16) }}>{pos}</div><div style={{ fontSize: fs(13) }}>{sub}</div><div style={{ color: c.muted, fontSize: fs(12.5) }}>{per}</div></div>;
     if (T.job === 'time') return (
       <div style={{ display: 'grid', gridTemplateColumns: `${z(112)}px minmax(0,1fr)`, columnGap: z(24) }}>
-        <div style={{ fontSize: z(12.5), fontWeight: 700, color: c.muted }}>{per}</div>
-        <div><div style={{ ...bold, fontSize: z(16) }}>{pos}</div><div style={{ fontSize: z(13) }}>{sub}</div></div>
+        <div style={{ fontSize: fs(12.5), fontWeight: 700, color: c.muted }}>{per}</div>
+        <div><div style={{ ...bold, fontSize: fs(16) }}>{pos}</div><div style={{ fontSize: fs(13) }}>{sub}</div></div>
       </div>
     );
     return (
       <div>
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', columnGap: z(16), alignItems: 'baseline' }}>
-          <div style={{ ...bold, fontSize: z(15) }}>{pos}</div><div style={{ fontSize: z(12.5), fontWeight: 700, color: c.muted, textAlign: 'right' }}>{per}</div>
+          <div style={{ ...bold, fontSize: fs(15) }}>{pos}</div><div style={{ fontSize: fs(12.5), fontWeight: 700, color: c.muted, textAlign: 'right' }}>{per}</div>
         </div>
-        <div style={{ fontSize: z(13) }}>{sub}</div>
+        <div style={{ fontSize: fs(13) }}>{sub}</div>
       </div>
     );
   };
@@ -196,7 +201,7 @@ export function buildFlows(e: Env): Flows {
         const body = <div style={{ paddingBottom: z(ni === nodes.length - 1 ? 16 : tight ? 0 : 6) }}>{node}</div>;
         out.push({ g, el: T.lay === 'label' ? (
           <div style={{ display: 'grid', gridTemplateColumns: `${z(132)}px minmax(0,1fr)`, columnGap: z(20), borderTop: head ? `${z(1.5)}px solid ${c.ink}` : undefined, paddingTop: head ? z(10) : 0 }}>
-            <div style={{ fontSize: z(12.5), fontWeight: 700, textTransform: 'uppercase', letterSpacing: z(1), color: c.ink }}>{head ? title : null}</div>{body}
+            <div style={{ fontSize: fs(12.5), fontWeight: 700, textTransform: 'uppercase', letterSpacing: z(1), color: c.ink }}>{head ? title : null}</div>{body}
           </div>
         ) : <>{head && H(c, title)}{body}</> });
       });
@@ -206,27 +211,27 @@ export function buildFlows(e: Env): Flows {
 
   // ---------- Bagian ----------
   const extra = (c: Col, poin?: string[]): ReactNode => (poin ?? []).filter(Boolean).map((t, i) => <div key={i}>{bullet(c, tr(t), { size: 12.5 })}</div>);
-  const edu = (c: Col, x: Edu): ReactNode => <div><div style={{ fontWeight: 700, fontSize: z(14), color: c.ink }}>{tr(x.jurusan)}</div><div>{x.institusi}</div>{x.ket && <div style={{ color: c.muted, fontSize: z(12.5) }}>{tr(x.ket)}</div>}{extra(c, x.poin)}</div>;
+  const edu = (c: Col, x: Edu): ReactNode => <div><div style={{ fontWeight: 700, fontSize: fs(14), color: c.ink }}>{tr(x.jurusan)}</div><div>{x.institusi}</div>{x.ket && <div style={{ color: c.muted, fontSize: fs(12.5) }}>{tr(x.ket)}</div>}{extra(c, x.poin)}</div>;
   const pel = (c: Col, x: Pelatihan): ReactNode => (
     <div>{bullet(c, tr(x.judul), { bold: true })}
-      {x.rincian.map((r, i) => <div key={i} style={{ paddingLeft: z(T.bul === 'none' ? 0 : 16), fontSize: z(12.5) }}>{i + 1}. {tr(r)}</div>)}</div>
+      {x.rincian.map((r, i) => <div key={i} style={{ paddingLeft: z(T.bul === 'none' ? 0 : 16), fontSize: fs(12.5) }}>{i + 1}. {tr(r)}</div>)}</div>
   );
-  const ref = (c: Col, x: Ref): ReactNode => <div><div style={{ fontWeight: 700, color: c.ink }}>{x.nama}</div>{x.jabatan && <div>{tr(x.jabatan)}</div>}<div>{x.perusahaan}</div>{x.ket && <div style={{ color: c.muted, fontSize: z(12.5) }}>{tr(x.ket)}</div>}{extra(c, x.poin)}</div>;
+  const ref = (c: Col, x: Ref): ReactNode => <div><div style={{ fontWeight: 700, color: c.ink }}>{x.nama}</div>{x.jabatan && <div>{tr(x.jabatan)}</div>}<div>{x.perusahaan}</div>{x.ket && <div style={{ color: c.muted, fontSize: fs(12.5) }}>{tr(x.ket)}</div>}{extra(c, x.poin)}</div>;
   const org = (c: Col, x: Org): ReactNode[] => [
-    <div key="h"><div style={{ fontWeight: 700, color: c.ink }}>{tr(x.peran)}</div><div>{x.organisasi}</div>{x.ket && <div style={{ color: c.muted, fontSize: z(12.5) }}>{tr(x.ket)}</div>}</div>,
+    <div key="h"><div style={{ fontWeight: 700, color: c.ink }}>{tr(x.peran)}</div><div>{x.organisasi}</div>{x.ket && <div style={{ color: c.muted, fontSize: fs(12.5) }}>{tr(x.ket)}</div>}</div>,
     ...x.poin.map((t, i) => <div key={i}>{bullet(c, tr(t), { size: 12.5 })}</div>),
   ];
   const kontak = (c: Col): ReactNode => (
     <div style={{ display: 'grid', rowGap: z(6) }}>
       {kont.map(([key, v]) => T.plain
         ? <div key={key} style={{ overflowWrap: 'anywhere' }}>{v}</div>
-        : <div key={key}><div style={{ fontSize: z(12), fontWeight: 700, textTransform: 'uppercase', letterSpacing: z(0.8), color: c.muted }}>{L[key]}</div><div style={{ overflowWrap: 'anywhere' }}>{v}</div></div>)}
+        : <div key={key}><div style={{ fontSize: fs(12), fontWeight: 700, textTransform: 'uppercase', letterSpacing: z(0.8), color: c.muted }}>{L[key]}</div><div style={{ overflowWrap: 'anywhere' }}>{v}</div></div>)}
     </div>
   );
 
   const S: Record<Bagian | 'kontak', (c: Col, wide: boolean) => Unit[]> = {
     kontak: (c) => (kont.length ? sec(c, L.kontak, [[kontak(c)]]) : []),
-    ringkasan: (c) => (shown('ringkasan') && (cv.ringkasan || (cv.ringkasanPoin ?? []).some(Boolean)) ? sec(c, L.ringkasan, [[...(cv.ringkasan ? [<p style={{ margin: 0, fontSize: z(13.5), lineHeight: 1.6 }}>{tr(cv.ringkasan)}</p>] : []), ...(cv.ringkasanPoin ?? []).filter(Boolean).map((t, i) => <div key={i}>{bullet(c, tr(t), { size: 13.5 })}</div>)]]) : []),
+    ringkasan: (c) => (shown('ringkasan') && (cv.ringkasan || (cv.ringkasanPoin ?? []).some(Boolean)) ? sec(c, L.ringkasan, [[...(cv.ringkasan ? [<p style={{ margin: 0, fontSize: fs(13.5), lineHeight: 1.6 }}>{tr(cv.ringkasan)}</p>] : []), ...(cv.ringkasanPoin ?? []).filter(Boolean).map((t, i) => <div key={i}>{bullet(c, tr(t), { size: 13.5 })}</div>)]]) : []),
     pengalaman: (c) => (shown('pengalaman') && cv.pengalaman.length ? sec(c, L.pengalaman, cv.pengalaman.map((j) => [jobHead(c, j), ...j.poin.filter(Boolean).map((t, i) => <div key={i}>{bullet(c, tr(t), { ind })}</div>)])) : []),
     pendidikan: (c) => (shown('pendidikan') && cv.pendidikan.length ? sec(c, L.pendidikan, cv.pendidikan.map((x) => [edu(c, x)])) : []),
     keahlian: (c, w) => (shown('keahlian') && cv.keahlian.length ? sec(c, L.keahlian, [list(c, cv.keahlian.map(tr), w)], true) : []),
@@ -241,12 +246,12 @@ export function buildFlows(e: Env): Flows {
   // ---------- Nama & kop ----------
   const nameBlock = (c: Col, big: boolean, align: 'left' | 'center' = 'left'): ReactNode => (
     <div style={{ textAlign: align, paddingBottom: z(14) }}>
-      <div style={{ fontSize: z(big ? 46 : 32), fontWeight: 700, lineHeight: 1.08, letterSpacing: z(big ? -1 : -0.2), color: c.ink, overflowWrap: 'anywhere' }}>{cv.nama}</div>
-      {cv.jabatan && <div style={{ fontSize: z(big ? 26 : 16), lineHeight: 1.25, marginTop: z(8), color: c.ink, fontWeight: big ? 400 : 600 }}>{tr(cv.jabatan)}</div>}
+      <div style={{ fontSize: fs(big ? 46 : 32), fontWeight: 700, lineHeight: 1.08, letterSpacing: z(big ? -1 : -0.2), color: c.ink, overflowWrap: 'anywhere' }}>{cv.nama}</div>
+      {cv.jabatan && <div style={{ fontSize: fs(big ? 26 : 16), lineHeight: 1.25, marginTop: z(8), color: c.ink, fontWeight: big ? 400 : 600 }}>{tr(cv.jabatan)}</div>}
     </div>
   );
   const contactRow = (c: Col, cen: boolean): ReactNode => (
-    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: cen ? 'center' : 'flex-start', columnGap: z(18), rowGap: z(2), fontSize: z(13), color: c.ink }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: cen ? 'center' : 'flex-start', columnGap: z(18), rowGap: z(2), fontSize: fs(13), color: c.ink }}>
       {kont.map(([key, v]) => <span key={key} style={{ overflowWrap: 'anywhere' }}>{v}</span>)}
     </div>
   );
@@ -309,7 +314,7 @@ export function PageView({ e, idx, top, main, side }: { e: Env; idx: number; top
   return (
     <div data-page style={{
       position: 'relative', width: W, height: H, overflow: 'hidden', boxSizing: 'border-box', background: '#ffffff', color: p.ink,
-      fontFamily: FONT[T.font], fontSize: Math.round(13 * k * 100) / 100, lineHeight: 1.5, letterSpacing: T.track ? `${Math.round(T.track * k * 100) / 100}px` : undefined,
+      fontFamily: FONT[T.font], fontSize: halfPt(13 * k), lineHeight: 1.5, letterSpacing: T.track ? `${Math.round(T.track * k * 100) / 100}px` : undefined,
     }}>
       {filled && <div aria-hidden style={{ position: 'absolute', top: 0, bottom: 0, background: p.accent, width: edge, ...(T.lay === 'kiri' ? { left: 0 } : { right: 0 }) }} />}
       {lines && <div aria-hidden style={{ position: 'absolute', top: m, bottom: m, width: 2, background: p.ink, left: T.lay === 'kiri' ? edge - 1 : W - edge - 1 }} />}
