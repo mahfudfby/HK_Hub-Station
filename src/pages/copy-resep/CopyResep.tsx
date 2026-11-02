@@ -26,6 +26,8 @@ import FormSection from '../../shared/components/FormSection';
 const STORAGE_KEY = 'copy-resep:v1';
 const USER_KEYS = ['posisi', 'tata', 'tulisan', 'instansi', 'izin', 'apotekerLabel', 'apoteker', 'sipa', 'alamatKop', 'logo', 'kota', 'jabatan', 'ttd', 'stempel'] as const;
 const NO_FMT = '{n3}/R/{yyyy}';
+// Input tanggal di ponsel (iOS): lebar bawaannya melebihi kolom grid, jadi boleh menyusut dan tanpa tampilan bawaan
+const dateCls = `${inputCls} min-w-0 max-w-full appearance-none`;
 const DOT = '1.5px dotted #000';
 const PRINT_FONT = cssFamily('Tinos', '"Times New Roman", serif');
 
@@ -366,9 +368,9 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
             <UserData storageKey="data-user:copy-resep" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
             <FormSection title="Data Resep">
               <Field label="Nomor resep"><NumberFormatInput parts={['Urut', 'Kode', 'Tahun']} example="012/R/2026" value={f.nomor} onChange={(v) => set('nomor', v)} /></Field>
-              <div className="grid grid-cols-2 gap-2">
-                <Field label="Tanggal resep"><input type="date" className={inputCls} value={f.tanggalResep} onChange={(e) => set('tanggalResep', e.target.value)} /></Field>
-                <Field label="Tanggal lahir pasien"><input type="date" className={inputCls} value={f.tglLahir} onChange={(e) => set('tglLahir', e.target.value)} /></Field>
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+                <Field label="Tanggal resep"><input type="date" className={dateCls} value={f.tanggalResep} onChange={(e) => set('tanggalResep', e.target.value)} /></Field>
+                <Field label="Tanggal lahir pasien"><input type="date" className={dateCls} value={f.tglLahir} onChange={(e) => set('tglLahir', e.target.value)} /></Field>
                 <Field label="Dokter (resep dari)"><AutoTextarea className={inputCls} value={f.dokter} onChange={(e) => set('dokter', e.target.value)} /></Field>
                 <Field label="Nama pasien"><AutoTextarea className={inputCls} value={f.pasien} onChange={(e) => set('pasien', e.target.value)} /></Field>
               </div>
@@ -392,9 +394,9 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
             </FormSection>
 
             <FormSection title="Apoteker &amp; Tanda Tangan">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
                 <Field label="Kota"><AutoTextarea className={inputCls} value={f.kota} onChange={(e) => set('kota', e.target.value)} /></Field>
-                <Field label="Tanggal copy resep"><input type="date" className={inputCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
+                <Field label="Tanggal copy resep"><input type="date" className={dateCls} value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} /></Field>
                 <Field label="Label apoteker (APA / Apoteker)"><AutoTextarea className={inputCls} value={f.apotekerLabel} onChange={(e) => set('apotekerLabel', e.target.value)} /></Field>
                 <Field label="Nama apoteker"><AutoTextarea className={inputCls} value={f.apoteker} onChange={(e) => set('apoteker', e.target.value)} /></Field>
                 <Field label="SIPA"><AutoTextarea className={inputCls} value={f.sipa} onChange={(e) => set('sipa', e.target.value)} /></Field>

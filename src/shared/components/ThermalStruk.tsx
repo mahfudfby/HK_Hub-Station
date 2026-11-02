@@ -32,7 +32,6 @@ type Struk = {
   seri1: string;
   seri2: string;
   waktuMasuk: string; // parkir
-  nopol: string; // parkir
   asal: string; // travel
   tujuan: string; // travel
   berangkat: string; // travel, datetime-local
@@ -42,7 +41,7 @@ type Struk = {
   tarif: string;
   metode: 'Tunai' | 'Kartu / e-Money' | 'QRIS';
   kartuNo: string;
-  saldo: string;
+  saldoAwal: string; // e-parkir: saldo kartu sebelum bayar; sisa saldo di struk = saldoAwal − tarif
   footer: string;
   huruf: string;
   skala: number; // ukuran teks (%)
@@ -70,7 +69,6 @@ const BASE: Struk = {
   seri1: '',
   seri2: '01/001',
   waktuMasuk: '',
-  nopol: '',
   asal: '',
   tujuan: '',
   berangkat: '',
@@ -80,7 +78,7 @@ const BASE: Struk = {
   tarif: '',
   metode: 'Tunai',
   kartuNo: '',
-  saldo: '',
+  saldoAwal: '',
   footer: '',
   huruf: 'Cousine',
   skala: 100,
@@ -92,11 +90,12 @@ const BASE: Struk = {
 
 const KIND: Record<StrukKind, { judul: string; defaults: () => Struk }> = {
   parkir: {
-    judul: 'Struk Parkir 58mm',
+    judul: 'E-Parkir Mall & Gedung 58mm',
     defaults: () => ({
-      ...BASE, usaha: 'PENGELOLA PARKIR ANDA', lokasi: 'PARKIR UTAMA', kode: 'SHIFT 1', seri1: randomSeri(),
-      waktu: nowLocal(), waktuMasuk: nowLocal(-135), nopol: 'B 1234 XYZ', golongan: 'GOL-1 MOBIL', tarif: '6000',
-      footer: 'Terima kasih\nKarcis hilang dikenakan denda sesuai ketentuan',
+      ...BASE, usaha: 'NAMA MALL / GEDUNG ANDA', lokasi: 'BASEMENT 1 • PINTU KELUAR 2', kode: 'GATE 2', seri1: randomSeri(),
+      waktu: nowLocal(), waktuMasuk: nowLocal(-135), golongan: 'GOL-1 MOBIL', tarif: '6000',
+      metode: 'Kartu / e-Money', kartuNo: '0000 0000 0000 0000', saldoAwal: '200000',
+      footer: 'Terima kasih atas kunjungan Anda\nSimpan struk ini sebagai bukti pembayaran',
     }),
   },
   travel: {
@@ -131,13 +130,16 @@ const durasi = (masuk: string, keluar: string) => {
   return `${Math.floor(m / 60)} jam ${m % 60} menit`;
 };
 console.assert(durasi('2026-01-01T10:00:00', '2026-01-01T12:15:00') === '2 jam 15 menit' && durasi('2026-01-01T12:00:00', '2026-01-01T10:00:00') === '' && durasi('', '') === '', 'durasi');
+// E-parkir: pembayaran selalu kartu cashless (tap). Sisa saldo = saldo sebelum bayar − tarif, tidak pernah negatif.
+const sisaSaldo = (saldoAwal: string, tarif: string) => Math.max(0, num(saldoAwal) - num(tarif));
+console.assert(sisaSaldo('200000', '6000') === 194000 && sisaSaldo('5000', '6000') === 0 && sisaSaldo('', '') === 0, 'sisaSaldo');
 
 // ---------------- Tampilan struk ----------------
 function Receipt({ n, kind, T, k }: { n: Struk; kind: StrukKind; T: ReturnType<typeof notaLayout>; k: number }) {
   const K = n.kosong;
   const v = (s: string) => (K ? TITIK_PENDEK : s);
   const fs = (d: number) => (T.font + d) * k; // lebar struk tetap, hanya huruf yang ikut skala
-  const kartu = n.metode !== 'Tunai';
+  const parkir = kind === 'parkir';
   const logoW = Math.min(52 * k, T.px - 2 * T.pad[1]);
   const waktu = K ? '……/……/20…… ……:……:……' : fmtWaktu(n.waktu);
 
@@ -147,7 +149,7 @@ function Receipt({ n, kind, T, k }: { n: Struk; kind: StrukKind; T: ReturnType<t
   const rows: [string, string][] = [
     ...(n.pakaiNomor ? [['No Seri', v(seri)] as [string, string]] : []),
     ...(kind === 'parkir'
-      ? [['MASUK', K ? waktu : fmtWaktu(n.waktuMasuk)], ['DURASI', K ? TITIK_PENDEK : lama], ['NOPOL', v(n.nopol)]] as [string, string][]
+      ? [['WAKTU', K ? waktu : fmtWaktu(n.waktuMasuk)], ['DURASI', K ? TITIK_PENDEK : lama]] as [string, string][]
       : [['ASAL', v(n.asal)], ['TUJUAN', v(n.tujuan)], ['JADWAL', K ? waktu : fmtWaktu(n.berangkat)], ['NAMA', v(n.penumpang)], ['KURSI', v(n.kursi)]] as [string, string][]),
   ].filter(([, val]) => K || val);
 
@@ -185,18 +187,22 @@ function Receipt({ n, kind, T, k }: { n: Struk; kind: StrukKind; T: ReturnType<t
         <span style={{ whiteSpace: 'nowrap' }}>{K ? 'Rp ………' : `Rp ${rupiah(num(n.tarif))}`}</span>
       </div>
 
-      {K ? (
+      {parkir ? (
+        // E-parkir: selalu kartu cashless (tap) + nomor kartu + sisa saldo
         <>
-          <div>Bayar : {TITIK_PENDEK}</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Sisa Saldo</span><span>Rp. ………</span></div>
+          <div>Bayar : Kartu Cashless (Tap)</div>
+          <div>CN : {K ? TITIK_PENDEK : n.kartuNo || TITIK_PENDEK}</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>Sisa Saldo</span>
+            <span>{K || n.saldoAwal === '' ? 'Rp. ………' : `Rp. ${rupiah(sisaSaldo(n.saldoAwal, n.tarif))}`}</span>
+          </div>
         </>
+      ) : K ? (
+        <div>Bayar : {TITIK_PENDEK}</div>
       ) : (
         <>
-          <div>{kind === 'travel' ? 'Bayar' : 'Metode'} : {n.metode}</div>
-          {kartu && n.kartuNo && <div>{kind === 'parkir' ? 'CN' : 'Ref'} : {n.kartuNo}</div>}
-          {kind === 'parkir' && kartu && n.saldo && (
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Sisa Saldo</span><span>Rp. {rupiah(num(n.saldo))}</span></div>
-          )}
+          <div>Bayar : {n.metode}</div>
+          {n.metode !== 'Tunai' && n.kartuNo && <div>Ref : {n.kartuNo}</div>}
         </>
       )}
 
@@ -208,7 +214,8 @@ function Receipt({ n, kind, T, k }: { n: Struk; kind: StrukKind; T: ReturnType<t
 // ---------------- Editor ----------------
 export default function ThermalStruk({ kind }: { kind: StrukKind }) {
   const cfg = KIND[kind];
-  const STORAGE_KEY = `struk-${kind}-58mm:v1`;
+  // Kunci simpanan terpisah: e-parkir tidak memakai data menu Struk Parkir lama (isinya berbeda: tanpa nopol, selalu kartu)
+  const STORAGE_KEY = kind === 'parkir' ? 'e-parkir-58mm:v1' : `struk-${kind}-58mm:v1`;
   const [toast, setToast] = useState<ToastState>(null);
   const notify = useCallback<Notify>((type, message) => setToast({ type, message }), []);
   const closeToast = useCallback(() => setToast(null), []);
@@ -237,14 +244,14 @@ export default function ThermalStruk({ kind }: { kind: StrukKind }) {
   }, [n, notify, STORAGE_KEY]);
 
   const set = <K extends keyof Struk>(key: K, v: Struk[K]) => setN((p) => ({ ...p, [key]: v }));
-  const fileName = `${kind === 'parkir' ? 'struk-parkir' : 'tiket-travel'}-${(n.seri1 || 'transaksi').replace(/[^\w-]+/g, '-').toLowerCase()}`;
+  const fileName = `${kind === 'parkir' ? 'e-parkir' : 'tiket-travel'}-${(n.seri1 || 'transaksi').replace(/[^\w-]+/g, '-').toLowerCase()}`;
   // Kertas gulung: tinggi mengikuti panjang struk; kertas lembar: ukuran halaman tetap
   const { exporting, run } = useLetterExport(() => ref.current!.firstElementChild as HTMLElement, fileName, notify,
     (page) => (T.roll ? { w: T.paper.w, h: Math.ceil((T.paper.w * page.offsetHeight) / T.px) } : T.paper), T.roll ? 2 : 3);
   const transaksiBaru = () => {
     const d = cfg.defaults();
     const urut = String(Number(n.seri1.replace(/\D/g, '') || 0) + 1).padStart(Math.max(6, n.seri1.length), '0');
-    setN((p) => ({ ...p, seri1: urut, waktu: d.waktu, waktuMasuk: d.waktuMasuk, berangkat: d.berangkat, nopol: '', penumpang: '', kursi: '', kartuNo: '', saldo: '' }));
+    setN((p) => ({ ...p, seri1: urut, waktu: d.waktu, waktuMasuk: d.waktuMasuk, berangkat: d.berangkat, penumpang: '', kursi: '', kartuNo: '', saldoAwal: '' }));
     notify('info', `Transaksi baru No Seri ${urut}.`);
   };
   const txt = (key: keyof Struk, label: string, rows = 1, placeholder?: string) => (
@@ -253,7 +260,7 @@ export default function ThermalStruk({ kind }: { kind: StrukKind }) {
     </Field>
   );
   const tgl = (key: 'waktu' | 'waktuMasuk' | 'berangkat', label: string) => (
-    <Field label={label}><input type="datetime-local" step={1} className={inputCls} value={n[key]} onChange={(e) => set(key, e.target.value)} /></Field>
+    <Field label={label}><input type="datetime-local" step={1} className={`${inputCls} min-w-0 max-w-full appearance-none`} value={n[key]} onChange={(e) => set(key, e.target.value)} /></Field>
   );
 
   const [canvas, setCanvas] = useCanvasMode();
@@ -297,27 +304,24 @@ export default function ThermalStruk({ kind }: { kind: StrukKind }) {
             <FormSection title="Usaha (kop)">
               <ImageUpload label="Upload logo (kiri atas)" value={n.logo} onChange={(v) => set('logo', v)} notify={notify}
                 bg={logoBg} onBg={setLogoBg} shown={logo.src} bgBusy={logo.busy} />
-              {txt('usaha', kind === 'parkir' ? 'Nama pengelola parkir' : 'Nama travel / armada')}
+              {txt('usaha', kind === 'parkir' ? 'Nama mall / gedung (pengelola parkir)' : 'Nama travel / armada')}
               {txt('alamat', 'Alamat', 2)}
               {txt('telp', 'Telepon info')}
             </FormSection>
 
-            <FormSection title={kind === 'parkir' ? 'Transaksi Parkir' : 'Data Tiket'}>
-              {txt('lokasi', kind === 'parkir' ? 'Lokasi / pintu parkir' : 'Loket / agen penerbit')}
-              <div className="grid grid-cols-2 gap-2">
+            <FormSection title={kind === 'parkir' ? 'Transaksi E-Parkir' : 'Data Tiket'}>
+              {txt('lokasi', kind === 'parkir' ? 'Lokasi / pintu keluar' : 'Loket / agen penerbit')}
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
                 {tgl('waktu', kind === 'parkir' ? 'Waktu keluar' : 'Waktu terbit')}
                 {txt('kode', 'Kode shift / loket')}
                 <Field label="No Seri (nomor tiket)"><input className={inputCls} inputMode="numeric" value={n.seri1} onChange={(e) => set('seri1', e.target.value)} /></Field>
                 {txt('seri2', 'No Seri (loket/urut)')}
               </div>
               {kind === 'parkir' ? (
-                <div className="grid grid-cols-2 gap-2">
-                  {tgl('waktuMasuk', 'Waktu masuk')}
-                  {txt('nopol', 'Nomor polisi')}
-                </div>
+                tgl('waktuMasuk', 'Waktu masuk')
               ) : (
                 <>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
                     {txt('asal', 'Asal')}
                     {txt('tujuan', 'Tujuan')}
                     {tgl('berangkat', 'Jadwal berangkat')}
@@ -326,21 +330,30 @@ export default function ThermalStruk({ kind }: { kind: StrukKind }) {
                   {txt('kursi', 'Kursi / armada')}
                 </>
               )}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
                 {txt('golongan', 'Golongan / kelas', 1, 'mis. GOL-1 MOBIL')}
                 <Field label="Tarif (Rp)"><input type="number" min={0} className={inputCls} value={n.tarif} onChange={(e) => set('tarif', e.target.value)} /></Field>
-                <Field label="Metode bayar">
-                  <select className={inputCls} value={n.metode} onChange={(e) => set('metode', e.target.value as Struk['metode'])}>
-                    <option>Tunai</option>
-                    <option>Kartu / e-Money</option>
-                    <option>QRIS</option>
-                  </select>
-                </Field>
-                {n.metode !== 'Tunai' && txt('kartuNo', kind === 'parkir' ? 'Nomor kartu (CN)' : 'No. referensi')}
-                {n.metode !== 'Tunai' && kind === 'parkir' && (
-                  <Field label="Sisa saldo (Rp)"><input type="number" min={0} className={inputCls} value={n.saldo} onChange={(e) => set('saldo', e.target.value)} /></Field>
+                {kind === 'travel' && (
+                  <Field label="Metode bayar">
+                    <select className={inputCls} value={n.metode} onChange={(e) => set('metode', e.target.value as Struk['metode'])}>
+                      <option>Tunai</option>
+                      <option>Kartu / e-Money</option>
+                      <option>QRIS</option>
+                    </select>
+                  </Field>
+                )}
+                {kind === 'travel' && n.metode !== 'Tunai' && txt('kartuNo', 'No. referensi')}
+                {kind === 'parkir' && txt('kartuNo', 'Nomor kartu (CN)')}
+                {kind === 'parkir' && (
+                  <Field label="Saldo kartu sebelum bayar (Rp)"><input type="number" min={0} className={inputCls} value={n.saldoAwal} onChange={(e) => set('saldoAwal', e.target.value)} /></Field>
                 )}
               </div>
+              {kind === 'parkir' && (
+                <p className="text-sm text-gray-600">
+                  Pembayaran selalu kartu cashless (tap). Sisa saldo di struk: <b>Rp {rupiah(sisaSaldo(n.saldoAwal, n.tarif))}</b>
+                  {n.saldoAwal !== '' && num(n.saldoAwal) < num(n.tarif) && <span className="text-red-600"> — saldo tidak cukup untuk tarif ini</span>}
+                </p>
+              )}
               {txt('footer', 'Pesan bawah', 2)}
             </FormSection>
             </>)}
