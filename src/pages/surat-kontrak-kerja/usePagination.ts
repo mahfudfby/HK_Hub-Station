@@ -27,7 +27,8 @@ console.assert(
 
 // key: objek baru setiap isi/kertas/template/font berubah → pembagian dihitung ulang dari awal.
 // Kembalian: [awal, akhir) indeks unit per halaman.
-export function usePagination(count: number, groups: number[], key: unknown, getRoot: () => HTMLElement | null) {
+// sel: penanda aliran isi; dokumen dua kolom memanggil hook ini dua kali ('[data-flow="main"]' & '[data-flow="side"]').
+export function usePagination(count: number, groups: number[], key: unknown, getRoot: () => HTMLElement | null, sel = '[data-flow]') {
   const [st, setSt] = useState<{ key: unknown; cuts: number[] }>({ key, cuts: [] });
   const cuts = st.key === key ? st.cuts : [];
   const bounds = [0, ...cuts.filter((c) => c < count), count];
@@ -35,7 +36,7 @@ export function usePagination(count: number, groups: number[], key: unknown, get
   useLayoutEffect(() => {
     const pages = [...(getRoot()?.querySelectorAll<HTMLElement>('[data-page]') ?? [])];
     for (const [i, page] of pages.entries()) {
-      const flow = page.querySelector<HTMLElement>('[data-flow]');
+      const flow = page.querySelector<HTMLElement>(sel);
       if (!flow) continue;
       // Luapan terbesar di antara pembungkus isi (halaman, kolom, bingkai) yang tingginya tetap
       let ov = 0;
