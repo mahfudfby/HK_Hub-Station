@@ -20,7 +20,7 @@ export const routes = [
     cat: 'gaji',
     component: lazy(() => import('../pages/slip-gaji')),
     title: 'Slip Gaji (BPJS & PPh 21)',
-    desc: 'Buat slip gaji lengkap dengan potongan BPJS dan PPh 21, ekspor ke PNG.',
+    desc: 'Buat slip gaji lengkap dengan potongan BPJS dan PPh 21, ekspor PDF, PNG & Print.',
   },
   {
     path: '/surat-dokter/*',
@@ -37,6 +37,14 @@ export const routes = [
     component: lazy(() => import('../pages/surat-sehat')),
     title: 'Surat Keterangan Sehat',
     desc: 'Khusus dokter terdaftar: surat sehat dengan BB, TB, tensi & golongan darah, ekspor PDF & PNG.',
+  },
+  {
+    path: '/copy-resep/*',
+    cat: 'kesehatan',
+    login: true, // khusus dokter: disembunyikan di Home sebelum login
+    component: lazy(() => import('../pages/copy-resep')),
+    title: 'Copy Resep Apotek & Dokter',
+    desc: 'Khusus dokter terdaftar: copy/salinan resep berkop apotek atau instalasi farmasi, isian bergaya tulisan tangan, ekspor PDF, PNG & Print.',
   },
   {
     path: '/surat-jalan/*',
@@ -114,6 +122,20 @@ export const routes = [
     component: lazy(() => import('../pages/nota-80mm')),
     title: 'Nota Pembelian 80mm',
     desc: 'Nota kasir untuk printer thermal 80mm (PNG 576px siap RawBT), PDF & Print.',
+  },
+  {
+    path: '/struk-parkir-58mm/*',
+    cat: 'nota',
+    component: lazy(() => import('../pages/struk-parkir-58mm')),
+    title: 'Struk Parkir 58mm',
+    desc: 'Karcis parkir thermal 58mm: lokasi, jam masuk/keluar, durasi otomatis, nopol, golongan & tarif, sisa saldo kartu. PNG 384px siap RawBT, PDF & Print.',
+  },
+  {
+    path: '/tiket-travel-58mm/*',
+    cat: 'nota',
+    component: lazy(() => import('../pages/tiket-travel-58mm')),
+    title: 'Tiket Travel 58mm',
+    desc: 'Tiket perjalanan thermal 58mm: asal-tujuan, jadwal berangkat, penumpang & kursi, golongan & tarif. PNG 384px siap RawBT, PDF & Print.',
   },
   {
     path: '/resi-80mm/*',
