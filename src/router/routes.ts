@@ -382,4 +382,18 @@ export const routes = [
     title: 'Surat Perjanjian Hutang Piutang',
     desc: 'Perjanjian pinjam uang dua pihak: pasal yang bisa diedit, jadwal cicilan otomatis, saksi opsional & lampiran foto bukti di halaman terpisah.',
   },
+  {
+    path: '/cv-creative/*',
+    cat: 'pribadi',
+    component: lazy(() => import('../pages/cv-creative')),
+    title: 'Custom Curriculum Vitae - Creative',
+    desc: 'CV berwarna dengan foto, 20 template tata letak (termasuk replika CV acuan), margin 1,5 cm. Isi Bahasa Indonesia, bisa Auto-Translate ke English. PDF, PNG & Print.',
+  },
+  {
+    path: '/cv-ats/*',
+    cat: 'pribadi',
+    component: lazy(() => import('../pages/cv-ats')),
+    title: 'Custom Curriculum Vitae - ATS Friendly',
+    desc: 'CV hitam putih berisi teks saja, 20 template tata letak, margin 1,5 cm. Isi Bahasa Indonesia, bisa Auto-Translate ke English. PDF teks asli, PNG & Print.',
+  },
 ];

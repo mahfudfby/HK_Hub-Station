@@ -111,6 +111,22 @@ nota thermal → `src/pages/tiket-travel-58mm/` (cukup 5 baris memakai `ThermalS
 | Nota/struk thermal | `ThermalNota`, `ThermalStruk` |
 | Faktur/invoice | `SalesDoc` |
 
+## Menu CV (Creative & ATS) — pola khusus
+- Dua menu `/cv-creative` dan `/cv-ats` memakai satu mesin: `shared/components/CvMenu.tsx` (form + ekspor),
+  `CvTemplates.tsx` (20 template per menu + pembuat halaman), `CvKit.tsx` (data, label, palet, cetak teks).
+  Halaman menu hanya 5 baris: `<CvMenu mode="creative" | "ats" />`.
+- 20 template = konfigurasi `Tpl` (keluarga tata letak `lay`, kolom samping, gaya judul, penanda butir, bentuk foto,
+  daftar, kop pekerjaan, kop halaman, font). `console.assert` memastikan 20 susunan unik. Template baru = tambah
+  `mk(...)`/`ats(...)` di `CvTemplates.tsx`; jangan menulis komponen halaman baru.
+- Margin tepi 1,5 cm = `marginPx` (57 px) di SEMUA template; kolom memakai grid tetap; garis lurus; teks ≥ 12 px.
+- WCAG AA: semua pasangan warna di `PALET` (CvKit) wajib kontras ≥ 4,5:1 (dicek `console.assert`). Palet baru ikut dicek.
+- Banyak halaman otomatis: isi dipecah jadi unit (`Unit`) lalu `usePagination` dipanggil per kolom (`data-flow="main"|"side"`).
+  Daftar butir = satu unit per butir agar bisa terpotong antarhalaman. Tambah pekerjaan/deskripsi/poin langsung menambah halaman.
+- Isian selalu Bahasa Indonesia; pilihan English memanggil `/api/translate` (cache di `shared/lib/translate.ts`).
+  Nama, perusahaan, institusi, email, situs, alamat TIDAK diterjemahkan; bulan/periode diterjemahkan lokal (`periodeEn`).
+- ATS: tanpa foto, hitam putih. PDF/PNG biasa berupa gambar; tombol "PDF Teks Asli (ATS)" memakai cetak browser (teks asli).
+- Data contoh wajib orang fiktif, bukan data pribadi nyata.
+
 ## Git & rilis — EKSEKUSI MANDIRI OTOMATIS
 Setelah perubahan selesai dan `npm run build` lolos, **langsung jalankan semuanya sendiri
 tanpa bertanya/meminta izin lagi**:
