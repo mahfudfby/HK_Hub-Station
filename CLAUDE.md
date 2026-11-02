@@ -75,6 +75,15 @@ Pengguna memilih template lewat dropdown, data tidak berubah saat ganti template
 - Beda warna/font saja **tidak dihitung** sebagai varian; yang dihitung adalah beda penataan & posisi.
 
 ## Aturan isi menu
+- **Kolom upload gambar** (`ImageUpload` di `LetterKit`) sudah membawa: toggle Hapus BG, toggle **Greyscale** (`GreyToggle`),
+  dan **auto-masuk Galeri Foto** real-time: setelah file dipilih, gambar diunggah ke Cloudinary di folder kategori
+  (`galleryFolder(label, 'upload')`: logo / stempel / tanda-tangan / lainnya dari label kolom) lalu `addSharedImage()` memperbarui
+  `SharedGallery` tanpa muat ulang. Label kolom WAJIB memuat kata logo / stempel / ttd / tanda tangan agar masuk kategori yang benar.
+  Kolom upload baru di luar `ImageUpload` yang punya `BgToggle` wajib ikut memasang `<GreyToggle value onChange notify />`.
+  (Pengecualian: logo SPBU memang selalu dipaksa hitam-putih untuk thermal.)
+- Tata letak baris kontrol upload di ponsel: input file memakai `min-w-[11rem]` supaya pindah baris, bukan menyusut dan menimpa tombol Hapus.
+- Struk parkir (`ThermalStruk kind="parkir"`): teks DURASI bisa dimatikan (`pakaiDurasi`, untuk parkir flat); tidak ada baris "Bayar";
+  baris golongan+tarif diberi jarak satu baris di atas dan bawah. Berlaku untuk semua tampilan struk parkir.
 - **Wajib ekspor PDF, PNG, dan Print** (semua menu sudah punya ketiganya).
   Surat: `useLetterExport` / `ExportButton` dari `shared/components/LetterKit`.
   Thermal: `ThermalNota` / `ThermalStruk` (PNG 384px untuk 58mm, 576px untuk 80mm, siap RawBT).
@@ -108,6 +117,7 @@ nota thermal → `src/pages/tiket-travel-58mm/` (cukup 5 baris memakai `ThermalS
 | Nomor surat otomatis, angka Romawi | `shared/lib/docNumber` |
 | Kontak kop (telp/email/web) | `KontakFields` |
 | Hapus latar foto/ttd | `shared/lib/removeBg` |
+| Toggle Greyscale (foto berwarna → hitam putih, bisa dibatalkan) | `shared/components/GreyToggle` + `shared/lib/greyscale` |
 | Nota/struk thermal | `ThermalNota`, `ThermalStruk` |
 | Faktur/invoice | `SalesDoc` |
 

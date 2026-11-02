@@ -14,6 +14,7 @@ import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
 import { isStaleChunkError, reloadForNewVersion } from '../../shared/lib/staleChunk';
 import PositionPad, { fxOf, getOffset } from '../../shared/components/PositionPad';
 import BgToggle from '../../shared/components/BgToggle';
+import GreyToggle from '../../shared/components/GreyToggle';
 import { ScaleBox, TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import { PaperPicker, PAPERS, paperOf, orient, mmToPx } from '../../shared/components/LetterKit';
 import { useBgRemoved } from '../../shared/lib/removeBg';
@@ -369,7 +370,7 @@ function TextField({ id, label, name, value, onChange, placeholder, type = 'text
   );
 }
 
-function FileField({ id, label, onChange, wrapClass = '', bg, onBg, bgBusy }) {
+function FileField({ id, label, onChange, wrapClass = '', bg, onBg, bgBusy, grey }) {
   return (
     <div className={`input-group ${wrapClass}`}>
       <label htmlFor={id} className="text-sm font-medium text-gray-700">{label}</label>
@@ -381,6 +382,7 @@ function FileField({ id, label, onChange, wrapClass = '', bg, onBg, bgBusy }) {
           />
         </div>
         <BgToggle checked={bg} onChange={onBg} busy={bgBusy} />
+        {grey && <GreyToggle value={grey.value} onChange={grey.onChange} notify={grey.notify} />}
       </div>
     </div>
   );
@@ -853,7 +855,8 @@ export default function SlipGaji() {
   const signatureShown = useBgRemoved(signature, bg.signature, bgError);
   const managerShown = useBgRemoved(managerSignature, bg.manager, bgError);
   const bgBusy = logoShown.busy || signatureShown.busy || managerShown.busy;
-  const bgProps = (key, shown) => ({ bg: bg[key], onBg: (v) => setBg((p) => ({ ...p, [key]: v })), bgBusy: shown.busy });
+  const greyOf = { logo: [logo, setLogo], signature: [signature, setSignature], manager: [managerSignature, setManagerSignature] };
+  const bgProps = (key, shown) => ({ bg: bg[key], onBg: (v) => setBg((p) => ({ ...p, [key]: v })), bgBusy: shown.busy, grey: { value: greyOf[key][0], onChange: greyOf[key][1], notify: pushToast } });
   const [exporting, setExporting] = useState(''); // '' | 'PNG' | 'PDF'
   const [printing, setPrinting] = useState(false);
   const [uploading, setUploading] = useState(false);

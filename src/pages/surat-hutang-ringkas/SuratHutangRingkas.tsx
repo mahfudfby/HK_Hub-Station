@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties,
 import { Link } from 'react-router-dom';
 import AutoTextarea from '../../shared/components/AutoTextarea';
 import BgToggle from '../../shared/components/BgToggle';
+import GreyToggle from '../../shared/components/GreyToggle';
 import FitPreview from '../../shared/components/FitPreview';
 import NumberFormatInput from '../../shared/components/NumberFormatInput';
 import PositionPad, { getOffset, type Offsets } from '../../shared/components/PositionPad';
@@ -479,6 +480,7 @@ export default function SuratHutangRingkas() {
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <BgToggle checked={ft.bg} onChange={(v) => setFoto(i, { bg: v })} />
+                      <GreyToggle value={ft.src} onChange={(v) => setFoto(i, { src: v })} notify={notify} />
                       <button type="button" className={btn} disabled={i === 0} onClick={() => moveFoto(i, -1)} aria-label={`Naikkan foto ${i + 1}`}>↑</button>
                       <button type="button" className={btn} disabled={i === f.foto.length - 1} onClick={() => moveFoto(i, 1)} aria-label={`Turunkan foto ${i + 1}`}>↓</button>
                       <button type="button" className={`${btn} text-red-600 border-red-200`} onClick={() => setF((x) => ({ ...x, foto: x.foto.filter((_, j) => j !== i) }))} aria-label={`Hapus foto ${i + 1}`}>Hapus</button>

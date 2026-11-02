@@ -48,6 +48,7 @@ type Struk = {
   paper: string; // id PAPERS; bawaan T58
   landscape: boolean;
   pakaiNomor: boolean; // tampilkan baris No Seri
+  pakaiDurasi: boolean; // parkir: tampilkan baris DURASI (matikan untuk parkir flat/tarif tetap)
   kosong: boolean; // template kosongan untuk diisi tangan
 };
 
@@ -85,6 +86,7 @@ const BASE: Struk = {
   paper: 'T58',
   landscape: false,
   pakaiNomor: true,
+  pakaiDurasi: true,
   kosong: false,
 };
 
@@ -149,7 +151,7 @@ function Receipt({ n, kind, T, k }: { n: Struk; kind: StrukKind; T: ReturnType<t
   const rows: [string, string][] = [
     ...(n.pakaiNomor ? [['No Seri', v(seri)] as [string, string]] : []),
     ...(kind === 'parkir'
-      ? [['WAKTU', K ? waktu : fmtWaktu(n.waktuMasuk)], ['DURASI', K ? TITIK_PENDEK : lama]] as [string, string][]
+      ? [['WAKTU', K ? waktu : fmtWaktu(n.waktuMasuk)] as [string, string], ...(n.pakaiDurasi ? [['DURASI', K ? TITIK_PENDEK : lama] as [string, string]] : [])]
       : [['ASAL', v(n.asal)], ['TUJUAN', v(n.tujuan)], ['JADWAL', K ? waktu : fmtWaktu(n.berangkat)], ['NAMA', v(n.penumpang)], ['KURSI', v(n.kursi)]] as [string, string][]),
   ].filter(([, val]) => K || val);
 
@@ -182,15 +184,14 @@ function Receipt({ n, kind, T, k }: { n: Struk; kind: StrukKind; T: ReturnType<t
       ))}
 
       {/* Golongan + tarif: baris besar seperti struk asli */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 * k, fontWeight: 700, fontSize: fs(4), margin: `${4 * k}px 0`, lineHeight: 1.2 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 * k, fontWeight: 700, fontSize: fs(4), margin: `${fs(0) * 1.35}px 0`, lineHeight: 1.2 }}>
         <span style={{ minWidth: 0 }}>{v(n.golongan)}</span>
         <span style={{ whiteSpace: 'nowrap' }}>{K ? 'Rp ………' : `Rp ${rupiah(num(n.tarif))}`}</span>
       </div>
 
       {parkir ? (
-        // E-parkir: selalu kartu cashless (tap) + nomor kartu + sisa saldo
+        // E-parkir: nomor kartu + sisa saldo (tanpa baris "Bayar")
         <>
-          <div>Bayar : Kartu Cashless (Tap)</div>
           <div>CN : {K ? TITIK_PENDEK : n.kartuNo || TITIK_PENDEK}</div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span>Sisa Saldo</span>
@@ -318,8 +319,13 @@ export default function ThermalStruk({ kind }: { kind: StrukKind }) {
                 {txt('seri2', 'No Seri (loket/urut)')}
               </div>
               {kind === 'parkir' ? (
-                tgl('waktuMasuk', 'Waktu masuk')
-              ) : (
+                <>
+                  {tgl('waktuMasuk', 'Waktu masuk')}
+                  <label className="flex min-h-[44px] items-center gap-2 text-sm font-medium text-gray-700">
+                    <input type="checkbox" className="h-5 w-5" checked={n.pakaiDurasi} onChange={(e) => set('pakaiDurasi', e.target.checked)} />
+                    Tampilkan teks Durasi (matikan untuk parkir flat/tarif tetap)
+                  </label>
+                </>              ) : (
                 <>
                   <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
                     {txt('asal', 'Asal')}
@@ -350,7 +356,7 @@ export default function ThermalStruk({ kind }: { kind: StrukKind }) {
               </div>
               {kind === 'parkir' && (
                 <p className="text-sm text-gray-600">
-                  Pembayaran selalu kartu cashless (tap). Sisa saldo di struk: <b>Rp {rupiah(sisaSaldo(n.saldoAwal, n.tarif))}</b>
+                  Sisa saldo di struk: <b>Rp {rupiah(sisaSaldo(n.saldoAwal, n.tarif))}</b>
                   {n.saldoAwal !== '' && num(n.saldoAwal) < num(n.tarif) && <span className="text-red-600"> — saldo tidak cukup untuk tarif ini</span>}
                 </p>
               )}
