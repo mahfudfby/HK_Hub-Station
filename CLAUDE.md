@@ -154,6 +154,17 @@ nota thermal → `src/pages/tiket-travel-58mm/` (cukup 5 baris memakai `ThermalS
     (buka dev server, pilih tiap template, panggil `buildCvDocx(pages, W, H)`, baca `word/document.xml`). Belum bisa diuji di Word asli dari lingkungan kerja ini.
 - Data contoh wajib orang fiktif, bukan data pribadi nyata.
 
+## Menu Surat Keterangan Keterampilan (sertifikat 2 halaman) — pola khusus
+- `pages/surat-keterangan-keterampilan/`: `templates.ts` (20 konfigurasi `Tpl`), `Render.tsx` (penyaji `Hal1`/`Hal2`), halaman form di file utama.
+  Default A4 landscape, 2 halaman (halaman 2 = daftar kompetensi + pengesah, bisa dimatikan). Mengekspor lewat `usePagesExport`.
+- Template = kombinasi 8 sifat tata letak (`frame`, `kop`, `title`, `who`, `qual`, `media`, `list`, `sign`); `console.assert` menjaga 20 kombinasi unik
+  dan tiap dua template beda minimal 3 sifat. Template baru = tambah `t(...)` di `templates.ts`, jangan menulis komponen halaman baru.
+- **Bingkai & pembatas dokumen sertifikat WAJIB bermotif batik/ornamen, bukan garis/kotak polos.** Pakai `FRAMES`, `motifBg()` dan `<Strip>` di `Render.tsx`
+  (10 motif SVG ubin 24×24: guilloche, kawung, parang, mega-mendung, truntum, tumpal, sulur, meander, ketupat, filigree; latar CSS berulang, aman untuk html2canvas).
+  Garis pemisah kop/judul/kotak kualifikasi juga memakai `<Strip>`.
+- Deteksi luapan: isi bingkai diberi `data-fit` + spacer padding bawah, dan halaman memeriksa `[data-fit]` agar teks tidak menembus bingkai.
+- QR Code hanya unggah gambar sendiri (tidak membuat kode verifikasi). Data contoh fiktif; kop lembaga & logo diisi pengguna (tanpa merek lembaga nyata).
+
 ## Git & rilis — EKSEKUSI MANDIRI OTOMATIS
 Setelah perubahan selesai dan `npm run build` lolos, **langsung jalankan semuanya sendiri
 tanpa bertanya/meminta izin lagi**:

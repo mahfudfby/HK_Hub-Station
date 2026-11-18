@@ -292,6 +292,13 @@ export const routes = [
     desc: 'Paklaring resmi HRD: jabatan, divisi dan masa kerja karyawan dihitung otomatis.',
   },
   {
+    path: '/surat-keterangan-keterampilan/*',
+    cat: 'surat',
+    component: lazy(() => import('../pages/surat-keterangan-keterampilan')),
+    title: 'Surat Keterangan Keterampilan',
+    desc: 'Sertifikat keterampilan kerja 2 halaman (landscape): kualifikasi, nomor registrasi, masa berlaku, foto, QR & daftar kompetensi; 20 template, ekspor PDF, PNG & Print.',
+  },
+  {
     path: '/surat-penawaran-kerja/*',
     cat: 'gaji',
     component: lazy(() => import('../pages/surat-penawaran-kerja')),
