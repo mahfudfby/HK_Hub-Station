@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { createContext, useContext, type CSSProperties, type ReactNode } from 'react';
 import { cssFamily } from '../../shared/lib/fonts';
 import { fxOf, type Offset } from '../../shared/components/PositionPad';
 import type { Tpl } from './templates';
@@ -135,20 +135,28 @@ export const FRAMES: Record<Tpl['frame'], { motif: Motif; layout: Layout; w: num
 };
 console.assert(Object.keys(FRAMES).length === 10, 'FRAMES');
 
+// Ukuran halaman (px) & huruf dokumen (px): untuk membagi pita motif menjadi ubin utuh (tidak terpotong di ujung)
+export const BoxCtx = createContext({ W: 1123, H: 794, fs: 14 });
+
 export function Frame({ t, children }: { t: Tpl; children: ReactNode }) {
   const A = t.accent;
   const { motif, layout, w } = FRAMES[t.frame];
   const bg = motifBg(motif, A, t.soft);
   const m = 0.8; // jarak bingkai dari tepi kertas (em)
   const px = (n: number) => `${n}em`;
-  const band = (pos: CSSProperties): CSSProperties => ({ position: 'absolute', backgroundImage: bg, backgroundSize: `${px(w)} ${px(w)}`, backgroundRepeat: 'repeat', ...pos });
+  const { W, H, fs } = useContext(BoxCtx);
+  // Panjang pita dibagi bilangan bulat ubin supaya motif utuh dan tebal pita sama di keempat sisi
+  const fit = (len: number) => px(len / Math.max(1, Math.round(len / w)));
+  const lenH = W / fs - 2 * m;
+  const lenV = H / fs - 2 * m - (layout === 'samping' ? 0 : 2 * w);
+  const band = (pos: CSSProperties, dir: 'h' | 'v' | 'c' = 'c'): CSSProperties => ({ position: 'absolute', backgroundImage: bg, backgroundSize: dir === 'h' ? `${fit(lenH)} ${px(w)}` : dir === 'v' ? `${px(w)} ${fit(lenV)}` : `${px(w)} ${px(w)}`, backgroundPosition: '0 0', backgroundRepeat: 'repeat', ...pos });
   const line = (inset: number): CSSProperties => ({ position: 'absolute', inset: px(inset), border: `1px solid ${A}`, pointerEvents: 'none' });
   const els: ReactNode[] = [];
   let pv = 2.4;
   let ph = 3.4;
   if (layout === 'keliling' || layout === 'ganda') {
-    els.push(<div key="t" style={band({ left: px(m), right: px(m), top: px(m), height: px(w) })} />, <div key="b" style={band({ left: px(m), right: px(m), bottom: px(m), height: px(w) })} />);
-    els.push(<div key="l" style={band({ left: px(m), top: px(m + w), bottom: px(m + w), width: px(w) })} />, <div key="r" style={band({ right: px(m), top: px(m + w), bottom: px(m + w), width: px(w) })} />);
+    els.push(<div key="t" style={band({ left: px(m), right: px(m), top: px(m), height: px(w) }, 'h')} />, <div key="b" style={band({ left: px(m), right: px(m), bottom: px(m), height: px(w) }, 'h')} />);
+    els.push(<div key="l" style={band({ left: px(m), top: px(m + w), bottom: px(m + w), width: px(w) }, 'v')} />, <div key="r" style={band({ right: px(m), top: px(m + w), bottom: px(m + w), width: px(w) }, 'v')} />);
     els.push(<div key="o" style={line(m)} />, <div key="i" style={line(m + w)} />);
     if (layout === 'ganda') els.push(<div key="i2" style={line(m + w + 0.35)} />);
     const e = m + w + (layout === 'ganda' ? 0.35 : 0);
@@ -156,13 +164,13 @@ export function Frame({ t, children }: { t: Tpl; children: ReactNode }) {
     ph = e + 1.8;
   } else if (layout === 'atas-bawah') {
     els.push(<div key="o" style={line(m)} />);
-    els.push(<div key="t" style={band({ left: px(m), right: px(m), top: px(m), height: px(w) })} />, <div key="b" style={band({ left: px(m), right: px(m), bottom: px(m), height: px(w) })} />);
+    els.push(<div key="t" style={band({ left: px(m), right: px(m), top: px(m), height: px(w) }, 'h')} />, <div key="b" style={band({ left: px(m), right: px(m), bottom: px(m), height: px(w) }, 'h')} />);
     els.push(<div key="ti" style={{ position: 'absolute', left: px(m), right: px(m), top: px(m + w), borderTop: `1px solid ${A}` }} />, <div key="bi" style={{ position: 'absolute', left: px(m), right: px(m), bottom: px(m + w), borderTop: `1px solid ${A}` }} />);
     pv = m + w + 1.2;
     ph = m + 2.6;
   } else if (layout === 'samping') {
     els.push(<div key="o" style={line(m)} />);
-    els.push(<div key="l" style={band({ left: px(m), top: px(m), bottom: px(m), width: px(w) })} />, <div key="r" style={band({ right: px(m), top: px(m), bottom: px(m), width: px(w) })} />);
+    els.push(<div key="l" style={band({ left: px(m), top: px(m), bottom: px(m), width: px(w) }, 'v')} />, <div key="r" style={band({ right: px(m), top: px(m), bottom: px(m), width: px(w) }, 'v')} />);
     els.push(<div key="li" style={{ position: 'absolute', top: px(m), bottom: px(m), left: px(m + w), borderLeft: `1px solid ${A}` }} />, <div key="ri" style={{ position: 'absolute', top: px(m), bottom: px(m), right: px(m + w), borderLeft: `1px solid ${A}` }} />);
     pv = m + 1.4;
     ph = m + w + 1.6;
