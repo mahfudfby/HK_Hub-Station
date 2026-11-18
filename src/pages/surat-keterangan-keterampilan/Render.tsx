@@ -160,26 +160,26 @@ export function Frame({ t, children }: { t: Tpl; children: ReactNode }) {
     els.push(<div key="o" style={line(m)} />, <div key="i" style={line(m + w)} />);
     if (layout === 'ganda') els.push(<div key="i2" style={line(m + w + 0.35)} />);
     const e = m + w + (layout === 'ganda' ? 0.35 : 0);
-    pv = e + 1;
-    ph = e + 1.8;
+    pv = e + 2.4;
+    ph = e + 3.6;
   } else if (layout === 'atas-bawah') {
     els.push(<div key="o" style={line(m)} />);
     els.push(<div key="t" style={band({ left: px(m), right: px(m), top: px(m), height: px(w) }, 'h')} />, <div key="b" style={band({ left: px(m), right: px(m), bottom: px(m), height: px(w) }, 'h')} />);
     els.push(<div key="ti" style={{ position: 'absolute', left: px(m), right: px(m), top: px(m + w), borderTop: `1px solid ${A}` }} />, <div key="bi" style={{ position: 'absolute', left: px(m), right: px(m), bottom: px(m + w), borderTop: `1px solid ${A}` }} />);
-    pv = m + w + 1.2;
-    ph = m + 2.6;
+    pv = m + w + 2.4;
+    ph = m + 4;
   } else if (layout === 'samping') {
     els.push(<div key="o" style={line(m)} />);
     els.push(<div key="l" style={band({ left: px(m), top: px(m), bottom: px(m), width: px(w) }, 'v')} />, <div key="r" style={band({ right: px(m), top: px(m), bottom: px(m), width: px(w) }, 'v')} />);
     els.push(<div key="li" style={{ position: 'absolute', top: px(m), bottom: px(m), left: px(m + w), borderLeft: `1px solid ${A}` }} />, <div key="ri" style={{ position: 'absolute', top: px(m), bottom: px(m), right: px(m + w), borderLeft: `1px solid ${A}` }} />);
-    pv = m + 1.4;
-    ph = m + w + 1.6;
+    pv = m + 2.6;
+    ph = m + w + 3.4;
   } else { // sudut: blok ornamen di empat sudut + garis ganda tipis
     const c = (pos: CSSProperties): CSSProperties => band({ width: px(2 * w), height: px(2 * w), border: `1px solid ${A}`, boxSizing: 'border-box', ...pos });
     els.push(<div key="o" style={line(m + w * 0.6)} />, <div key="i" style={line(m + w * 0.6 + 0.35)} />);
     els.push(<div key="c1" style={c({ left: px(m), top: px(m) })} />, <div key="c2" style={c({ right: px(m), top: px(m) })} />, <div key="c3" style={c({ left: px(m), bottom: px(m) })} />, <div key="c4" style={c({ right: px(m), bottom: px(m) })} />);
-    pv = m + 2 * w * 0.6 + 1.4;
-    ph = m + 2 * w + 1;
+    pv = m + 2 * w * 0.6 + 2.6;
+    ph = m + 2 * w + 2.4;
   }
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
