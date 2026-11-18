@@ -15,7 +15,7 @@ import { usePagesExport } from '../surat-kontrak-kerja/exportPages';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { useGoogleFonts } from '../../shared/lib/fonts';
 import { TEMPLATES, getTpl } from './templates';
-import { Hal1, Hal2, rootStyle, type Cert } from './Render';
+import { BoxCtx, Hal1, Hal2, rootStyle, type Cert } from './Render';
 
 // Surat Keterangan Keterampilan: sertifikat keterampilan kerja 2 halaman (landscape).
 // Halaman 1 = sertifikat (kop, nama, kualifikasi, nomor registrasi, masa berlaku, QR, foto, penetapan);
@@ -259,10 +259,12 @@ export default function SuratKeteranganKeterampilan() {
           </div>
 
           <FitPreview>
+            <BoxCtx.Provider value={{ W: pg.W, H: pg.H, fs }}>
             <div ref={pagesRef} className="w-max flex flex-col gap-6">
               <div data-page className="shadow-lg" style={pageBox}><div style={rootStyle(t, fs)}><Hal1 t={t} d={d} /></div></div>
               {f.pakaiHal2 && <div data-page className="shadow-lg" style={pageBox}><div style={rootStyle(t, fs)}><Hal2 t={t} d={d} /></div></div>}
             </div>
+            </BoxCtx.Provider>
           </FitPreview>
         </div>
       </div>
