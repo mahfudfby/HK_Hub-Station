@@ -122,16 +122,16 @@ export function Strip({ t, h = 0.7, v = false, w, style }: { t: Tpl; h?: number;
 // ============================================================
 type Layout = 'keliling' | 'ganda' | 'atas-bawah' | 'samping' | 'sudut';
 export const FRAMES: Record<Tpl['frame'], { motif: Motif; layout: Layout; w: number }> = {
-  guilloche: { motif: 'guilloche', layout: 'keliling', w: 1.5 },
-  kawung: { motif: 'kawung', layout: 'ganda', w: 1.6 },
-  'mega-mendung': { motif: 'mega-mendung', layout: 'keliling', w: 1.5 },
-  filigree: { motif: 'filigree', layout: 'sudut', w: 1.4 },
-  parang: { motif: 'parang', layout: 'keliling', w: 1.3 },
-  sulur: { motif: 'sulur', layout: 'ganda', w: 1.5 },
-  truntum: { motif: 'truntum', layout: 'keliling', w: 1.4 },
-  tumpal: { motif: 'tumpal', layout: 'atas-bawah', w: 1.8 },
-  ketupat: { motif: 'ketupat', layout: 'samping', w: 1.7 },
-  meander: { motif: 'meander', layout: 'atas-bawah', w: 1.4 },
+  guilloche: { motif: 'guilloche', layout: 'keliling', w: 2.6 },
+  kawung: { motif: 'kawung', layout: 'ganda', w: 2.8 },
+  'mega-mendung': { motif: 'mega-mendung', layout: 'keliling', w: 2.6 },
+  filigree: { motif: 'filigree', layout: 'sudut', w: 2.2 },
+  parang: { motif: 'parang', layout: 'keliling', w: 2.4 },
+  sulur: { motif: 'sulur', layout: 'ganda', w: 2.6 },
+  truntum: { motif: 'truntum', layout: 'keliling', w: 2.4 },
+  tumpal: { motif: 'tumpal', layout: 'atas-bawah', w: 3.0 },
+  ketupat: { motif: 'ketupat', layout: 'samping', w: 3.0 },
+  meander: { motif: 'meander', layout: 'atas-bawah', w: 2.4 },
 };
 console.assert(Object.keys(FRAMES).length === 10, 'FRAMES');
 
