@@ -27,8 +27,8 @@ const lines = (s: string) => s.split('\n').map((x) => x.trim()).filter(Boolean);
 // ============================================================
 // SECTION: Potongan kecil
 // ============================================================
-function Logo({ src, off, size }: { src: string; off?: Offset; size: number }) {
-  if (!src) return null;
+function Logo({ src, off, size, t }: { src: string; off?: Offset; size: number; t?: Tpl }) {
+  if (!src) return t ? <div style={{ flexShrink: 0 }}><Blank w={size * 1.25} h={size} text="LOGO" t={t} /></div> : null;
   const o = off ?? { x: 0, y: 0 };
   const fx = fxOf(o, 'logo');
   return <img src={src} alt="Logo" style={{ height: `${size}em`, maxWidth: `${size * 1.7}em`, objectFit: 'contain', flexShrink: 0, opacity: fx.a, transform: `translate(${o.x}px, ${o.y}px) scale(${fx.z})` }} />;
@@ -184,7 +184,7 @@ export function Frame({ t, children }: { t: Tpl; children: ReactNode }) {
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
       {els}
-      <div data-fit style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', padding: `${px(pv)} ${px(ph)} 0`, position: 'relative' }}>{children}<div aria-hidden="true" style={{ height: px(pv), flexShrink: 0 }} /></div>
+      <div data-fit style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', padding: `${px(pv + 1.6)} ${px(ph)} 0`, position: 'relative' }}>{children}<div aria-hidden="true" style={{ height: px(pv), flexShrink: 0 }} /></div>
     </div>
   );
 }
@@ -206,7 +206,7 @@ function KopBody({ t, d, small = false }: P & { small?: boolean }) {
   if (small || t.kop === 'kecil') {
     return (
       <div style={{ ...base, gap: '0.7em' }}>
-        <Logo src={d.logo} off={d.logoOff} size={2.4} />
+        <Logo t={t} src={d.logo} off={d.logoOff} size={2.4} />
         <div style={{ fontFamily: fam(t.head), fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '1em', color: t.accent }}>{d.lembaga}</div>
         {d.sub && <div style={{ marginLeft: 'auto', fontSize: '0.85em', color: '#555' }}>{d.sub}</div>}
       </div>
@@ -215,32 +215,32 @@ function KopBody({ t, d, small = false }: P & { small?: boolean }) {
   switch (t.kop) {
     case 'tengah': return (
       <div style={{ ...base, flexDirection: 'column', gap: '0.4em' }}>
-        <Logo src={d.logo} off={d.logoOff} size={4.4} />
+        <Logo t={t} src={d.logo} off={d.logoOff} size={4.4} />
         <Teks t={t} d={d} align="center" big={1.6} />
       </div>
     );
     case 'kanan': return (
       <div style={{ ...base, flexDirection: 'row-reverse', justifyContent: 'flex-start' }}>
-        <Logo src={d.logo} off={d.logoOff} size={4.8} />
+        <Logo t={t} src={d.logo} off={d.logoOff} size={4.8} />
         <div style={{ flex: 1 }}><Teks t={t} d={d} align="right" /></div>
       </div>
     );
     case 'banner': return (
       <div style={{ ...base, background: t.accent, padding: '0.7em 1.2em' }}>
-        {d.logo && <div style={{ background: '#fff', padding: '0.25em', borderRadius: '0.3em', display: 'flex' }}><Logo src={d.logo} off={d.logoOff} size={3.6} /></div>}
+        <div style={{ background: '#fff', padding: '0.25em', borderRadius: '0.3em', display: 'flex' }}><Logo t={t} src={d.logo} off={d.logoOff} size={3.6} /></div>
         <Teks t={t} d={d} align="left" color="#fff" big={1.55} />
       </div>
     );
     case 'dua-sisi': return (
       <div style={{ ...base, justifyContent: 'space-between' }}>
-        <div style={{ width: '6em', display: 'flex' }}><Logo src={d.logo} off={d.logoOff} size={4.4} /></div>
+        <div style={{ width: '6em', display: 'flex' }}><Logo t={t} src={d.logo} off={d.logoOff} size={4.4} /></div>
         <div style={{ flex: 1 }}><Teks t={t} d={d} align="center" big={1.5} /></div>
         <div style={{ width: '6em' }} />
       </div>
     );
     default: return ( // kiri (referensi)
       <div style={base}>
-        <Logo src={d.logo} off={d.logoOff} size={5} />
+        <Logo t={t} src={d.logo} off={d.logoOff} size={5} />
         <Teks t={t} d={d} align="left" />
       </div>
     );
@@ -435,7 +435,7 @@ export function Hal1({ t, d }: P) {
         <div style={{ display: 'flex', gap: '1.6em', flex: 1, minHeight: 0 }}>
           <div style={{ width: '12.5em', flexShrink: 0, background: t.accent, color: '#fff', padding: '1.2em 0.9em', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.9em', textAlign: 'center', alignSelf: 'stretch' }}>
             <Strip t={t} h={1} style={{ margin: '-1.2em -0.9em 0', width: 'calc(100% + 1.8em)' }} />
-            {d.logo && <div style={{ background: '#fff', padding: '0.3em', borderRadius: '0.3em', display: 'flex' }}><Logo src={d.logo} off={d.logoOff} size={5} /></div>}
+            <div style={{ background: '#fff', padding: '0.3em', borderRadius: '0.3em', display: 'flex' }}><Logo t={t} src={d.logo} off={d.logoOff} size={5} /></div>
             <Teks t={t} d={d} align="center" color="#fff" big={1.2} />
             <div style={{ flex: 1 }} />
             <Strip t={t} h={1} style={{ margin: '0 -0.9em -1.2em', width: 'calc(100% + 1.8em)' }} />
@@ -506,7 +506,7 @@ function Pengesah({ t, d }: P) {
   const ttd = d.ttd2 && <img src={d.ttd2} alt="Tanda tangan" style={{ height: '3.6em', maxWidth: '9em', objectFit: 'contain', mixBlendMode: 'multiply', display: 'block', margin: '0 auto' }} />;
   const nama = <div style={{ fontWeight: 700, fontFamily: fam(t.head) }}>{d.nama2}</div>;
   const jab = <div>{d.jabatan2}</div>;
-  const logo = (s: number) => <Logo src={d.logo2} off={o} size={s} />;
+  const logo = (s: number) => <Logo t={t} src={d.logo2} off={o} size={s} />;
   switch (t.sign) {
     case 'kanan': case 'kiri': case 'tengah': {
       const al = t.sign === 'kanan' ? 'flex-end' : t.sign === 'kiri' ? 'flex-start' : 'center';

@@ -37,10 +37,10 @@ export const orDots = (v: string, w?: string) =>
 
 // ---------------- Form ----------------
 export const inputCls = 'w-full p-2 border border-gray-300 rounded-lg text-sm';
-export function Field({ label, children }: { label: string; children: ReactNode }) {
+export function Field({ label, children, ribbon = false }: { label: string; children: ReactNode; ribbon?: boolean }) {
   return (
     <label className="block text-sm font-medium text-gray-700">
-      {label}
+      {ribbon ? <span className="pita-emas">{label}</span> : label}
       <div className="mt-1">{children}</div>
     </label>
   );
@@ -84,14 +84,14 @@ export function ImageUpload({ label, value, onChange, notify, bg, onBg, shown, b
     notify('info', `${label} dihapus.`);
   };
   return (
-    <Field label={label}>
+    <Field label={label} ribbon={/logo/i.test(label)}>
       {/* Kotak 3D hanya untuk upload: baris 1 = preview, baris 2 = Pilih File + Hapus. Toggle Hapus BG & Greyscale di bawah kotak */}
       <div className="flex flex-col gap-2">
       <div className="upload-box flex flex-col items-start gap-3">
         {busy ? (
-          <span className="h-14 w-14 flex items-center justify-center border rounded text-blue-600"><Spinner className="h-6 w-6" /></span>
+          <span className="h-36 w-36 flex items-center justify-center border rounded text-blue-600"><Spinner className="h-8 w-8" /></span>
         ) : (
-          value && <img src={shown} alt={label} className="h-14 w-14 object-contain border rounded bg-[repeating-conic-gradient(#e5e7eb_0_25%,#fff_0_50%)] bg-[length:12px_12px]" />
+          value && <img src={shown} alt={label} className="h-36 w-36 max-w-full object-contain border rounded bg-[repeating-conic-gradient(#e5e7eb_0_25%,#fff_0_50%)] bg-[length:16px_16px]" />
         )}
         <div className="flex w-full min-w-0 items-center gap-2">
           <input type="file" accept="image/*" disabled={busy} onChange={(e) => read(e.target.files?.[0])} className="text-sm min-w-0 flex-1" />
