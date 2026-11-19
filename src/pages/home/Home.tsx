@@ -1,24 +1,32 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { AlertCircle, Check, Info, X } from 'lucide-react';
+import {
+  AlertCircle,
+  Briefcase,
+  Building2,
+  Check,
+  FileText,
+  Info,
+  Printer,
+  Receipt,
+  Star,
+  Stethoscope,
+  Users,
+  X,
+} from 'lucide-react';
 import { routes } from '../../router/routes';
 import { useAuthUser } from '../../shared/lib/auth';
 import {
   CATEGORIES_CONFIG,
-  COLLAPSED_COLS_STORAGE_KEY,
   extractTags,
   FAVORITE_CATEGORY,
-  FAVORITES_STORAGE_KEY,
-  loadCollapsedCols,
   loadFavorites,
-  saveCollapsedCols,
   saveFavorites,
-  VIEW_MODE_STORAGE_KEY,
 } from './helpers';
-import KanbanColumn from './KanbanColumn';
-import KanbanHeader from './KanbanHeader';
+import MaterialCard from './MaterialCard';
+import MaterialHeader from './MaterialHeader';
 import QrisModal from './QrisModal';
-import { AppItem, KanbanGroup, SortOption, ToastState, ViewMode } from './types';
+import { AppItem, KanbanGroup, SortOption, ToastState } from './types';
 
 // ============================================================
 // SECTION: Kategori Baku (Kebutuhan router & CLAUDE.md)
@@ -32,6 +40,17 @@ export const CATEGORIES = [
   { key: 'kesehatan', title: 'Kesehatan (Khusus Dokter)' },
   { key: 'nota', title: 'Nota & Resi' },
 ];
+
+const iconMap = {
+  star: Star,
+  briefcase: Briefcase,
+  receipt: Receipt,
+  building: Building2,
+  users: Users,
+  fileText: FileText,
+  printer: Printer,
+  stethoscope: Stethoscope,
+};
 
 // ============================================================
 // SECTION: Toast Notification
@@ -87,7 +106,7 @@ function AmbientBackground() {
 }
 
 // ============================================================
-// SECTION: Home (Kanban Edition)
+// SECTION: Home (Material Design Edition)
 // ============================================================
 export default function Home() {
   const [toast, setToast] = useState<ToastState>(null);
@@ -99,58 +118,9 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortOption, setSortOption] = useState<SortOption>('default');
   const [qrisOpen, setQrisOpen] = useState(false);
-
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    try {
-      return (localStorage.getItem(VIEW_MODE_STORAGE_KEY) as ViewMode) || 'board';
-    } catch {
-      return 'board';
-    }
-  });
-
   const [favorites, setFavorites] = useState<string[]>(() => loadFavorites());
-  const [collapsedCols, setCollapsedCols] = useState<Record<string, boolean>>(() => loadCollapsedCols());
 
-  const boardContainerRef = useRef<HTMLDivElement>(null);
-
-  // Sync viewMode to localStorage
-  const handleViewModeChange = (mode: ViewMode) => {
-    setViewMode(mode);
-    try {
-      localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
-    } catch {
-      // Ignore
-    }
-  };
-
-  // Sync collapsedCols to localStorage
-  const toggleCollapseColumn = (key: string) => {
-    setCollapsedCols((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
-      saveCollapsedCols(next);
-      return next;
-    });
-  };
-
-  // Toggle Collapse All columns
-  const allCollapsed = useMemo(() => {
-    const keys = ['favorites', ...CATEGORIES_CONFIG.map((c) => c.key)];
-    return keys.every((k) => !!collapsedCols[k]);
-  }, [collapsedCols]);
-
-  const toggleCollapseAll = () => {
-    setCollapsedCols((prev) => {
-      const nextState = !allCollapsed;
-      const updated: Record<string, boolean> = {};
-      ['favorites', ...CATEGORIES_CONFIG.map((c) => c.key)].forEach((k) => {
-        updated[k] = nextState;
-      });
-      saveCollapsedCols(updated);
-      return updated;
-    });
-  };
-
-  // Handle incoming redirect toast (e.g. from logout or admin action)
+  // Handle incoming redirect toast
   useEffect(() => {
     const msg = (location.state as { toast?: string } | null)?.toast;
     if (!msg) return;
@@ -165,10 +135,7 @@ export default function Home() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  // ============================================================
-  // SECTION: Data Preparation
-  // ============================================================
-  // Menu login: true (dokter) disembunyikan sampai user login.
+  // Filter visible routes
   const visibleRoutes = useMemo(() => {
     return routes.filter((r) => 'title' in r && (!('login' in r) || user));
   }, [user]);
@@ -199,9 +166,7 @@ export default function Home() {
     });
   }, [visibleRoutes, favorites]);
 
-  // ============================================================
-  // SECTION: Favorite Management & Drag-and-Drop
-  // ============================================================
+  // Favorite toggle
   const toggleFavorite = useCallback((path: string, title: string) => {
     setFavorites((prev) => {
       const exists = prev.includes(path);
@@ -211,27 +176,11 @@ export default function Home() {
         type: exists ? 'info' : 'success',
         message: exists
           ? `"${title}" dihapus dari daftar favorit.`
-          : `"${title}" berhasil disematkan ke kolom Favorit!`,
+          : `"${title}" berhasil disematkan ke Favorit!`,
       });
       return next;
     });
   }, []);
-
-  const handleDropAppToColumn = useCallback((columnKey: string, appPath: string) => {
-    if (columnKey === 'favorites') {
-      setFavorites((prev) => {
-        if (prev.includes(appPath)) return prev;
-        const next = [...prev, appPath];
-        saveFavorites(next);
-        const item = allAppItems.find((a) => a.path === appPath);
-        setToast({
-          type: 'success',
-          message: `"${item?.title || 'Dokumen'}" disematkan ke Favorit!`,
-        });
-        return next;
-      });
-    }
-  }, [allAppItems]);
 
   const copyLink = useCallback(async (path: string, title: string) => {
     try {
@@ -271,23 +220,23 @@ export default function Home() {
     return result;
   }, [searchQuery, sortOption]);
 
-  // ============================================================
-  // SECTION: Build Kanban Columns
-  // ============================================================
-  const kanbanGroups = useMemo<KanbanGroup[]>(() => {
+  // Build Category Groups
+  const categoryGroups = useMemo<KanbanGroup[]>(() => {
     const list: KanbanGroup[] = [];
 
-    // Favorite Column (always present if user has favorites, or shown empty in board view)
+    // Favorite Group (if any favorite items)
     const favoriteItems = allAppItems.filter((a) => a.isFavorite);
     const processedFavs = processItems(favoriteItems);
 
-    list.push({
-      ...FAVORITE_CATEGORY,
-      apps: processedFavs,
-      isFavoriteCol: true,
-    });
+    if (processedFavs.length > 0 || selectedCategory === 'favorites') {
+      list.push({
+        ...FAVORITE_CATEGORY,
+        apps: processedFavs,
+        isFavoriteCol: true,
+      });
+    }
 
-    // Standard Category Columns
+    // Standard Category Groups
     CATEGORIES_CONFIG.forEach((cat) => {
       const catItems = allAppItems.filter((a) => a.cat === cat.key);
       const processed = processItems(catItems);
@@ -303,131 +252,99 @@ export default function Home() {
       return list.filter((g) => g.key === selectedCategory);
     }
 
-    return list;
+    // Otherwise show groups that have matching apps
+    return list.filter((g) => g.apps.length > 0);
   }, [allAppItems, processItems, selectedCategory]);
 
-  // Total matching apps across all non-favorite categories
   const totalMatchingApps = useMemo(() => {
-    const nonFavGroups = kanbanGroups.filter((g) => !g.isFavoriteCol);
+    const nonFavGroups = categoryGroups.filter((g) => !g.isFavoriteCol);
     return nonFavGroups.reduce((acc, g) => acc + g.apps.length, 0);
-  }, [kanbanGroups]);
-
-  // Scroll to column when category pill is tapped in board view
-  const handleSelectCategory = (catKey: string) => {
-    setSelectedCategory(catKey);
-    if (catKey === 'all') return;
-
-    if (viewMode === 'board' && boardContainerRef.current) {
-      const element = document.getElementById(`kanban-col-${catKey}`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
-      }
-    }
-  };
+  }, [categoryGroups]);
 
   return (
-    <main className="relative min-h-screen bg-gray-100/90 dark:bg-gray-950 px-4 py-8 text-gray-900 dark:text-gray-100 sm:px-6 sm:py-10 transition-colors duration-200">
+    <main className="relative min-h-screen bg-gray-50/70 dark:bg-gray-950 px-4 py-8 text-gray-900 dark:text-gray-100 sm:px-6 sm:py-12 transition-colors duration-200">
       <AmbientBackground />
 
       <div className="relative z-10 mx-auto w-full max-w-7xl">
-        {/* Kanban Top Navigation & Controls */}
-        <KanbanHeader
+        {/* Material Header */}
+        <MaterialHeader
           totalApps={allAppItems.length}
           totalFavorites={favorites.length}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          viewMode={viewMode}
-          onViewModeChange={handleViewModeChange}
           selectedCategory={selectedCategory}
-          onSelectCategory={handleSelectCategory}
+          onSelectCategory={setSelectedCategory}
           sortOption={sortOption}
           onSortOptionChange={setSortOption}
           onOpenQris={() => setQrisOpen(true)}
-          onToggleCollapseAll={toggleCollapseAll}
-          allCollapsed={allCollapsed}
         />
 
-        {/* Empty Search Result Message */}
-        {totalMatchingApps === 0 && searchQuery && (
-          <div className="my-12 p-8 text-center rounded-3xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 shadow-xs max-w-md mx-auto">
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-              Tidak ada dokumen yang cocok dengan "{searchQuery}".
+        {/* Empty Result Notification */}
+        {totalMatchingApps === 0 && (
+          <div className="my-12 p-8 text-center rounded-3xl border border-gray-200 dark:border-gray-800 bg-white/90 dark:bg-gray-900/90 shadow-xs max-w-md mx-auto">
+            <p className="text-sm font-bold text-gray-800 dark:text-gray-200">
+              Tidak ada dokumen yang ditemukan.
             </p>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Coba gunakan kata kunci lain seperti "surat", "gaji", "nota", atau "invoice".
+              {searchQuery
+                ? `Tidak ada hasil untuk pencarian "${searchQuery}".`
+                : 'Belum ada dokumen pada kategori ini.'}
             </p>
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              className="mt-4 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold transition-all shadow-xs"
-            >
-              Reset Pencarian
-            </button>
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="mt-4 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold transition-all shadow-xs"
+              >
+                Reset Pencarian
+              </button>
+            )}
           </div>
         )}
 
-        {/* ============================================================
-            SECTION: Board View (Horizontal Scrollable Lanes)
-           ============================================================ */}
-        {viewMode === 'board' && (
-          <div
-            ref={boardContainerRef}
-            className="kanban-board-scroll flex items-start gap-4 overflow-x-auto pb-6 pt-1 select-none scroll-smooth"
-            style={{ minHeight: 'calc(100vh - 250px)' }}
-          >
-            {kanbanGroups.map((group) => {
-              // In board mode, if selectedCategory !== 'all', only render that or show all
-              if (selectedCategory !== 'all' && group.key !== selectedCategory) {
-                return null;
-              }
+        {/* Material Sections & Grid of Cards */}
+        <div className="space-y-10">
+          {categoryGroups.map((group) => {
+            const Icon = iconMap[group.iconName] || FileText;
 
-              return (
-                <div key={group.key} id={`kanban-col-${group.key}`} className="shrink-0">
-                  <KanbanColumn
-                    group={group}
-                    isCollapsed={!!collapsedCols[group.key]}
-                    onToggleCollapse={toggleCollapseColumn}
-                    onToggleFavorite={toggleFavorite}
-                    onCopyLink={copyLink}
-                    onDropAppToColumn={handleDropAppToColumn}
-                    viewMode="board"
-                  />
+            return (
+              <section key={group.key} className="space-y-4">
+                {/* Category Header */}
+                <div className="flex items-center justify-between pb-2.5 border-b border-gray-200 dark:border-gray-800">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`p-2 rounded-xl ${group.badgeBg} ${group.badgeText}`}>
+                      <Icon size={18} />
+                    </div>
+                    <div>
+                      <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-gray-100 tracking-tight">
+                        {group.title}
+                      </h2>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-gray-200/80 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-mono">
+                    {group.apps.length}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        )}
 
-        {/* ============================================================
-            SECTION: Grid & List Views
-           ============================================================ */}
-        {(viewMode === 'grid' || viewMode === 'list') && (
-          <div className="space-y-6 pt-2">
-            {kanbanGroups.map((group) => {
-              // Hide empty favorites in grid/list if no favorites
-              if (group.isFavoriteCol && group.apps.length === 0) return null;
-
-              return (
-                <KanbanColumn
-                  key={group.key}
-                  group={group}
-                  isCollapsed={false}
-                  onToggleCollapse={toggleCollapseColumn}
-                  onToggleFavorite={toggleFavorite}
-                  onCopyLink={copyLink}
-                  onDropAppToColumn={handleDropAppToColumn}
-                  viewMode={viewMode}
-                />
-              );
-            })}
-          </div>
-        )}
+                {/* Cards Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {group.apps.map((app) => (
+                    <MaterialCard
+                      key={app.path}
+                      app={app}
+                      onToggleFavorite={toggleFavorite}
+                      onCopyLink={copyLink}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </div>
 
         {/* Footer */}
-        <footer className="mt-14 pt-6 border-t border-gray-200/80 dark:border-gray-800 text-center text-xs text-gray-500 dark:text-gray-400">
-          <p>
-            HK Hub Station • Platform Generator Dokumen & Cetak Cepat
-          </p>
+        <footer className="mt-16 pt-6 border-t border-gray-200 dark:border-gray-800 text-center text-xs text-gray-500 dark:text-gray-400">
+          HK Hub Station • Platform Generator Dokumen & Cetak Cepat
         </footer>
       </div>
 

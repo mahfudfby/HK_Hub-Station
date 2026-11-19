@@ -1,10 +1,38 @@
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import {
+  Check,
+  ChevronDown,
+  FileImage,
+  Palette,
+  RefreshCw,
+  Scissors,
+  Trash2,
+  Upload,
+  X,
+} from 'lucide-react';
+import { galleryFolder, uploadImage } from '../lib/cloudinary';
+import { toGreyscale } from '../lib/greyscale';
+import { removeBackground } from '../lib/removeBg';
+import BgToggle from './BgToggle';
+import { Spinner } from './Feedback';
+import GreyToggle from './GreyToggle';
 
-// Galeri foto bersama: semua gambar HK Hub di Cloudinary (lewat /api/cloudinary-list), untuk semua pengguna,
-// sampai pemilik menghapusnya di Cloudinary. Dikelompokkan per kategori (Logo / Tanda tangan / Stempel / Lainnya);
-// klik gambar = pasang ke kolom gambar menu ("Pasang ke" bisa dipilih).
+// ============================================================
+// SECTION: Types & Constants
+// ============================================================
 export type SharedImage = { url: string; kind: string; folder?: string }; // kind '' = kategori Lainnya
-export const IMAGE_LABEL: Record<string, string> = { logo: 'Logo', ttd: 'Tanda tangan', stempel: 'Stempel', managerSignature: 'Tanda tangan manajer', signature: 'Tanda tangan' };
+export const IMAGE_LABEL: Record<string, string> = {
+  logo: 'Logo',
+  ttd: 'Tanda tangan',
+  stempel: 'Stempel',
+  managerSignature: 'Tanda tangan manajer',
+  signature: 'Tanda tangan',
+  ttdPemohon: 'Tanda tangan pemohon',
+  ttdAtasan: 'Tanda tangan atasan',
+  ttdHrd: 'Tanda tangan HRD',
+  ttd1: 'Tanda tangan pihak 1',
+  ttd2: 'Tanda tangan pihak 2',
+};
 
 const CATS = [
   { kind: 'stempel', label: 'Stempel' },
@@ -12,25 +40,37 @@ const CATS = [
   { kind: 'ttd', label: 'Tanda Tangan' },
   { kind: '', label: 'Lainnya' },
 ];
-// Kategori sebuah kolom gambar menu: ttdRt/ttdRw/managerSignature → ttd, stempelRt → stempel, dst.
-export const catOfKey = (k: string) => (/logo|foto/i.test(k) ? 'logo' : /stempel|cap/i.test(k) ? 'stempel' : /ttd|sign/i.test(k) ? 'ttd' : '');
-console.assert(catOfKey('ttdRw') === 'ttd' && catOfKey('managerSignature') === 'ttd' && catOfKey('stempelRt') === 'stempel' && catOfKey('logo') === 'logo', 'catOfKey');
-const labelOf = (k: string) => IMAGE_LABEL[k] ?? k.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
-// Kolom gambar = kolom bernama logo/ttd/stempel/signature (+ akhiran, mis. ttdRt)
+
+export const catOfKey = (k: string) =>
+  /logo|foto/i.test(k) ? 'logo' : /stempel|cap/i.test(k) ? 'stempel' : /ttd|sign/i.test(k) ? 'ttd' : '';
+
+const labelOf = (k: string) =>
+  IMAGE_LABEL[k] ?? k.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
+
 const isImageKey = (k: string) => k in IMAGE_LABEL || catOfKey(k) !== '';
 
-// Bingkai "Galeri Foto" dengan tombol ciutkan/lebarkan untuk seluruh galeri
+// ============================================================
+// SECTION: GaleriLipat Container
+// ============================================================
 export function GaleriLipat({ children, className = '' }: { children: ReactNode; className?: string }) {
   const [buka, setBuka] = useState(true);
   const id = useId();
   return (
     <div className={`space-y-2 ${className}`}>
-      <button type="button" aria-expanded={buka} aria-controls={id} onClick={() => setBuka(!buka)}
-        className="flex min-h-[44px] w-full items-center justify-between gap-2 rounded-lg px-1 text-left font-bold text-gray-800">
-        <span>Galeri Foto</span>
-        <span className="flex items-center gap-1 text-xs font-medium text-gray-600">
+      <button
+        type="button"
+        aria-expanded={buka}
+        aria-controls={id}
+        onClick={() => setBuka(!buka)}
+        className="flex min-h-[44px] w-full items-center justify-between gap-2 rounded-xl px-2 text-left font-bold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+      >
+        <span className="flex items-center gap-2">
+          <FileImage size={18} className="text-primary-600 dark:text-primary-400" />
+          <span>Galeri Foto & Aset Gambar</span>
+        </span>
+        <span className="flex items-center gap-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
           {buka ? 'Ciutkan' : 'Lebarkan'}
-          <span aria-hidden="true" className={`text-base transition-transform ${buka ? 'rotate-180' : ''}`}>▾</span>
+          <ChevronDown size={16} className={`transition-transform duration-200 ${buka ? 'rotate-180' : ''}`} />
         </span>
       </button>
       {buka && <div id={id}>{children}</div>}
@@ -38,16 +78,18 @@ export function GaleriLipat({ children, className = '' }: { children: ReactNode;
   );
 }
 
-// Satu permintaan per kunjungan halaman, dipakai bersama Data User & Edit Canvas
+// ============================================================
+// SECTION: Cache & Global Listeners
+// ============================================================
 let cache: Promise<SharedImage[]> | null = null;
 const loadShared = () =>
   (cache ??= fetch('/api/cloudinary-list')
     .then((r) => (r.ok ? r.json() : { images: [] }))
     .then((d) => (Array.isArray(d.images) ? d.images : []))
-    .catch(() => [])); // galeri opsional; gagal (mis. dev lokal tanpa /api) = kosong
+    .catch(() => []));
 
-// Foto yang baru diunggah dari kolom form langsung masuk galeri (kategori sesuai kolom), tanpa muat ulang halaman.
 const listeners = new Set<(v: SharedImage[]) => void>();
+
 export async function addSharedImage(img: SharedImage) {
   const next = [img, ...(await loadShared()).filter((g) => g.url !== img.url)];
   cache = Promise.resolve(next);
@@ -60,8 +102,17 @@ export async function removeSharedImage(url: string) {
   listeners.forEach((f) => f(next));
 }
 
-export default function SharedGallery({ keys, data, onApply, onPicked, showEmpty = false }: {
-  keys: readonly string[]; // kolom isian menu; hanya kolom gambar yang dipakai
+// ============================================================
+// SECTION: SharedGallery Main Component
+// ============================================================
+export default function SharedGallery({
+  keys,
+  data,
+  onApply,
+  onPicked,
+  showEmpty = false,
+}: {
+  keys: readonly string[];
   data: object;
   onApply: (picked: Record<string, unknown>) => void;
   onPicked?: (message: string) => void;
@@ -69,141 +120,645 @@ export default function SharedGallery({ keys, data, onApply, onPicked, showEmpty
 }) {
   const [shared, setShared] = useState<SharedImage[] | null>(null);
   const imageKeys = keys.filter(isImageKey);
-  const [target, setTarget] = useState(''); // '' = otomatis sesuai kategori gambar
-  const [ciut, setCiut] = useState<Record<string, boolean>>({}); // kategori yang diciutkan
-  const [sel, setSel] = useState<{ img: SharedImage; label: string } | null>(null); // gambar yang dibuka di pop-up
-  const [yakin, setYakin] = useState(false); // langkah kedua hapus
+  const [target, setTarget] = useState('');
+  const [ciut, setCiut] = useState<Record<string, boolean>>({});
+  const [sel, setSel] = useState<{ img: SharedImage; label: string } | null>(null);
+  const [yakin, setYakin] = useState(false);
   const [hapusBusy, setHapusBusy] = useState(false);
   const [galat, setGalat] = useState('');
-  const tutup = () => { setSel(null); setYakin(false); setGalat(''); };
+
+  // Right-Click Context Menu State
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    img: SharedImage;
+    label: string;
+  } | null>(null);
+  const [busyAction, setBusyAction] = useState<string>(''); // 'hapusBg' | 'greyscale' | 'pasang' | 'hapus'
+
+  // Upload Status in Edit Canvas
+  const [uploadBusyKey, setUploadBusyKey] = useState<string>('');
+  const [bgRemovedMap, setBgRemovedMap] = useState<Record<string, boolean>>({});
+
+  const touchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const tutup = () => {
+    setSel(null);
+    setYakin(false);
+    setGalat('');
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  // Close context menu on outside click or escape
   useEffect(() => {
-    if (!sel) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !hapusBusy) tutup(); };
-    addEventListener('keydown', onKey);
-    return () => removeEventListener('keydown', onKey);
-  }, [sel, hapusBusy]);
+    const handleGlobalClick = () => closeContextMenu();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeContextMenu();
+        if (!hapusBusy) tutup();
+      }
+    };
+    window.addEventListener('click', handleGlobalClick);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('click', handleGlobalClick);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [hapusBusy]);
+
   useEffect(() => {
     let on = true;
     if (imageKeys.length) loadShared().then((v) => on && setShared(v));
-    const sub = (v: SharedImage[]) => { if (on) setShared(v); };
+    const sub = (v: SharedImage[]) => {
+      if (on) setShared(v);
+    };
     listeners.add(sub);
-    return () => { on = false; listeners.delete(sub); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return () => {
+      on = false;
+      listeners.delete(sub);
+    };
+  }, [imageKeys.length]);
+
   if (!imageKeys.length) return null;
-  const groups = CATS.map((c) => ({ ...c, imgs: (shared ?? []).filter((g) => (g.kind || '') === c.kind) })).filter((g) => g.imgs.length);
-  if (!groups.length) {
-    if (!showEmpty) return null;
-    return <p className="text-xs text-gray-600">{shared ? 'Galeri masih kosong. Gambar yang disimpan lewat Data User (Isi Formulir) akan muncul di sini.' : 'Memuat galeri…'}</p>;
-  }
-  // Kolom tujuan: pilihan "Pasang ke", atau kolom pertama yang sekategori, atau kolom gambar pertama
-  const keyFor = (kind: string) => target || imageKeys.find((k) => catOfKey(k) === kind) || imageKeys[0];
+
   const current = data as Record<string, unknown>;
+
+  // Target key resolver
+  const keyFor = (kind: string) => target || imageKeys.find((k) => catOfKey(k) === kind) || imageKeys[0];
+
+  // ============================================================
+  // SECTION: Handler Upload Langsung di Edit Canvas
+  // ============================================================
+  const handleUploadFile = (k: string, file?: File) => {
+    if (!file) return;
+    const label = labelOf(k);
+    if (!file.type.startsWith('image/')) {
+      onPicked?.(`${label}: berkas bukan gambar.`);
+      return;
+    }
+    setUploadBusyKey(k);
+    onPicked?.(`Memuat ${label.toLowerCase()}...`);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result);
+      onApply({ [k]: dataUrl });
+      onPicked?.(`${label} berhasil dipasang.`);
+      setUploadBusyKey('');
+
+      // Auto upload ke Cloudinary dan masuk Galeri Foto
+      const folder = galleryFolder(label, 'upload');
+      uploadImage(file, folder)
+        .then(({ url }) => {
+          const kat = folder.split('/')[1];
+          addSharedImage({ url, kind: kat === 'tanda-tangan' ? 'ttd' : kat === 'lainnya' ? '' : kat });
+          onApply({ [k]: url });
+          onPicked?.(`${label} masuk Galeri Foto.`);
+        })
+        .catch(() => {
+          // Tetap terpasang secara lokal
+        });
+    };
+    reader.onerror = () => {
+      onPicked?.(`Gagal membaca ${label}.`);
+      setUploadBusyKey('');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // ============================================================
+  // SECTION: Handler Context Menu (Klik Kanan)
+  // ============================================================
+  const handlePasangDariContext = (img: SharedImage, targetKeyOverride?: string) => {
+    const k = targetKeyOverride || keyFor(img.kind || '');
+    onApply({ [k]: img.url });
+    onPicked?.(`${labelOf(k)} berhasil dipasang dari galeri.`);
+    closeContextMenu();
+    tutup();
+  };
+
+  const handleHapusBgDariContext = async (img: SharedImage) => {
+    setBusyAction('hapusBg');
+    try {
+      const transparentDataUrl = await removeBackground(img.url);
+      const k = keyFor(img.kind || '');
+      onApply({ [k]: transparentDataUrl });
+      const folder = galleryFolder(img.kind || 'lainnya', 'upload');
+      addSharedImage({ url: transparentDataUrl, kind: img.kind, folder });
+      onPicked?.('Background berhasil dihapus dan gambar langsung dipasang.');
+    } catch {
+      onPicked?.('Gagal menghapus background: gambar tidak dapat diproses.');
+    } finally {
+      setBusyAction('');
+      closeContextMenu();
+      tutup();
+    }
+  };
+
+  const handleGreyscaleDariContext = async (img: SharedImage) => {
+    setBusyAction('greyscale');
+    try {
+      const greyscaleDataUrl = await toGreyscale(img.url);
+      const k = keyFor(img.kind || '');
+      onApply({ [k]: greyscaleDataUrl });
+      const folder = galleryFolder(img.kind || 'lainnya', 'upload');
+      addSharedImage({ url: greyscaleDataUrl, kind: img.kind, folder });
+      onPicked?.('Gambar berhasil diubah ke Greyscale dan langsung dipasang.');
+    } catch {
+      onPicked?.('Gagal mengubah ke Greyscale.');
+    } finally {
+      setBusyAction('');
+      closeContextMenu();
+      tutup();
+    }
+  };
+
+  const handleHapusDariGaleri = async (img: SharedImage) => {
+    setHapusBusy(true);
+    setGalat('');
+    try {
+      const r = await fetch('/api/cloudinary-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: img.url }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d?.error || `Server menolak (${r.status}).`);
+
+      const dipakai = imageKeys.filter((x) => current[x] === img.url);
+      if (dipakai.length) onApply(Object.fromEntries(dipakai.map((x) => [x, ''])));
+      await removeSharedImage(img.url);
+      onPicked?.('Foto berhasil dihapus dari galeri.');
+      tutup();
+      closeContextMenu();
+    } catch (e: any) {
+      setGalat(`Gagal menghapus: ${e?.message || 'periksa koneksi.'}`);
+    } finally {
+      setHapusBusy(false);
+    }
+  };
+
+  // Right-click trigger
+  const triggerContextMenu = (e: React.MouseEvent, img: SharedImage, label: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const x = Math.min(e.clientX, window.innerWidth - 240);
+    const y = Math.min(e.clientY, window.innerHeight - 260);
+    setContextMenu({ x, y, img, label });
+  };
+
+  // Long press for touch devices
+  const handleTouchStart = (e: React.TouchEvent, img: SharedImage, label: string) => {
+    const touch = e.touches[0];
+    const x = Math.min(touch.clientX, window.innerWidth - 240);
+    const y = Math.min(touch.clientY, window.innerHeight - 260);
+    touchTimerRef.current = setTimeout(() => {
+      setContextMenu({ x, y, img, label });
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (touchTimerRef.current) {
+      clearTimeout(touchTimerRef.current);
+      touchTimerRef.current = null;
+    }
+  };
+
+  const groups = CATS.map((c) => ({
+    ...c,
+    imgs: (shared ?? []).filter((g) => (g.kind || '') === c.kind),
+  })).filter((g) => g.imgs.length);
+
   return (
-    <div className="space-y-3">
-      {imageKeys.length > 1 && (
-        <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Pasang gambar ke">
-          <span className="text-xs font-bold text-gray-700">Pasang ke:</span>
-          {['', ...imageKeys].map((k) => (
-            <button key={k || 'auto'} type="button" role="radio" aria-checked={target === k} onClick={() => setTarget(k)}
-              className={`px-3 min-h-[36px] rounded-full border text-xs font-medium ${target === k ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}>
-              {k ? labelOf(k) : 'Otomatis'}
-            </button>
-          ))}
+    <div className="space-y-5">
+      {/* ============================================================
+          BAGIAN 1: UPLOAD LOGO, TANDA TANGAN & STEMPEL DI EDIT CANVAS
+         ============================================================ */}
+      <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/90 p-4 shadow-xs space-y-3.5">
+        <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700/60">
+          <div className="flex items-center gap-2">
+            <span className="h-4 w-1 rounded-full bg-primary-600 dark:bg-primary-500" />
+            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+              Upload Logo, Tanda Tangan & Stempel
+            </h3>
+          </div>
+          <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+            {imageKeys.length} Slot Gambar
+          </span>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {imageKeys.map((k) => {
+            const val = String(current[k] || '');
+            const label = labelOf(k);
+            const isBusy = uploadBusyKey === k;
+            const isBgRemoved = !!bgRemovedMap[k];
+
+            return (
+              <div
+                key={k}
+                className="flex flex-col justify-between rounded-xl border border-gray-200 dark:border-gray-700 p-3 bg-gray-50/60 dark:bg-gray-900/40"
+              >
+                <div>
+                  <span className="block text-xs font-bold text-gray-800 dark:text-gray-200 mb-2 truncate">
+                    {label}
+                  </span>
+
+                  {/* Thumbnail / Upload Area */}
+                  {isBusy ? (
+                    <div className="flex h-28 w-full items-center justify-center rounded-lg border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-primary-600">
+                      <Spinner className="h-6 w-6 mr-2" /> Memuat...
+                    </div>
+                  ) : val ? (
+                    <div className="space-y-2">
+                      <div className="relative flex h-28 w-full items-center justify-center rounded-lg border border-gray-300 dark:border-gray-700 bg-[repeating-conic-gradient(#e5e7eb_0_25%,#fff_0_50%)] dark:bg-[repeating-conic-gradient(#374151_0_25%,#1f2937_0_50%)] bg-[length:14px_14px] p-2">
+                        <img
+                          src={val}
+                          alt={label}
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <label className="cursor-pointer text-xs font-bold text-primary-600 dark:text-primary-400 hover:underline">
+                          Ganti
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => handleUploadFile(k, e.target.files?.[0])}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => onApply({ [k]: '' })}
+                          className="text-xs font-bold text-red-600 dark:text-red-400 hover:underline"
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2 pt-1 border-t border-gray-200/80 dark:border-gray-700/60">
+                        <BgToggle
+                          checked={isBgRemoved}
+                          onChange={async (v) => {
+                            setBgRemovedMap((prev) => ({ ...prev, [k]: v }));
+                            if (v) {
+                              try {
+                                const clean = await removeBackground(val);
+                                onApply({ [k]: clean });
+                              } catch {
+                                // Ignore
+                              }
+                            }
+                          }}
+                          label="Hapus BG"
+                        />
+                        <GreyToggle
+                          value={val}
+                          onChange={(next) => onApply({ [k]: next })}
+                          notify={(_t, m) => onPicked?.(m)}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="flex h-28 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary-500 dark:hover:border-primary-400 transition-colors p-3 text-center">
+                      <Upload size={20} className="text-gray-400 mb-1" />
+                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Pilih File</span>
+                      <span className="text-[10px] text-gray-400">PNG, JPG, SVG</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleUploadFile(k, e.target.files?.[0])}
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ============================================================
+          BAGIAN 2: GALERI FOTO (DENGAN KLIK KANAN: PASANG, HAPUS, HAPUS BG, GREYSCALE)
+         ============================================================ */}
+      <div className="space-y-3">
+        {imageKeys.length > 1 && (
+          <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Pasang gambar ke">
+            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Pasang ke:</span>
+            {['', ...imageKeys].map((k) => (
+              <button
+                key={k || 'auto'}
+                type="button"
+                role="radio"
+                aria-checked={target === k}
+                onClick={() => setTarget(k)}
+                className={`px-3 min-h-[32px] rounded-full border text-xs font-semibold transition-colors ${
+                  target === k
+                    ? 'bg-primary-600 border-primary-600 text-white shadow-xs'
+                    : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-primary-400'
+                }`}
+              >
+                {k ? labelOf(k) : 'Otomatis'}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 p-2.5 text-xs text-blue-800 dark:text-blue-300">
+          <strong>Tips:</strong> Klik kanan pada foto di bawah untuk menu cepat: <b>Pasang</b>, <b>Hapus</b>, <b>Hapus BG</b>, dan <b>Greyscale</b>.
+        </div>
+
+        {!groups.length ? (
+          showEmpty ? (
+            <p className="text-xs text-gray-500 py-4 text-center">
+              {shared ? 'Galeri masih kosong. Upload logo/tanda tangan di atas untuk menyimpannya di sini.' : 'Memuat galeri...'}
+            </p>
+          ) : null
+        ) : (
+          groups.map((g) => {
+            const id = g.kind || 'lain';
+            const buka = !ciut[id];
+            return (
+              <div key={id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80 overflow-hidden">
+                <button
+                  type="button"
+                  aria-expanded={buka}
+                  aria-controls={`galeri-${id}`}
+                  onClick={() => setCiut((c) => ({ ...c, [id]: buka }))}
+                  className="flex min-h-[40px] w-full items-center justify-between gap-2 bg-gray-50 dark:bg-gray-800 px-3 text-left text-xs font-bold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <span>{g.label} ({g.imgs.length})</span>
+                  <ChevronDown size={15} className={`transition-transform duration-200 ${buka ? 'rotate-180' : ''}`} />
+                </button>
+                {buka && (
+                  <div id={`galeri-${id}`} className="flex flex-wrap gap-2.5 p-3">
+                    {g.imgs.map((img) => {
+                      const dipakai = imageKeys.filter((x) => current[x] === img.url);
+                      const aktif = dipakai.length > 0;
+                      return (
+                        <div
+                          key={img.url}
+                          onContextMenu={(e) => triggerContextMenu(e, img, g.label)}
+                          onTouchStart={(e) => handleTouchStart(e, img, g.label)}
+                          onTouchEnd={handleTouchEnd}
+                          onClick={() => {
+                            setSel({ img, label: g.label });
+                            setYakin(false);
+                            setGalat('');
+                          }}
+                          className={`relative h-22 w-22 sm:h-20 sm:w-20 shrink-0 cursor-pointer rounded-xl border-2 p-1.5 transition-all select-none ${
+                            aktif
+                              ? 'border-primary-600 bg-primary-50 dark:bg-primary-950/60 shadow-md ring-2 ring-primary-500/30'
+                              : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xs hover:-translate-y-0.5 hover:border-primary-400'
+                          }`}
+                          title="Klik kiri: Buka pratinjau | Klik kanan: Menu Pasang, Hapus, Hapus BG & Greyscale"
+                        >
+                          <img
+                            src={img.url.replace('/upload/', '/upload/w_240,h_240,c_fit/')}
+                            alt={g.label}
+                            loading="lazy"
+                            className="h-full w-full object-contain"
+                          />
+                          {aktif && (
+                            <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary-600 text-white text-[10px] font-bold shadow-xs">
+                              <Check size={11} />
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* ============================================================
+          FLOATING CONTEXT MENU (KLIK KANAN PADA FOTO GALERI)
+         ============================================================ */}
+      {contextMenu && (
+        <div
+          role="menu"
+          aria-label="Menu Tindakan Foto"
+          onClick={(e) => e.stopPropagation()}
+          className="fixed z-[120] w-56 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1.5 shadow-2xl text-xs font-semibold text-gray-800 dark:text-gray-200 animate-in fade-in duration-150"
+          style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
+        >
+          {/* Header thumbnail & label */}
+          <div className="flex items-center gap-2 px-2.5 py-2 border-b border-gray-100 dark:border-gray-700/60 mb-1">
+            <img
+              src={contextMenu.img.url.replace('/upload/', '/upload/w_80,h_80,c_fit/')}
+              alt=""
+              className="h-7 w-7 rounded-lg object-contain border border-gray-200 dark:border-gray-700"
+            />
+            <span className="truncate font-bold text-gray-900 dark:text-gray-100">{contextMenu.label}</span>
+          </div>
+
+          {/* Opsi 1: Pasang */}
+          <button
+            type="button"
+            role="menuitem"
+            disabled={!!busyAction}
+            onClick={() => handlePasangDariContext(contextMenu.img)}
+            className="flex min-h-[36px] w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 hover:bg-primary-50 dark:hover:bg-primary-950/50 hover:text-primary-600 dark:hover:text-primary-400 transition-colors text-left"
+          >
+            <Check size={15} className="text-primary-600 dark:text-primary-400 shrink-0" />
+            <span>Pasang ke {labelOf(keyFor(contextMenu.img.kind || ''))}</span>
+          </button>
+
+          {/* Opsi 2: Hapus BG */}
+          <button
+            type="button"
+            role="menuitem"
+            disabled={!!busyAction}
+            onClick={() => handleHapusBgDariContext(contextMenu.img)}
+            className="flex min-h-[36px] w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 hover:bg-purple-50 dark:hover:bg-purple-950/50 hover:text-purple-600 dark:hover:text-purple-400 transition-colors text-left"
+          >
+            {busyAction === 'hapusBg' ? (
+              <RefreshCw size={15} className="animate-spin text-purple-600 shrink-0" />
+            ) : (
+              <Scissors size={15} className="text-purple-600 dark:text-purple-400 shrink-0" />
+            )}
+            <span>Hapus BG (Transparan)</span>
+          </button>
+
+          {/* Opsi 3: Greyscale */}
+          <button
+            type="button"
+            role="menuitem"
+            disabled={!!busyAction}
+            onClick={() => handleGreyscaleDariContext(contextMenu.img)}
+            className="flex min-h-[36px] w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 hover:bg-amber-50 dark:hover:bg-amber-950/50 hover:text-amber-600 dark:hover:text-amber-400 transition-colors text-left"
+          >
+            {busyAction === 'greyscale' ? (
+              <RefreshCw size={15} className="animate-spin text-amber-600 shrink-0" />
+            ) : (
+              <Palette size={15} className="text-amber-600 dark:text-amber-400 shrink-0" />
+            )}
+            <span>Ubah ke Greyscale</span>
+          </button>
+
+          <div className="my-1 border-t border-gray-100 dark:border-gray-700/60" />
+
+          {/* Opsi 4: Hapus Foto */}
+          <button
+            type="button"
+            role="menuitem"
+            disabled={!!busyAction || hapusBusy}
+            onClick={() => {
+              if (confirm('Hapus foto ini dari galeri untuk SEMUA pengguna?')) {
+                handleHapusDariGaleri(contextMenu.img);
+              }
+            }}
+            className="flex min-h-[36px] w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors text-left"
+          >
+            <Trash2 size={15} className="shrink-0" />
+            <span>Hapus dari Galeri</span>
+          </button>
         </div>
       )}
-      {groups.map((g) => {
-        const id = g.kind || 'lain';
-        const buka = !ciut[id];
-        return (
-        <div key={id} className="rounded-lg border border-gray-200">
-          <button type="button" aria-expanded={buka} aria-controls={`galeri-${id}`} onClick={() => setCiut((c) => ({ ...c, [id]: buka }))}
-            className="flex min-h-[44px] w-full items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 text-left text-sm font-bold text-gray-700 hover:bg-gray-100">
-            <span>{g.label} ({g.imgs.length})</span>
-            <span aria-hidden="true" className={`transition-transform ${buka ? 'rotate-180' : ''}`}>▾</span>
-          </button>
-          {buka && <div id={`galeri-${id}`} className="flex flex-wrap gap-2 p-2">
-            {g.imgs.map((img) => {
-              const k = keyFor(g.kind);
-              // Klik gambar = pop-up Pasang / Lepas / Hapus Foto
-              const dipakai = imageKeys.filter((x) => current[x] === img.url);
-              const aktif = dipakai.length > 0;
-              return (
-                <button key={img.url} type="button" aria-pressed={aktif} aria-haspopup="dialog"
-                  title="Buka: Pasang / Hapus"
-                  aria-label={`Buka gambar ${g.label.toLowerCase()}: pasang atau hapus`}
-                  onClick={() => { setSel({ img, label: g.label }); setYakin(false); setGalat(''); }}
-                  className={`h-24 w-24 shrink-0 rounded-lg border-2 p-1 transition duration-150 sm:h-20 sm:w-20 ${aktif
-                    ? '!border-blue-600 bg-blue-50 shadow-[inset_0_3px_6px_rgba(0,0,0,0.35)]'
-                    : 'border-gray-300 bg-white shadow-md hover:-translate-y-0.5'}`}>
-                  <img src={img.url.replace('/upload/', '/upload/w_240,h_240,c_fit/')} alt="" loading="lazy" className="h-full w-full object-contain" />
-                </button>
-              );
-            })}
-          </div>}
-        </div>
-        );
-      })}
+
+      {/* ============================================================
+          POP-UP DIALOG PRATINJAU FOTO BIASA (KLIK KIRI)
+         ============================================================ */}
       {sel && (() => {
         const { img, label } = sel;
         const kind = img.kind || '';
         const k = keyFor(kind);
         const dipakai = imageKeys.filter((x) => current[x] === img.url);
         const aktif = dipakai.length > 0;
+
         const pasang = () => {
           onApply({ [k]: img.url });
-          onPicked?.(`${labelOf(k)} dari galeri dipasang.`);
+          onPicked?.(`${labelOf(k)} dari galeri berhasil dipasang.`);
           tutup();
         };
+
         const lepas = () => {
           onApply(Object.fromEntries(dipakai.map((x) => [x, ''])));
           onPicked?.(`${dipakai.map(labelOf).join(', ')} dilepas.`);
           tutup();
         };
-        const hapus = async () => {
-          setHapusBusy(true);
-          setGalat('');
-          try {
-            const r = await fetch('/api/cloudinary-delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: img.url }) });
-            const d = await r.json().catch(() => ({}));
-            if (!r.ok) throw new Error(d?.error || `Server menolak (${r.status}).`);
-            if (dipakai.length) onApply(Object.fromEntries(dipakai.map((x) => [x, ''])));
-            await removeSharedImage(img.url);
-            onPicked?.('Foto dihapus dari galeri.');
-            tutup();
-          } catch (e: any) {
-            setGalat(`Gagal menghapus: ${e?.message || 'periksa koneksi lalu coba lagi.'}`);
-          } finally {
-            setHapusBusy(false);
-          }
-        };
-        const btn = 'min-h-[48px] w-full rounded-xl px-4 text-base font-semibold disabled:opacity-60';
+
+        const btn = 'min-h-[44px] w-full rounded-xl px-4 text-sm font-bold disabled:opacity-60 transition-colors';
+
         return (
-          <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={() => !hapusBusy && tutup()}>
-            <div role="dialog" aria-modal="true" aria-label={`Gambar ${label}`} onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md space-y-3 rounded-2xl bg-white p-4 text-gray-800 shadow-2xl">
+          <div
+            className="fixed inset-0 z-[100] flex items-end justify-center bg-black/65 backdrop-blur-xs p-3 sm:items-center"
+            onClick={() => !hapusBusy && tutup()}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Gambar ${label}`}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md space-y-3.5 rounded-3xl bg-white dark:bg-gray-800 p-5 text-gray-800 dark:text-gray-200 shadow-2xl border border-gray-200 dark:border-gray-700"
+            >
               <div className="flex items-center justify-between gap-2">
-                <p className="font-bold">Galeri — {label}</p>
-                <button type="button" onClick={tutup} disabled={hapusBusy} aria-label="Tutup" className="min-h-[44px] min-w-[44px] rounded-lg text-xl text-gray-500">✕</button>
+                <p className="font-bold text-gray-900 dark:text-gray-100">Galeri — {label}</p>
+                <button
+                  type="button"
+                  onClick={tutup}
+                  disabled={hapusBusy}
+                  aria-label="Tutup"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <X size={18} />
+                </button>
               </div>
-              <div className="flex h-[40vh] items-center justify-center rounded-xl border bg-[repeating-conic-gradient(#e5e7eb_0_25%,#fff_0_50%)] bg-[length:16px_16px] p-2">
-                <img src={img.url.replace('/upload/', '/upload/w_900,h_900,c_fit/')} alt={`Gambar ${label.toLowerCase()}`} className="max-h-full max-w-full object-contain" />
+
+              <div className="flex h-[36vh] items-center justify-center rounded-2xl border border-gray-200 dark:border-gray-700 bg-[repeating-conic-gradient(#e5e7eb_0_25%,#fff_0_50%)] dark:bg-[repeating-conic-gradient(#374151_0_25%,#1f2937_0_50%)] bg-[length:16px_16px] p-2">
+                <img
+                  src={img.url.replace('/upload/', '/upload/w_900,h_900,c_fit/')}
+                  alt={`Gambar ${label.toLowerCase()}`}
+                  className="max-h-full max-w-full object-contain"
+                />
               </div>
-              {aktif
-                ? <button type="button" onClick={lepas} disabled={hapusBusy} className={`${btn} border border-blue-600 bg-white text-blue-700`}>Lepas dari {dipakai.map(labelOf).join(', ')}</button>
-                : <button type="button" onClick={pasang} disabled={hapusBusy} className={`${btn} bg-blue-600 text-white`}>Pasang sebagai {labelOf(k)}</button>}
-              {!yakin ? (
-                <button type="button" onClick={() => setYakin(true)} disabled={hapusBusy} className={`${btn} border border-red-300 bg-red-50 text-red-700`}>Hapus Foto</button>
-              ) : (
-                <div className="space-y-2 rounded-xl border border-red-300 bg-red-50 p-3">
-                  <p className="text-sm font-medium text-red-800">Hapus foto ini dari galeri untuk SEMUA pengguna? Tidak bisa dibatalkan.</p>
-                  <div className="flex gap-2">
-                    <button type="button" onClick={() => setYakin(false)} disabled={hapusBusy} className={`${btn} border bg-white text-gray-700`}>Batal</button>
-                    <button type="button" onClick={hapus} disabled={hapusBusy} className={`${btn} bg-red-600 text-white`}>{hapusBusy ? 'Menghapus…' : 'Ya, Hapus'}</button>
-                  </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-2">
+                {aktif ? (
+                  <button
+                    type="button"
+                    onClick={lepas}
+                    disabled={hapusBusy}
+                    className={`${btn} border border-primary-600 bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400`}
+                  >
+                    Lepas dari {dipakai.map(labelOf).join(', ')}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={pasang}
+                    disabled={hapusBusy}
+                    className={`${btn} bg-primary-600 hover:bg-primary-700 text-white shadow-xs`}
+                  >
+                    Pasang sebagai {labelOf(k)}
+                  </button>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    disabled={!!busyAction}
+                    onClick={() => handleHapusBgDariContext(img)}
+                    className="flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl border border-purple-300 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/50 text-xs font-bold text-purple-700 dark:text-purple-300"
+                  >
+                    <Scissors size={14} /> Hapus BG
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!!busyAction}
+                    onClick={() => handleGreyscaleDariContext(img)}
+                    className="flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/50 text-xs font-bold text-amber-700 dark:text-amber-300"
+                  >
+                    <Palette size={14} /> Greyscale
+                  </button>
                 </div>
-              )}
-              {galat && <p role="alert" className="text-sm text-red-700">{galat}</p>}
+
+                {!yakin ? (
+                  <button
+                    type="button"
+                    onClick={() => setYakin(true)}
+                    disabled={hapusBusy}
+                    className={`${btn} border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 text-xs`}
+                  >
+                    Hapus dari Galeri
+                  </button>
+                ) : (
+                  <div className="space-y-2 rounded-2xl border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/60 p-3">
+                    <p className="text-xs font-semibold text-red-800 dark:text-red-300">
+                      Hapus foto ini dari galeri untuk SEMUA pengguna? Tidak bisa dibatalkan.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setYakin(false)}
+                        disabled={hapusBusy}
+                        className={`${btn} border bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs`}
+                      >
+                        Batal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleHapusDariGaleri(img)}
+                        disabled={hapusBusy}
+                        className={`${btn} bg-red-600 text-white text-xs`}
+                      >
+                        {hapusBusy ? 'Menghapus...' : 'Ya, Hapus'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {galat && <p role="alert" className="text-xs text-red-600 dark:text-red-400">{galat}</p>}
             </div>
           </div>
         );

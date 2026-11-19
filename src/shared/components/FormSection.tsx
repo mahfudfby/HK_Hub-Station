@@ -22,28 +22,33 @@ export default function FormSection({ title, lockable = false, children, classNa
     addEventListener('keydown', esc);
     return () => { removeEventListener('keydown', esc); document.body.style.overflow = prev; };
   }, [full]);
-  const btn = 'flex h-10 min-w-10 items-center justify-center gap-1 rounded-lg border border-gray-300 bg-white px-2 text-xs font-medium text-gray-700 hover:bg-gray-50';
+  const btn = 'flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-xs transition-colors';
   return (
-    <div className={full ? 'fixed inset-0 z-50 overflow-auto bg-black/50 p-3 md:p-8' : ''} onClick={full ? (e) => e.target === e.currentTarget && setFull(false) : undefined}>
-      <section className={`relative space-y-3 ${full ? 'mx-auto max-w-5xl rounded-2xl bg-white p-5 shadow-2xl md:p-8' : ''} ${className}`}
+    <div className={full ? 'fixed inset-0 z-50 overflow-auto bg-black/60 backdrop-blur-xs p-3 md:p-8' : ''} onClick={full ? (e) => e.target === e.currentTarget && setFull(false) : undefined}>
+      <section className={`relative rounded-2xl border border-gray-200/90 dark:border-gray-800 bg-white dark:bg-gray-800/90 p-4 sm:p-5 shadow-xs transition-shadow duration-150 hover:shadow-sm space-y-3.5 ${full ? 'mx-auto max-w-5xl rounded-3xl bg-white p-6 shadow-2xl md:p-8' : ''} ${className}`}
         role={full ? 'dialog' : undefined} aria-modal={full || undefined} aria-label={full && typeof title === 'string' ? title : undefined}>
-        <div className="flex items-start justify-between gap-2">
-          <h2 className="font-bold pt-2">{title}</h2>
+        <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-gray-100 dark:border-gray-700/60">
+          <div className="flex items-center gap-2">
+            <span className="h-4 w-1 rounded-full bg-primary-600 dark:bg-primary-500" aria-hidden="true" />
+            <h2 className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100 tracking-tight">{title}</h2>
+          </div>
           <div className="flex shrink-0 gap-1.5">
             {lockable && (
               <button type="button" onClick={() => setLocked((v) => !v)} aria-pressed={locked} className={btn}
-                title={locked ? 'Buka kunci: edit seluruh narasi' : 'Kunci narasi: hanya isi bagian {…}'}>
-                {locked ? <Lock size={16} aria-hidden="true" /> : <Unlock size={16} aria-hidden="true" />}
+                title={locked ? 'Buka kunci: edit seluruh narasi' : 'Kunci narasi: hanya isi bagian {...}'}>
+                {locked ? <Lock size={15} aria-hidden="true" /> : <Unlock size={15} aria-hidden="true" />}
                 <span className="hidden sm:inline">{locked ? 'Narasi terkunci' : 'Edit narasi'}</span>
               </button>
             )}
             <button type="button" onClick={() => setFull((v) => !v)} className={btn}
               aria-label={full ? 'Tutup layar penuh' : 'Buka layar penuh'} title={full ? 'Tutup layar penuh (Esc)' : 'Layar penuh'}>
-              {full ? <Minimize2 size={16} aria-hidden="true" /> : <Maximize2 size={16} aria-hidden="true" />}
+              {full ? <Minimize2 size={15} aria-hidden="true" /> : <Maximize2 size={15} aria-hidden="true" />}
             </button>
           </div>
         </div>
-        <LockCtx.Provider value={lockable && locked}>{children}</LockCtx.Provider>
+        <div className="space-y-3.5 pt-1">
+          <LockCtx.Provider value={lockable && locked}>{children}</LockCtx.Provider>
+        </div>
       </section>
     </div>
   );

@@ -36,77 +36,23 @@ export const orDots = (v: string, w?: string) =>
   v ? <span style={{ fontStyle: 'italic', borderBottom: DOTTED, padding: `0 6px ${GAP}` }}>{v}</span> : <Dots w={w} />;
 
 // ---------------- Form ----------------
-export const inputCls = 'w-full p-2 border border-gray-300 rounded-lg text-sm';
+export const inputCls = 'w-full min-h-[42px] px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 shadow-xs transition-all duration-150 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-hidden';
 export function Field({ label, children, ribbon = false }: { label: string; children: ReactNode; ribbon?: boolean }) {
   return (
-    <label className="block text-sm font-medium text-gray-700">
+    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
       {ribbon ? <span className="pita-emas">{label}</span> : label}
-      <div className="mt-1">{children}</div>
+      <div className="mt-1.5">{children}</div>
     </label>
   );
 }
 
-export function ImageUpload({ label, value, onChange, notify, bg, onBg, shown, bgBusy }: {
-  label: string; value: string; onChange: (v: string) => void; notify: Notify;
-  bg: boolean; onBg: (v: boolean) => void; shown: string; bgBusy: boolean;
+// Upload Logo, Tanda Tangan, dan Stempel telah dipindahkan ke menu Edit Canvas untuk SEMUA menu.
+// Pemanggilan ImageUpload di dalam form kini mengembalikan null agar form tetap bersih dan fokus pada teks data.
+export function ImageUpload(_props: {
+  label?: string; value?: string; onChange?: (v: string) => void; notify?: Notify;
+  bg?: boolean; onBg?: (v: boolean) => void; shown?: string; bgBusy?: boolean;
 }) {
-  const [busy, setBusy] = useState(false);
-  const cur = useRef(value);
-  cur.current = value;
-  const read = (file?: File) => {
-    if (!file) return;
-    if (!file.type.startsWith('image/')) return notify('error', `${label}: file "${file.name}" bukan gambar.`);
-    setBusy(true);
-    notify('loading', `Memuat ${label.toLowerCase()}…`);
-    const r = new FileReader();
-    r.onload = () => {
-      const data = String(r.result);
-      onChange(data);
-      notify('success', `${label} berhasil dipasang.`);
-      setBusy(false);
-      // Masuk Galeri Foto otomatis sesuai kategori kolom (logo / stempel / tanda tangan / lainnya)
-      const folder = galleryFolder(label, 'upload');
-      uploadImage(file, folder).then(({ url }) => {
-        const kat = folder.split('/')[1];
-        addSharedImage({ url, kind: kat === 'tanda-tangan' ? 'ttd' : kat === 'lainnya' ? '' : kat });
-        if (cur.current === data) onChange(url); // pakai link galeri agar tidak terunggah ganda saat Data User disimpan
-        notify('success', 'Foto masuk Galeri Foto.');
-      }).catch(() => { /* galeri opsional: gagal unggah = foto tetap terpasang di form */ });
-    };
-    r.onerror = () => {
-      notify('error', `${label} gagal dibaca.`);
-      setBusy(false);
-    };
-    r.readAsDataURL(file);
-  };
-  const remove = () => {
-    onChange('');
-    notify('info', `${label} dihapus.`);
-  };
-  return (
-    <Field label={label} ribbon={/logo/i.test(label)}>
-      {/* Kotak 3D hanya untuk upload: baris 1 = preview, baris 2 = Pilih File + Hapus. Toggle Hapus BG & Greyscale di bawah kotak */}
-      <div className="flex flex-col gap-2">
-      <div className="upload-box flex flex-col items-start gap-3">
-        {busy ? (
-          <span className="h-36 w-36 flex items-center justify-center border rounded text-blue-600"><Spinner className="h-8 w-8" /></span>
-        ) : (
-          value && <img src={shown} alt={label} className="h-36 w-36 max-w-full object-contain border rounded bg-[repeating-conic-gradient(#e5e7eb_0_25%,#fff_0_50%)] bg-[length:16px_16px]" />
-        )}
-        <div className="flex w-full min-w-0 items-center gap-2">
-          <input type="file" accept="image/*" disabled={busy} onChange={(e) => read(e.target.files?.[0])} className="text-sm min-w-0 flex-1" />
-          {value && (
-            <button type="button" onClick={remove} className="shrink-0 text-sm text-red-600 min-h-[44px] px-2">Hapus</button>
-          )}
-        </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-x-3">
-        <BgToggle checked={bg} onChange={onBg} busy={bgBusy} />
-        <GreyToggle value={value} onChange={onChange} notify={notify} />
-      </div>
-      </div>
-    </Field>
-  );
+  return null;
 }
 
 // ---------------- Ekspor ----------------
