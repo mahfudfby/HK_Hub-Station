@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Briefcase,
   Building2,
   FileText,
+  Moon,
   Printer,
   QrCode,
   Receipt,
@@ -10,6 +11,7 @@ import {
   SlidersHorizontal,
   Star,
   Stethoscope,
+  Sun,
   Users,
   X,
 } from 'lucide-react';
@@ -51,6 +53,32 @@ export default function MaterialHeader({
   onOpenQris,
 }: MaterialHeaderProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [dark, setDark] = useState(() => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'));
+
+  useEffect(() => {
+    const handleThemeChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ dark: boolean }>;
+      if (customEvent.detail && typeof customEvent.detail.dark === 'boolean') {
+        setDark(customEvent.detail.dark);
+      } else {
+        setDark(document.documentElement.classList.contains('dark'));
+      }
+    };
+    window.addEventListener('hk:theme-changed', handleThemeChange);
+    return () => window.removeEventListener('hk:theme-changed', handleThemeChange);
+  }, []);
+
+  const toggleTheme = () => {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle('dark', next);
+    try {
+      localStorage.setItem('hk:tema', next ? 'dark' : 'light');
+    } catch {
+      // Ignore
+    }
+    window.dispatchEvent(new CustomEvent('hk:theme-changed', { detail: { dark: next } }));
+  };
 
   // Keyboard shortcut: press '/' to focus search input
   useEffect(() => {
@@ -91,6 +119,16 @@ export default function MaterialHeader({
 
         {/* Header Right Actions */}
         <div className="flex items-center flex-wrap gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={dark ? 'Ganti ke Mode Terang' : 'Ganti ke Mode Gelap'}
+            title={dark ? 'Ganti ke Mode Terang' : 'Ganti ke Mode Gelap'}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-amber-400 shadow-xs hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            {dark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
           <button
             type="button"
             onClick={onOpenQris}
