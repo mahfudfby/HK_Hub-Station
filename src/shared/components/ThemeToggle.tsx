@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Moon, Sun } from 'lucide-react';
 
 // Mode gelap/terang untuk tampilan website (dokumen di pratinjau tetap kertas putih).
@@ -6,6 +7,7 @@ import { Moon, Sun } from 'lucide-react';
 const KEY = 'hk:tema';
 
 export default function ThemeToggle() {
+  const { pathname } = useLocation();
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
 
   useEffect(() => {
@@ -20,6 +22,10 @@ export default function ThemeToggle() {
     window.addEventListener('hk:theme-changed', handleThemeChange);
     return () => window.removeEventListener('hk:theme-changed', handleThemeChange);
   }, []);
+
+  // Di halaman Home (/), tombol tema sudah terpasang rapi di dalam MaterialHeader (App Bar),
+  // sehingga tombol mengambang disembunyikan agar tidak ganda.
+  if (pathname === '/') return null;
 
   const toggle = () => {
     const next = !dark;
