@@ -54,6 +54,12 @@ export async function addSharedImage(img: SharedImage) {
   listeners.forEach((f) => f(next));
 }
 
+export async function removeSharedImage(url: string) {
+  const next = (await loadShared()).filter((g) => g.url !== url);
+  cache = Promise.resolve(next);
+  listeners.forEach((f) => f(next));
+}
+
 export default function SharedGallery({ keys, data, onApply, onPicked, showEmpty = false }: {
   keys: readonly string[]; // kolom isian menu; hanya kolom gambar yang dipakai
   data: object;
@@ -65,6 +71,17 @@ export default function SharedGallery({ keys, data, onApply, onPicked, showEmpty
   const imageKeys = keys.filter(isImageKey);
   const [target, setTarget] = useState(''); // '' = otomatis sesuai kategori gambar
   const [ciut, setCiut] = useState<Record<string, boolean>>({}); // kategori yang diciutkan
+  const [sel, setSel] = useState<{ img: SharedImage; label: string } | null>(null); // gambar yang dibuka di pop-up
+  const [yakin, setYakin] = useState(false); // langkah kedua hapus
+  const [hapusBusy, setHapusBusy] = useState(false);
+  const [galat, setGalat] = useState('');
+  const tutup = () => { setSel(null); setYakin(false); setGalat(''); };
+  useEffect(() => {
+    if (!sel) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !hapusBusy) tutup(); };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, [sel, hapusBusy]);
   useEffect(() => {
     let on = true;
     if (imageKeys.length) loadShared().then((v) => on && setShared(v));
@@ -108,26 +125,18 @@ export default function SharedGallery({ keys, data, onApply, onPicked, showEmpty
           {buka && <div id={`galeri-${id}`} className="flex flex-wrap gap-2 p-2">
             {g.imgs.map((img) => {
               const k = keyFor(g.kind);
-              // Klik 1 = pasang; klik 2 (foto sudah terpasang) = lepas dari semua kolom yang memakainya
+              // Klik gambar = pop-up Pasang / Lepas / Hapus Foto
               const dipakai = imageKeys.filter((x) => current[x] === img.url);
               const aktif = dipakai.length > 0;
               return (
-                <button key={img.url} type="button" aria-pressed={aktif}
-                  title={aktif ? 'Klik lagi untuk melepas' : `Pakai sebagai ${labelOf(k).toLowerCase()}`}
-                  aria-label={aktif ? `Lepas gambar ${g.label.toLowerCase()} ini` : `Pakai gambar ${g.label.toLowerCase()} ini sebagai ${labelOf(k).toLowerCase()}`}
-                  onClick={() => {
-                    if (aktif) {
-                      onApply(Object.fromEntries(dipakai.map((x) => [x, ''])));
-                      onPicked?.(`${dipakai.map(labelOf).join(', ')} dilepas.`);
-                    } else {
-                      onApply({ [k]: img.url });
-                      onPicked?.(`${labelOf(k)} dari galeri dipasang.`);
-                    }
-                  }}
-                  className={`h-14 w-14 shrink-0 rounded-lg border-2 p-1 transition duration-150 ${aktif
-                    ? 'translate-y-0.5 scale-95 !border-blue-600 bg-blue-50 shadow-[inset_0_3px_6px_rgba(0,0,0,0.35)]'
+                <button key={img.url} type="button" aria-pressed={aktif} aria-haspopup="dialog"
+                  title="Buka: Pasang / Hapus"
+                  aria-label={`Buka gambar ${g.label.toLowerCase()}: pasang atau hapus`}
+                  onClick={() => { setSel({ img, label: g.label }); setYakin(false); setGalat(''); }}
+                  className={`h-24 w-24 shrink-0 rounded-lg border-2 p-1 transition duration-150 sm:h-20 sm:w-20 ${aktif
+                    ? '!border-blue-600 bg-blue-50 shadow-[inset_0_3px_6px_rgba(0,0,0,0.35)]'
                     : 'border-gray-300 bg-white shadow-md hover:-translate-y-0.5'}`}>
-                  <img src={img.url.replace('/upload/', '/upload/w_112,h_112,c_fit/')} alt="" loading="lazy" className="h-full w-full object-contain" />
+                  <img src={img.url.replace('/upload/', '/upload/w_240,h_240,c_fit/')} alt="" loading="lazy" className="h-full w-full object-contain" />
                 </button>
               );
             })}
@@ -135,6 +144,70 @@ export default function SharedGallery({ keys, data, onApply, onPicked, showEmpty
         </div>
         );
       })}
+      {sel && (() => {
+        const { img, label } = sel;
+        const kind = img.kind || '';
+        const k = keyFor(kind);
+        const dipakai = imageKeys.filter((x) => current[x] === img.url);
+        const aktif = dipakai.length > 0;
+        const pasang = () => {
+          onApply({ [k]: img.url });
+          onPicked?.(`${labelOf(k)} dari galeri dipasang.`);
+          tutup();
+        };
+        const lepas = () => {
+          onApply(Object.fromEntries(dipakai.map((x) => [x, ''])));
+          onPicked?.(`${dipakai.map(labelOf).join(', ')} dilepas.`);
+          tutup();
+        };
+        const hapus = async () => {
+          setHapusBusy(true);
+          setGalat('');
+          try {
+            const r = await fetch('/api/cloudinary-delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: img.url }) });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(d?.error || `Server menolak (${r.status}).`);
+            if (dipakai.length) onApply(Object.fromEntries(dipakai.map((x) => [x, ''])));
+            await removeSharedImage(img.url);
+            onPicked?.('Foto dihapus dari galeri.');
+            tutup();
+          } catch (e: any) {
+            setGalat(`Gagal menghapus: ${e?.message || 'periksa koneksi lalu coba lagi.'}`);
+          } finally {
+            setHapusBusy(false);
+          }
+        };
+        const btn = 'min-h-[48px] w-full rounded-xl px-4 text-base font-semibold disabled:opacity-60';
+        return (
+          <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={() => !hapusBusy && tutup()}>
+            <div role="dialog" aria-modal="true" aria-label={`Gambar ${label}`} onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md space-y-3 rounded-2xl bg-white p-4 text-gray-800 shadow-2xl">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-bold">Galeri — {label}</p>
+                <button type="button" onClick={tutup} disabled={hapusBusy} aria-label="Tutup" className="min-h-[44px] min-w-[44px] rounded-lg text-xl text-gray-500">✕</button>
+              </div>
+              <div className="flex h-[40vh] items-center justify-center rounded-xl border bg-[repeating-conic-gradient(#e5e7eb_0_25%,#fff_0_50%)] bg-[length:16px_16px] p-2">
+                <img src={img.url.replace('/upload/', '/upload/w_900,h_900,c_fit/')} alt={`Gambar ${label.toLowerCase()}`} className="max-h-full max-w-full object-contain" />
+              </div>
+              {aktif
+                ? <button type="button" onClick={lepas} disabled={hapusBusy} className={`${btn} border border-blue-600 bg-white text-blue-700`}>Lepas dari {dipakai.map(labelOf).join(', ')}</button>
+                : <button type="button" onClick={pasang} disabled={hapusBusy} className={`${btn} bg-blue-600 text-white`}>Pasang sebagai {labelOf(k)}</button>}
+              {!yakin ? (
+                <button type="button" onClick={() => setYakin(true)} disabled={hapusBusy} className={`${btn} border border-red-300 bg-red-50 text-red-700`}>Hapus Foto</button>
+              ) : (
+                <div className="space-y-2 rounded-xl border border-red-300 bg-red-50 p-3">
+                  <p className="text-sm font-medium text-red-800">Hapus foto ini dari galeri untuk SEMUA pengguna? Tidak bisa dibatalkan.</p>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setYakin(false)} disabled={hapusBusy} className={`${btn} border bg-white text-gray-700`}>Batal</button>
+                    <button type="button" onClick={hapus} disabled={hapusBusy} className={`${btn} bg-red-600 text-white`}>{hapusBusy ? 'Menghapus…' : 'Ya, Hapus'}</button>
+                  </div>
+                </div>
+              )}
+              {galat && <p role="alert" className="text-sm text-red-700">{galat}</p>}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

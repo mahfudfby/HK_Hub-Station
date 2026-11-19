@@ -160,17 +160,27 @@ export default function SuratKeteranganKeterampilan() {
   const [geser, setGeser] = useState('ttd');
   const [canvas, setCanvas] = useCanvasMode();
 
+  const uploads = (
+    <div className="space-y-5">
+      <p className="text-sm font-bold text-gray-800">Gambar (Logo, Foto, QR, Tanda Tangan)</p>
+      <ImageUpload label="Logo lembaga" value={f.logo} onChange={(x) => set('logo', x)} notify={notify} {...bgFor('logo', logo)} />
+      {f.pakaiFoto && <ImageUpload label="Foto pemegang sertifikat" value={f.foto} onChange={(x) => set('foto', x)} notify={notify} {...bgFor('foto', foto)} />}
+      {f.pakaiQr && <ImageUpload label="Gambar QR Code" value={f.qr} onChange={(x) => set('qr', x)} notify={notify} {...bgFor('qr', qr)} />}
+      <ImageUpload label="Tanda tangan penandatangan" value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
+      {f.pakaiHal2 && (<>
+        <ImageUpload label="Logo pengesah (halaman 2)" value={f.logo2} onChange={(x) => set('logo2', x)} notify={notify} {...bgFor('logo2', logo2)} />
+        <ImageUpload label="Tanda tangan pengesah (opsional)" value={f.ttd2} onChange={(x) => set('ttd2', x)} notify={notify} {...bgFor('ttd2', ttd2)} />
+      </>)}
+    </div>
+  );
+
   const tampilan = (
     <>
       <DocOptions kosong={{ value: f.kosong, onChange: (x) => set('kosong', x) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(x) => set('skala', x)} />
       <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: `TTD ${f.pejabat || 'Pejabat'}` }]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(x) => set('posisi', x)} />
-      <Field label="Template (tata letak)">
-        <select className={inputCls} value={t.id} onChange={(e) => set('gaya', e.target.value)}>
-          {TEMPLATES.map((s) => <option key={s.id} value={s.id}>{s.name} — {s.desc}</option>)}
-        </select>
-      </Field>
+      {uploads}
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(x) => set('paper', x)} onLandscape={(x) => set('landscape', x)} />
     </>
   );
@@ -202,7 +212,7 @@ export default function SuratKeteranganKeterampilan() {
             <UserData storageKey="data-user:surat-keterangan-keterampilan" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
             <FormSection title="Kop Lembaga">
-              <ImageUpload label="Logo lembaga" value={f.logo} onChange={(x) => set('logo', x)} notify={notify} {...bgFor('logo', logo)} />
+              <p className="text-xs text-gray-600">Logo, foto, QR & tanda tangan diunggah di <b>Edit Canvas</b>, di dekat joystik.</p>
               {txt('Nama lembaga', 'lembaga')}
               {txt('Nama lembaga (baris kedua, mis. bahasa Inggris)', 'sub')}
             </FormSection>
@@ -226,10 +236,8 @@ export default function SuratKeteranganKeterampilan() {
             </FormSection>
 
             <FormSection title="Foto & QR Code">
-              <Switch checked={f.pakaiFoto} onChange={(x) => set('pakaiFoto', x)} label="Tampilkan foto pemegang" />
-              {f.pakaiFoto && <ImageUpload label="Foto pemegang sertifikat" value={f.foto} onChange={(x) => set('foto', x)} notify={notify} {...bgFor('foto', foto)} />}
-              <Switch checked={f.pakaiQr} onChange={(x) => set('pakaiQr', x)} label="Tampilkan kotak QR Code" hint="Unggah gambar QR dari sistem verifikasi lembaga Anda; aplikasi ini tidak membuat kode verifikasi." />
-              {f.pakaiQr && <ImageUpload label="Gambar QR Code" value={f.qr} onChange={(x) => set('qr', x)} notify={notify} {...bgFor('qr', qr)} />}
+              <Switch checked={f.pakaiFoto} onChange={(x) => set('pakaiFoto', x)} label="Tampilkan foto pemegang" hint="Unggah gambarnya di Edit Canvas (dekat joystik)." />
+              <Switch checked={f.pakaiQr} onChange={(x) => set('pakaiQr', x)} label="Tampilkan kotak QR Code" hint="Unggah gambar QR dari sistem verifikasi lembaga Anda di Edit Canvas; aplikasi ini tidak membuat kode verifikasi." />
             </FormSection>
 
             <FormSection title="Penetapan & Penandatangan">
@@ -240,7 +248,6 @@ export default function SuratKeteranganKeterampilan() {
               {txt('Lembaga penetap (satu baris = satu baris cetak tebal)', 'penetap', 3)}
               {txt('Jabatan penandatangan', 'jabatan')}
               {txt('Nama penandatangan', 'pejabat')}
-              <ImageUpload label="Tanda tangan penandatangan" value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
             </FormSection>
 
             <FormSection title="Halaman 2: Kompetensi yang Dikuasai">
@@ -248,16 +255,15 @@ export default function SuratKeteranganKeterampilan() {
               {f.pakaiHal2 && (<>
                 {txt('Judul halaman 2', 'judul2')}
                 {txt('Daftar kompetensi (satu baris = satu butir, nomor otomatis)', 'items', 8)}
-                <ImageUpload label="Logo pengesah (halaman 2)" value={f.logo2} onChange={(x) => set('logo2', x)} notify={notify} {...bgFor('logo2', logo2)} />
                 {txt('Nama pengesah', 'nama2')}
                 {txt('Jabatan pengesah', 'jabatan2')}
-                <ImageUpload label="Tanda tangan pengesah (opsional)" value={f.ttd2} onChange={(x) => set('ttd2', x)} notify={notify} {...bgFor('ttd2', ttd2)} />
               </>)}
               <p className="text-xs text-gray-500">Teks & gambar disimpan otomatis di perangkat ini.</p>
             </FormSection>
             </>)}
           </div>
 
+          <div className="min-w-0 space-y-3">
           <FitPreview>
             <BoxCtx.Provider value={{ W: pg.W, H: pg.H, fs }}>
             <div ref={pagesRef} className="w-max flex flex-col gap-6">
@@ -266,6 +272,14 @@ export default function SuratKeteranganKeterampilan() {
             </div>
             </BoxCtx.Provider>
           </FitPreview>
+          <div className="rounded-2xl bg-white p-4 shadow">
+            <Field label="Template (tata letak)">
+              <select className={inputCls} value={t.id} onChange={(e) => set('gaya', e.target.value)}>
+                {TEMPLATES.map((x) => <option key={x.id} value={x.id}>{x.name} — {x.desc}</option>)}
+              </select>
+            </Field>
+          </div>
+          </div>
         </div>
       </div>
       <Toast toast={toast} onClose={closeToast} />

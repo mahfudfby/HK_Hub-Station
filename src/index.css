@@ -90,6 +90,21 @@ button:where(:not([data-fit-preview] *)):disabled { cursor: not-allowed; box-sha
 }
 :where(input[type="checkbox"], input[type="radio"], input[type="range"]):where(:not([data-fit-preview] *)) { accent-color: var(--md-primary); cursor: pointer; }
 
+/* ---------- Pita emas: judul kolom Logo ---------- */
+.pita-emas {
+  display: inline-block;
+  margin-bottom: 0.15rem;
+  padding: 0.4rem 1.9rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #4a3200;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  background: linear-gradient(180deg, #fff3b0 0%, #f5c542 38%, #c99a1d 72%, #f2d36b 100%);
+  border-top: 1px solid #fff6c9;
+  border-bottom: 1px solid #8a6508;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 50%, 100% 100%, 0 100%, 12px 50%);
+}
+
 /* ---------- Area upload: kotak 3D supaya jelas terlihat ---------- */
 .upload-box {
   padding: 0.875rem;
