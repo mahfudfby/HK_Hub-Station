@@ -152,19 +152,16 @@ export default function SharedGallery({
     setContextMenu(null);
   };
 
-  // Close context menu on outside click or escape
+  // Close context menu / modal on escape key
   useEffect(() => {
-    const handleGlobalClick = () => closeContextMenu();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         closeContextMenu();
         if (!hapusBusy) tutup();
       }
     };
-    window.addEventListener('click', handleGlobalClick);
     window.addEventListener('keydown', onKey);
     return () => {
-      window.removeEventListener('click', handleGlobalClick);
       window.removeEventListener('keydown', onKey);
     };
   }, [hapusBusy]);
@@ -240,39 +237,66 @@ export default function SharedGallery({
     tutup();
   };
 
-  const handleHapusBgDariContext = async (img: SharedImage) => {
+  const handleLepasDariContext = (k: string) => {
+    onApply({ [k]: '' });
+    onPicked?.(`${labelOf(k)} dilepas.`);
+    closeContextMenu();
+    tutup();
+  };
+
+  const handleHapusBgDariContext = async (img: SharedImage, targetKeyOverride?: string) => {
     setBusyAction('hapusBg');
     try {
       const transparentDataUrl = await removeBackground(img.url);
-      const k = keyFor(img.kind || '');
+      const k = targetKeyOverride || keyFor(img.kind || '');
       onApply({ [k]: transparentDataUrl });
-      const folder = galleryFolder(img.kind || 'lainnya', 'upload');
-      addSharedImage({ url: transparentDataUrl, kind: img.kind, folder });
+
+      // Coba upload ke Cloudinary agar tersimpan permanen
+      try {
+        const blob = await (await fetch(transparentDataUrl)).blob();
+        const folder = galleryFolder(img.kind || 'lainnya', 'hapus-bg');
+        const uploaded = await uploadImage(blob, folder);
+        await addSharedImage({ url: uploaded.url, kind: img.kind, folder });
+        onApply({ [k]: uploaded.url });
+      } catch {
+        await addSharedImage({ url: transparentDataUrl, kind: img.kind });
+      }
+
       onPicked?.('Background berhasil dihapus dan gambar langsung dipasang.');
-    } catch {
-      onPicked?.('Gagal menghapus background: gambar tidak dapat diproses.');
-    } finally {
-      setBusyAction('');
       closeContextMenu();
       tutup();
+    } catch (err: any) {
+      onPicked?.(`Gagal menghapus background: ${err?.message || 'gambar tidak dapat diproses'}.`);
+    } finally {
+      setBusyAction('');
     }
   };
 
-  const handleGreyscaleDariContext = async (img: SharedImage) => {
+  const handleGreyscaleDariContext = async (img: SharedImage, targetKeyOverride?: string) => {
     setBusyAction('greyscale');
     try {
       const greyscaleDataUrl = await toGreyscale(img.url);
-      const k = keyFor(img.kind || '');
+      const k = targetKeyOverride || keyFor(img.kind || '');
       onApply({ [k]: greyscaleDataUrl });
-      const folder = galleryFolder(img.kind || 'lainnya', 'upload');
-      addSharedImage({ url: greyscaleDataUrl, kind: img.kind, folder });
+
+      // Coba upload ke Cloudinary agar tersimpan permanen
+      try {
+        const blob = await (await fetch(greyscaleDataUrl)).blob();
+        const folder = galleryFolder(img.kind || 'lainnya', 'greyscale');
+        const uploaded = await uploadImage(blob, folder);
+        await addSharedImage({ url: uploaded.url, kind: img.kind, folder });
+        onApply({ [k]: uploaded.url });
+      } catch {
+        await addSharedImage({ url: greyscaleDataUrl, kind: img.kind });
+      }
+
       onPicked?.('Gambar berhasil diubah ke Greyscale dan langsung dipasang.');
-    } catch {
-      onPicked?.('Gagal mengubah ke Greyscale.');
-    } finally {
-      setBusyAction('');
       closeContextMenu();
       tutup();
+    } catch (err: any) {
+      onPicked?.(`Gagal mengubah ke Greyscale: ${err?.message || 'gambar tidak dapat diproses'}.`);
+    } finally {
+      setBusyAction('');
     }
   };
 
@@ -280,13 +304,11 @@ export default function SharedGallery({
     setHapusBusy(true);
     setGalat('');
     try {
-      const r = await fetch('/api/cloudinary-delete', {
+      await fetch('/api/cloudinary-delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: img.url }),
-      });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(d?.error || `Server menolak (${r.status}).`);
+      }).catch(() => null);
 
       const dipakai = imageKeys.filter((x) => current[x] === img.url);
       if (dipakai.length) onApply(Object.fromEntries(dipakai.map((x) => [x, ''])));
@@ -295,7 +317,10 @@ export default function SharedGallery({
       tutup();
       closeContextMenu();
     } catch (e: any) {
-      setGalat(`Gagal menghapus: ${e?.message || 'periksa koneksi.'}`);
+      await removeSharedImage(img.url);
+      onPicked?.('Foto dilepas dari galeri.');
+      tutup();
+      closeContextMenu();
     } finally {
       setHapusBusy(false);
     }
@@ -305,16 +330,20 @@ export default function SharedGallery({
   const triggerContextMenu = (e: React.MouseEvent, img: SharedImage, label: string) => {
     e.preventDefault();
     e.stopPropagation();
-    const x = Math.min(e.clientX, window.innerWidth - 240);
-    const y = Math.min(e.clientY, window.innerHeight - 260);
+    const menuWidth = 260;
+    const menuHeight = 340;
+    const x = Math.max(10, Math.min(e.clientX, window.innerWidth - menuWidth - 10));
+    const y = Math.max(10, Math.min(e.clientY, window.innerHeight - menuHeight - 10));
     setContextMenu({ x, y, img, label });
   };
 
   // Long press for touch devices
   const handleTouchStart = (e: React.TouchEvent, img: SharedImage, label: string) => {
     const touch = e.touches[0];
-    const x = Math.min(touch.clientX, window.innerWidth - 240);
-    const y = Math.min(touch.clientY, window.innerHeight - 260);
+    const menuWidth = 260;
+    const menuHeight = 340;
+    const x = Math.max(10, Math.min(touch.clientX, window.innerWidth - menuWidth - 10));
+    const y = Math.max(10, Math.min(touch.clientY, window.innerHeight - menuHeight - 10));
     touchTimerRef.current = setTimeout(() => {
       setContextMenu({ x, y, img, label });
     }, 500);
@@ -506,6 +535,10 @@ export default function SharedGallery({
                           onTouchStart={(e) => handleTouchStart(e, img, g.label)}
                           onTouchEnd={handleTouchEnd}
                           onClick={() => {
+                            if (contextMenu) {
+                              closeContextMenu();
+                              return;
+                            }
                             setSel({ img, label: g.label });
                             setYakin(false);
                             setGalat('');
@@ -543,85 +576,146 @@ export default function SharedGallery({
           FLOATING CONTEXT MENU (KLIK KANAN PADA FOTO GALERI)
          ============================================================ */}
       {contextMenu && (
-        <div
-          role="menu"
-          aria-label="Menu Tindakan Foto"
-          onClick={(e) => e.stopPropagation()}
-          className="fixed z-[120] w-56 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1.5 shadow-2xl text-xs font-semibold text-gray-800 dark:text-gray-200 animate-in fade-in duration-150"
-          style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
-        >
-          {/* Header thumbnail & label */}
-          <div className="flex items-center gap-2 px-2.5 py-2 border-b border-gray-100 dark:border-gray-700/60 mb-1">
-            <img
-              src={contextMenu.img.url.replace('/upload/', '/upload/w_80,h_80,c_fit/')}
-              alt=""
-              className="h-7 w-7 rounded-lg object-contain border border-gray-200 dark:border-gray-700"
-            />
-            <span className="truncate font-bold text-gray-900 dark:text-gray-100">{contextMenu.label}</span>
-          </div>
-
-          {/* Opsi 1: Pasang */}
-          <button
-            type="button"
-            role="menuitem"
-            disabled={!!busyAction}
-            onClick={() => handlePasangDariContext(contextMenu.img)}
-            className="flex min-h-[36px] w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 hover:bg-primary-50 dark:hover:bg-primary-950/50 hover:text-primary-600 dark:hover:text-primary-400 transition-colors text-left"
-          >
-            <Check size={15} className="text-primary-600 dark:text-primary-400 shrink-0" />
-            <span>Pasang ke {labelOf(keyFor(contextMenu.img.kind || ''))}</span>
-          </button>
-
-          {/* Opsi 2: Hapus BG */}
-          <button
-            type="button"
-            role="menuitem"
-            disabled={!!busyAction}
-            onClick={() => handleHapusBgDariContext(contextMenu.img)}
-            className="flex min-h-[36px] w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 hover:bg-purple-50 dark:hover:bg-purple-950/50 hover:text-purple-600 dark:hover:text-purple-400 transition-colors text-left"
-          >
-            {busyAction === 'hapusBg' ? (
-              <RefreshCw size={15} className="animate-spin text-purple-600 shrink-0" />
-            ) : (
-              <Scissors size={15} className="text-purple-600 dark:text-purple-400 shrink-0" />
-            )}
-            <span>Hapus BG (Transparan)</span>
-          </button>
-
-          {/* Opsi 3: Greyscale */}
-          <button
-            type="button"
-            role="menuitem"
-            disabled={!!busyAction}
-            onClick={() => handleGreyscaleDariContext(contextMenu.img)}
-            className="flex min-h-[36px] w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 hover:bg-amber-50 dark:hover:bg-amber-950/50 hover:text-amber-600 dark:hover:text-amber-400 transition-colors text-left"
-          >
-            {busyAction === 'greyscale' ? (
-              <RefreshCw size={15} className="animate-spin text-amber-600 shrink-0" />
-            ) : (
-              <Palette size={15} className="text-amber-600 dark:text-amber-400 shrink-0" />
-            )}
-            <span>Ubah ke Greyscale</span>
-          </button>
-
-          <div className="my-1 border-t border-gray-100 dark:border-gray-700/60" />
-
-          {/* Opsi 4: Hapus Foto */}
-          <button
-            type="button"
-            role="menuitem"
-            disabled={!!busyAction || hapusBusy}
-            onClick={() => {
-              if (confirm('Hapus foto ini dari galeri untuk SEMUA pengguna?')) {
-                handleHapusDariGaleri(contextMenu.img);
-              }
+        <>
+          {/* Backdrop transparan: klik / klik kanan di luar langsung menutup menu tanpa efek samping */}
+          <div
+            className="fixed inset-0 z-[119] bg-black/10 dark:bg-black/30 backdrop-blur-[1px]"
+            onClick={() => closeContextMenu()}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              closeContextMenu();
             }}
-            className="flex min-h-[36px] w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors text-left"
+          />
+
+          <div
+            role="menu"
+            aria-label="Menu Tindakan Foto"
+            onClick={(e) => e.stopPropagation()}
+            className="fixed z-[120] w-64 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 shadow-2xl text-xs font-semibold text-gray-800 dark:text-gray-200 animate-in fade-in duration-150"
+            style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
           >
-            <Trash2 size={15} className="shrink-0" />
-            <span>Hapus dari Galeri</span>
-          </button>
-        </div>
+            {/* Header thumbnail & label */}
+            <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 border-b border-gray-100 dark:border-gray-700/60 mb-1.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <img
+                  src={contextMenu.img.url.replace('/upload/', '/upload/w_80,h_80,c_fit/')}
+                  alt=""
+                  className="h-7 w-7 rounded-lg object-contain border border-gray-200 dark:border-gray-700 shrink-0 bg-white"
+                />
+                <span className="truncate font-bold text-gray-900 dark:text-gray-100">{contextMenu.label}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => closeContextMenu()}
+                className="h-6 w-6 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Bagian 1: Pasang / Lepas ke slot yang tersedia */}
+            <div className="space-y-1 mb-1">
+              <p className="px-2 pt-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                Pasang ke Dokumen:
+              </p>
+              {imageKeys.map((k) => {
+                const isInstalled = current[k] === contextMenu.img.url;
+                return isInstalled ? (
+                  <button
+                    key={k}
+                    type="button"
+                    role="menuitem"
+                    disabled={!!busyAction}
+                    onClick={() => handleLepasDariContext(k)}
+                    className="flex min-h-[34px] w-full items-center justify-between gap-2 rounded-xl px-2.5 py-1.5 bg-primary-50 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Check size={14} className="text-primary-600 dark:text-primary-400 shrink-0" />
+                      <span className="truncate">Lepas dari <b>{labelOf(k)}</b></span>
+                    </div>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-white dark:bg-gray-800 text-primary-600 font-bold border border-primary-200 dark:border-primary-800">
+                      Aktif
+                    </span>
+                  </button>
+                ) : (
+                  <button
+                    key={k}
+                    type="button"
+                    role="menuitem"
+                    disabled={!!busyAction}
+                    onClick={() => handlePasangDariContext(contextMenu.img, k)}
+                    className="flex min-h-[34px] w-full items-center gap-2 rounded-xl px-2.5 py-1.5 hover:bg-primary-50 dark:hover:bg-primary-950/50 hover:text-primary-600 dark:hover:text-primary-400 transition-colors text-left"
+                  >
+                    <Check size={14} className="text-gray-400 shrink-0" />
+                    <span className="truncate">Pasang ke <b>{labelOf(k)}</b></span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="my-1 border-t border-gray-100 dark:border-gray-700/60" />
+
+            {/* Bagian 2: Manipulasi Gambar */}
+            <div className="space-y-1">
+              <p className="px-2 pt-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                Tindakan Foto:
+              </p>
+              {/* Opsi: Hapus BG */}
+              <button
+                type="button"
+                role="menuitem"
+                disabled={!!busyAction}
+                onClick={() => handleHapusBgDariContext(contextMenu.img)}
+                className="flex min-h-[36px] w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 hover:bg-purple-50 dark:hover:bg-purple-950/50 hover:text-purple-600 dark:hover:text-purple-400 transition-colors text-left"
+              >
+                {busyAction === 'hapusBg' ? (
+                  <RefreshCw size={15} className="animate-spin text-purple-600 shrink-0" />
+                ) : (
+                  <Scissors size={15} className="text-purple-600 dark:text-purple-400 shrink-0" />
+                )}
+                <span>{busyAction === 'hapusBg' ? 'Memproses Hapus BG...' : 'Hapus BG (Transparan)'}</span>
+              </button>
+
+              {/* Opsi: Greyscale */}
+              <button
+                type="button"
+                role="menuitem"
+                disabled={!!busyAction}
+                onClick={() => handleGreyscaleDariContext(contextMenu.img)}
+                className="flex min-h-[36px] w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 hover:bg-amber-50 dark:hover:bg-amber-950/50 hover:text-amber-600 dark:hover:text-amber-400 transition-colors text-left"
+              >
+                {busyAction === 'greyscale' ? (
+                  <RefreshCw size={15} className="animate-spin text-amber-600 shrink-0" />
+                ) : (
+                  <Palette size={15} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                )}
+                <span>{busyAction === 'greyscale' ? 'Memproses Greyscale...' : 'Ubah ke Greyscale'}</span>
+              </button>
+            </div>
+
+            <div className="my-1 border-t border-gray-100 dark:border-gray-700/60" />
+
+            {/* Bagian 3: Hapus Foto dari Galeri */}
+            <button
+              type="button"
+              role="menuitem"
+              disabled={!!busyAction || hapusBusy}
+              onClick={() => {
+                if (confirm('Hapus foto ini dari galeri bersama?')) {
+                  handleHapusDariGaleri(contextMenu.img);
+                }
+              }}
+              className="flex min-h-[34px] w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors text-left"
+            >
+              {hapusBusy ? (
+                <RefreshCw size={14} className="animate-spin shrink-0" />
+              ) : (
+                <Trash2 size={14} className="shrink-0" />
+              )}
+              <span>{hapusBusy ? 'Menghapus...' : 'Hapus dari Galeri'}</span>
+            </button>
+          </div>
+        </>
       )}
 
       {/* ============================================================
