@@ -57,7 +57,7 @@ const LOGO_MAX_HEIGHT = 60;
 const SIGNATURE_MAX_WIDTH = 120;
 const SIGNATURE_MAX_HEIGHT = 70;
 
-// Bawaan: kertas dot-matrix continuous form 9,5×5,5" (CF95x55) = 912×528 px @96DPI. Kertas lain dipilih di Edit Canvas.
+// Bawaan: kertas dot-matrix continuous form 9,5×5,5" (CF95x55) = 912×528 px @96DPI. Kertas lain dipilih di Edit Tampilan.
 const PAPER_KEY = 'slip-gaji:paper:v1';
 const loadPaper = () => {
   try {

@@ -15,6 +15,7 @@ import { num, rupiah } from '../../shared/lib/money';
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import FormSection from '../../shared/components/FormSection';
 import KontakFields from '../../shared/components/KontakFields';
+import TemplateRibbon from '../../shared/components/TemplateRibbon';
 
 // Bahan bersama dua menu berdiri sendiri: Invoice Toko Online (/invoice-olshop) & Receipt Pesanan Toko Online (/receipt-olshop).
 // Dokumen milik penjual sendiri: identitas toko (logo + nama) diisi pengguna; tanpa merek/logo marketplace mana pun.
@@ -501,11 +502,12 @@ export default function OrderPage({ cfg }: { cfg: Cfg }) {
       <TextSizeSlider value={d.skala} onChange={(v) => set('skala', v)} effective={k} />
       <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: 'Tanda tangan' }, { id: 'stempel', label: 'Stempel' }]}
         active={geser} onActive={setGeser} value={d.posisi} onChange={(v) => set('posisi', v)} />
-      <Field label="Template">
+      <div className="space-y-2">
+        <TemplateRibbon label="GANTI TEMPLATE" />
         <select className={inputCls} value={d.gaya || cfg.templates[0].id} onChange={(e) => set('gaya', e.target.value)}>
           {cfg.templates.map((g, i) => <option key={g.id} value={g.id}>{i + 1}. {g.name}</option>)}
         </select>
-      </Field>
+      </div>
       <PaperPicker paper={d.paper} landscape={d.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
       <Field label="Warna aksen (template berwarna)">
         <input type="color" aria-label="Warna aksen" className="h-[42px] w-full rounded-lg border border-gray-300 p-1" value={d.accent} onChange={(e) => set('accent', e.target.value)} />

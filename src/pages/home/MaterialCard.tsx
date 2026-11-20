@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowUpRight, Check, Copy, Lock, Star } from 'lucide-react';
 import { AppItem } from './types';
 
@@ -23,6 +23,7 @@ const tagStyles: Record<string, string> = {
 };
 
 export default function MaterialCard({ app, onToggleFavorite, onCopyLink }: MaterialCardProps) {
+  const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = (e: React.MouseEvent) => {
@@ -39,8 +40,19 @@ export default function MaterialCard({ app, onToggleFavorite, onCopyLink }: Mate
     onToggleFavorite(app.path, app.title);
   };
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button')) {
+      return;
+    }
+    navigate(app.path);
+  };
+
   return (
-    <div className="group relative flex flex-col justify-between rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/90 p-4 sm:p-5 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-primary-400 dark:hover:border-primary-500 hover:shadow-md">
+    <div
+      onClick={handleCardClick}
+      className="group relative flex flex-col justify-between rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/90 p-4 sm:p-5 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-primary-400 dark:hover:border-primary-500 hover:shadow-md cursor-pointer"
+    >
       {/* Top Meta Row */}
       <div>
         <div className="flex items-center justify-between gap-2 mb-3">

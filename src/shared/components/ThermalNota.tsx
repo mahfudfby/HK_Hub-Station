@@ -15,6 +15,7 @@ import { cssFamily, useGoogleFonts, type WebFont } from '../lib/fonts';
 import { TextSizeSlider, useFitScale } from './TextScale';
 import DocOptions, { nomorTampil, TITIK } from './DocOptions';
 import FormSection from './FormSection';
+import TemplateRibbon from './TemplateRibbon';
 
 // Nota pembelian untuk printer thermal 58mm / 80mm.
 // Lebar nota × skala 2 = lebar titik cetak printer: 58mm → 192px → PNG 384px (±32 karakter/baris),
@@ -514,11 +515,12 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
     <>
       <PaperPicker paper={n.paper} landscape={n.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
       <TextSizeSlider value={n.skala} onChange={(v) => set('skala', v)} effective={k} />
-      <Field label="Template nota">
+      <div className="space-y-2">
+        <TemplateRibbon label="GANTI TEMPLATE" />
         <select className={inputCls} value={tpl.id} onChange={(e) => set('template', e.target.value)}>
           {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
         </select>
-      </Field>
+      </div>
       <DocOptions nomor={{ value: n.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: n.kosong, onChange: (v) => set('kosong', v) }} />
     </>
   );

@@ -17,6 +17,7 @@ import { useBgRemoved } from '../lib/removeBg';
 import { cached, translateAll } from '../lib/translate';
 import { buildCvDocx } from '../lib/cvDocx';
 import { saveFile } from '../lib/saveFile';
+import TemplateRibbon from './TemplateRibbon';
 
 // Menu CV bersama (Creative & ATS): isian bahasa Indonesia, hasil bisa otomatis diterjemahkan ke Inggris.
 // 20 template per menu (CvTemplates). Banyak halaman: tiap kolom dipecah sendiri oleh usePagination.
@@ -179,11 +180,12 @@ export default function CvMenu({ mode }: { mode: 'creative' | 'ats' }) {
   const tampilan = (
     <>
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
-      <Field label="Template (20 tata letak)">
+      <div className="space-y-2">
+        <TemplateRibbon label="GANTI TEMPLATE" />
         <select className={inputCls} value={T.id} onChange={(e) => set('gaya', e.target.value)}>
           {TPL.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
         </select>
-      </Field>
+      </div>
       <Field label="Ukuran kertas (margin tepi 1,5 cm)">
         <select className={inputCls} value={pg.paper.w === PAPERS.A4.w ? 'A4' : f.paper} onChange={(e) => set('paper', e.target.value)}>
           {KERTAS.map((id) => <option key={id} value={id}>{PAPERS[id].label}</option>)}

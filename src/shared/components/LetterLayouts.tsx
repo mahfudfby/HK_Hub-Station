@@ -3,6 +3,7 @@ import { Field, inputCls, signSpace } from './LetterKit';
 import { fxOf, type Offset } from './PositionPad';
 import { FitLine } from './LetterStyles';
 import { cssFamily, useGoogleFonts } from '../lib/fonts';
+import TemplateRibbon from './TemplateRibbon';
 
 // 20 TATA LETAK surat untuk menu surat baru (Izin Sekolah, Pengajuan, Lamaran, Pengunduran Diri, Musyawarah Desa).
 // Beda dengan LetterStyles (font/garis): di sini susunan halaman berubah (kop samping, kop bawah, kolom, pita, dll.).
@@ -893,11 +894,12 @@ export function LayoutLetter(p: LayoutProps) {
 
 export function LayoutPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
   return (
-    <Field label="Template (tata letak)">
+    <div className="space-y-2">
+      <TemplateRibbon label="GANTI TEMPLATE" />
       <select className={inputCls} value={getLayout(value).id} onChange={(e) => onChange(e.target.value)}>
         {LETTER_LAYOUTS.map((l) => <option key={l.id} value={l.id}>{l.name} — {l.desc}</option>)}
       </select>
-    </Field>
+    </div>
   );
 }
 

@@ -14,6 +14,7 @@ import { useBgRemoved } from '../../shared/lib/removeBg';
 import { Lembar, useTplFonts, type Isi } from './Lipat3';
 import { TEMPLATES, getTpl } from './templates';
 import FormSection from '../../shared/components/FormSection';
+import TemplateRibbon from '../../shared/components/TemplateRibbon';
 
 // Undangan Yasinan & Tahlilan lipat 3 dalam 1 halaman. Kertas landscape = 3 kolom tegak; kertas vertikal = 3 baris mendatar.
 // Menu berdiri sendiri; 20 template sendiri (templates.ts), bukan LetterLayouts karena bentuknya brosur lipat.
@@ -154,11 +155,12 @@ export default function UndanganYasinan() {
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <PositionPad targets={[{ id: 'logo', label: 'Foto almarhum/ah' }, { id: 'ttd', label: `TTD ${f.keluarga || 'Keluarga'}` }]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(v) => set('posisi', v)} />
-      <Field label="Template undangan">
+      <div className="space-y-2">
+        <TemplateRibbon label="GANTI TEMPLATE" />
         <select className={inputCls} value={t.id} onChange={(e) => set('gaya', e.target.value)}>
           {TEMPLATES.map((s, i) => <option key={s.id} value={s.id}>{i + 1}. {s.name}</option>)}
         </select>
-      </Field>
+      </div>
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(v) => set('paper', v)} onLandscape={(v) => set('landscape', v)} />
       <p className="text-xs text-gray-600">Satu halaman dibagi 3 panel. Landscape: 3 kolom tegak. Vertikal: 3 baris mendatar (isi ditata melebar). Lipat mengikuti garis titik-titik.</p>
     </>

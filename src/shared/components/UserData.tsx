@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import FormSection from './FormSection';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { galleryFolder, uploadImage } from '../lib/cloudinary';
 import SharedGallery, { GaleriLipat, IMAGE_LABEL as LABEL } from './SharedGallery';
 
@@ -50,6 +50,7 @@ export default function UserData({ storageKey, keys, data, onApply }: {
   const [name, setName] = useState('');
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
+  const [expanded, setExpanded] = useState(false); // Default menutup ciut sampai tombol diklik
 
   // Halaman dibuka: gambar di isian saat ini (hasil Data User sebelumnya) dicek, bila terhapus segera diberi tahu
   useEffect(() => {
@@ -126,28 +127,96 @@ export default function UserData({ storageKey, keys, data, onApply }: {
   };
 
   return (
-    <FormSection title="Data User" className="rounded-xl border border-gray-300 p-3">
-      <p className="text-xs text-gray-600">Simpan data umum (nama usaha, alamat, logo, tanda tangan) agar tidak perlu diketik ulang. Template tampilan dipilih terpisah.</p>
-      <div className="flex gap-2">
-        <select aria-label="Pilih data user" className="w-full min-w-0 p-2 border border-gray-300 rounded-lg text-sm" value={sel} onChange={(e) => apply(e.target.value)}>
-          <option value="">{list.length ? 'Pilih data user…' : 'Belum ada data user tersimpan'}</option>
-          {list.map((t) => <option key={t.name} value={t.name}>{t.name}</option>)}
-        </select>
-        <button type="button" onClick={remove} disabled={!sel} className="shrink-0 px-3 rounded-lg border border-red-200 text-sm font-medium text-red-600 disabled:opacity-40">Hapus</button>
+    <section className="rounded-2xl border border-gray-200/90 dark:border-gray-800 bg-white dark:bg-gray-800/90 p-4 sm:p-5 shadow-xs transition-shadow duration-150 hover:shadow-sm space-y-3">
+      {/* Header Bar dengan Tombol Ciutkan / Buka */}
+      <div className="flex items-center justify-between gap-3 pb-2 border-b border-gray-100 dark:border-gray-700/60">
+        <div className="flex items-center gap-2">
+          <span className="h-4 w-1 rounded-full bg-primary-600 dark:bg-primary-500" aria-hidden="true" />
+          <h2 className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100 tracking-tight">
+            Data User
+          </h2>
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-gray-700/80 text-gray-600 dark:text-gray-300">
+            {sel ? `Aktif: ${sel}` : `${list.length} profil`}
+          </span>
+        </div>
+
+        {/* Tombol Ciutkan / Minimize */}
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition shadow-xs"
+          aria-expanded={expanded}
+        >
+          {expanded ? (
+            <>
+              <ChevronUp size={15} aria-hidden="true" />
+              <span>Ciutkan</span>
+            </>
+          ) : (
+            <>
+              <ChevronDown size={15} aria-hidden="true" />
+              <span>Buka Data User</span>
+            </>
+          )}
+        </button>
       </div>
-      <div className="flex gap-2">
-        <input aria-label="Nama data user baru" placeholder="Nama data user, mis. Toko Cabang 1" value={name}
-          onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } }}
-          className="w-full min-w-0 p-2 border border-gray-300 rounded-lg text-sm" />
-        <button type="button" onClick={save} disabled={!name.trim() || busy} className="shrink-0 px-3 rounded-lg bg-blue-600 text-sm font-semibold text-white disabled:opacity-50">{busy ? 'Mengunggah…' : 'Simpan'}</button>
-      </div>
-      {/* Galeri Foto per kategori (Logo / Tanda tangan / Stempel / Lainnya), selalu tampil */}
-      {keys.some((k) => /logo|foto|ttd|sign|stempel/i.test(k)) && (
-        <GaleriLipat className="rounded-xl border border-gray-200 bg-white p-3">
-          <SharedGallery showEmpty keys={keys} data={data} onApply={onApply} onPicked={setMsg} />
-        </GaleriLipat>
+
+      {/* Konten Terbuka (Hanya tampil saat expanded = true) */}
+      {expanded && (
+        <div className="space-y-3.5 pt-1">
+          <p className="text-xs text-gray-600 dark:text-gray-400">
+            Simpan data umum (nama usaha, alamat, logo, tanda tangan) agar tidak perlu diketik ulang. Template tampilan dipilih terpisah.
+          </p>
+          <div className="flex gap-2">
+            <select
+              aria-label="Pilih data user"
+              className="w-full min-w-0 p-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg text-sm"
+              value={sel}
+              onChange={(e) => apply(e.target.value)}
+            >
+              <option value="">{list.length ? 'Pilih data user…' : 'Belum ada data user tersimpan'}</option>
+              {list.map((t) => <option key={t.name} value={t.name}>{t.name}</option>)}
+            </select>
+            <button
+              type="button"
+              onClick={remove}
+              disabled={!sel}
+              className="shrink-0 px-3 rounded-lg border border-red-200 dark:border-red-900/60 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 disabled:opacity-40"
+            >
+              Hapus
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <input
+              aria-label="Nama data user baru"
+              placeholder="Nama data user, mis. Toko Cabang 1"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } }}
+              className="w-full min-w-0 p-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg text-sm"
+            />
+            <button
+              type="button"
+              onClick={save}
+              disabled={!name.trim() || busy}
+              className="shrink-0 px-3.5 rounded-lg bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 shadow-xs"
+            >
+              {busy ? 'Mengunggah…' : 'Simpan'}
+            </button>
+          </div>
+          {/* Galeri Foto per kategori */}
+          {keys.some((k) => /logo|foto|ttd|sign|stempel/i.test(k)) && (
+            <GaleriLipat className="rounded-xl border border-gray-200 dark:border-gray-700/60 bg-white dark:bg-gray-900 p-3">
+              <SharedGallery showEmpty keys={keys} data={data} onApply={onApply} onPicked={setMsg} />
+            </GaleriLipat>
+          )}
+          {msg && (
+            <p className={`text-xs ${msg.includes('terhapus dari Cloudinary') ? 'font-bold text-red-700 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'}`} role="status">
+              {msg}
+            </p>
+          )}
+        </div>
       )}
-      {msg && <p className={`text-xs ${msg.includes('terhapus dari Cloudinary') ? 'font-bold text-red-700' : 'text-gray-700'}`} role="status">{msg}</p>}
-    </FormSection>
+    </section>
   );
 }

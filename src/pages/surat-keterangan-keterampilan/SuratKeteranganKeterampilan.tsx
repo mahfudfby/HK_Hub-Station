@@ -16,6 +16,7 @@ import { useBgRemoved } from '../../shared/lib/removeBg';
 import { useGoogleFonts } from '../../shared/lib/fonts';
 import { TEMPLATES, getTpl } from './templates';
 import { BoxCtx, Hal1, Hal2, rootStyle, type Cert } from './Render';
+import TemplateRibbon from '../../shared/components/TemplateRibbon';
 
 // Surat Keterangan Keterampilan: sertifikat keterampilan kerja 2 halaman (landscape).
 // Halaman 1 = sertifikat (kop, nama, kualifikasi, nomor registrasi, masa berlaku, QR, foto, penetapan);
@@ -212,7 +213,7 @@ export default function SuratKeteranganKeterampilan() {
             <UserData storageKey="data-user:surat-keterangan-keterampilan" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
             <FormSection title="Kop Lembaga">
-              <p className="text-xs text-gray-600">Logo, foto, QR & tanda tangan diunggah di <b>Edit Canvas</b>, di dekat joystik.</p>
+              <p className="text-xs text-gray-600">Logo, foto, QR & tanda tangan diunggah di <b>Edit Tampilan</b>, di dekat joystik.</p>
               {txt('Nama lembaga', 'lembaga')}
               {txt('Nama lembaga (baris kedua, mis. bahasa Inggris)', 'sub')}
             </FormSection>
@@ -236,8 +237,8 @@ export default function SuratKeteranganKeterampilan() {
             </FormSection>
 
             <FormSection title="Foto & QR Code">
-              <Switch checked={f.pakaiFoto} onChange={(x) => set('pakaiFoto', x)} label="Tampilkan foto pemegang" hint="Unggah gambarnya di Edit Canvas (dekat joystik)." />
-              <Switch checked={f.pakaiQr} onChange={(x) => set('pakaiQr', x)} label="Tampilkan kotak QR Code" hint="Unggah gambar QR dari sistem verifikasi lembaga Anda di Edit Canvas; aplikasi ini tidak membuat kode verifikasi." />
+              <Switch checked={f.pakaiFoto} onChange={(x) => set('pakaiFoto', x)} label="Tampilkan foto pemegang" hint="Unggah gambarnya di Edit Tampilan (dekat joystik)." />
+              <Switch checked={f.pakaiQr} onChange={(x) => set('pakaiQr', x)} label="Tampilkan kotak QR Code" hint="Unggah gambar QR dari sistem verifikasi lembaga Anda di Edit Tampilan; aplikasi ini tidak membuat kode verifikasi." />
             </FormSection>
 
             <FormSection title="Penetapan & Penandatangan">
@@ -272,12 +273,11 @@ export default function SuratKeteranganKeterampilan() {
             </div>
             </BoxCtx.Provider>
           </FitPreview>
-          <div className="rounded-2xl bg-white p-4 shadow">
-            <Field label="Template (tata letak)">
-              <select className={inputCls} value={t.id} onChange={(e) => set('gaya', e.target.value)}>
-                {TEMPLATES.map((x) => <option key={x.id} value={x.id}>{x.name} — {x.desc}</option>)}
-              </select>
-            </Field>
+          <div className="rounded-2xl bg-white dark:bg-gray-800 p-4 shadow-xs border border-gray-200 dark:border-gray-700 space-y-2">
+            <TemplateRibbon label="GANTI TEMPLATE" />
+            <select className={inputCls} value={t.id} onChange={(e) => set('gaya', e.target.value)}>
+              {TEMPLATES.map((x) => <option key={x.id} value={x.id}>{x.name} — {x.desc}</option>)}
+            </select>
           </div>
           </div>
         </div>

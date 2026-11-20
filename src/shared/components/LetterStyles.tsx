@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Field, LETTER_FONT, inputCls } from './LetterKit';
 import { cssFamily, useGoogleFonts, type WebFont } from '../lib/fonts';
+import TemplateRibbon from './TemplateRibbon';
 
 // 20 gaya surat dokter (Surat Keterangan Dokter & Sehat): font, kop, garis kop, judul, baris data, tanda tangan.
 // 'klasik' = tampilan asli (harus tetap sama persis). Semua CSS aman untuk html2canvas (warna polos, border, flex/grid).
@@ -170,10 +171,11 @@ export function SignName({ g, k = 1, children }: { g: Gaya; k?: number; children
 // ---------------- Pemilih gaya (form) ----------------
 export function StylePicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
   return (
-    <Field label="Template surat">
+    <div className="space-y-2">
+      <TemplateRibbon label="GANTI TEMPLATE" />
       <select className={inputCls} value={getGaya(value).id} onChange={(e) => onChange(e.target.value)}>
         {LETTER_STYLES.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
       </select>
-    </Field>
+    </div>
   );
 }

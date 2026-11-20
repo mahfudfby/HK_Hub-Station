@@ -17,6 +17,7 @@ import { orRandomNo, randomDocNo } from '../lib/docNumber';
 import { cssFamily, loadGoogleFont, useGoogleFonts, type WebFont } from '../lib/fonts';
 import FormSection from './FormSection';
 import KontakFields from './KontakFields';
+import TemplateRibbon from './TemplateRibbon';
 
 // Generator Invoice & Faktur Penjualan: satu mesin, beberapa template gaya, ukuran kertas & orientasi bebas.
 
@@ -654,7 +655,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
     </Field>
   );
   const seg = (on: boolean) => `px-3 py-2 rounded-lg border text-sm font-medium min-h-[44px] ${on ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`;
-  // Analog geser tanda tangan/stempel (halaman Edit Canvas)
+  // Analog geser tanda tangan/stempel (halaman Edit Tampilan)
   const [geser, setGeser] = useState('ttd');
   const posPad = (
     <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: `TTD ${d.ttdNama || 'Penjual'}` }, { id: 'stempel', label: 'Stempel' },
@@ -698,11 +699,12 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
       <DocOptions nomor={{ value: d.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: d.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={d.skala} onChange={(v) => set('skala', v)} effective={k} />
       {posPad}
-      <Field label="Template">
+      <div className="space-y-2">
+        <TemplateRibbon label="GANTI TEMPLATE" />
         <select className={inputCls} value={tplOf(d.template).id} onChange={(e) => set('template', e.target.value)}>
           {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
         </select>
-      </Field>
+      </div>
       {fontField}
       {paperField}
       {orientButtons}

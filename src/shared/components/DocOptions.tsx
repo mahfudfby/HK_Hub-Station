@@ -1,4 +1,4 @@
-// Opsi dokumen bersama semua menu (di Edit Canvas → Tampilan):
+// Opsi dokumen bersama semua menu (di Edit Tampilan → Tampilan):
 // - Pakai nomor dokumen: matikan agar baris nomor tidak tampil.
 // - Template kosongan: data dikosongkan (titik-titik/garis) untuk diisi manual dengan alat tulis;
 //   kop, label, kalimat baku & tanda tangan tetap tampil. Isian form tidak hilang (hanya tampilan).

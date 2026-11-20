@@ -136,7 +136,7 @@ export default function SharedGallery({
   } | null>(null);
   const [busyAction, setBusyAction] = useState<string>(''); // 'hapusBg' | 'greyscale' | 'pasang' | 'hapus'
 
-  // Upload Status in Edit Canvas
+  // Upload Status in Edit Tampilan
   const [uploadBusyKey, setUploadBusyKey] = useState<string>('');
   const [bgRemovedMap, setBgRemovedMap] = useState<Record<string, boolean>>({});
 
@@ -190,7 +190,7 @@ export default function SharedGallery({
   const keyFor = (kind: string) => target || imageKeys.find((k) => catOfKey(k) === kind) || imageKeys[0];
 
   // ============================================================
-  // SECTION: Handler Upload Langsung di Edit Canvas
+  // SECTION: Handler Upload Langsung di Edit Tampilan
   // ============================================================
   const handleUploadFile = (k: string, file?: File) => {
     if (!file) return;
@@ -335,7 +335,7 @@ export default function SharedGallery({
   return (
     <div className="space-y-5">
       {/* ============================================================
-          BAGIAN 1: UPLOAD LOGO, TANDA TANGAN & STEMPEL DI EDIT CANVAS
+          BAGIAN 1: UPLOAD LOGO, TANDA TANGAN & STEMPEL DI EDIT TAMPILAN
          ============================================================ */}
       <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/90 p-4 shadow-xs space-y-3.5">
         <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700/60">

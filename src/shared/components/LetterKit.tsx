@@ -46,7 +46,7 @@ export function Field({ label, children, ribbon = false }: { label: string; chil
   );
 }
 
-// Upload Logo, Tanda Tangan, dan Stempel telah dipindahkan ke menu Edit Canvas untuk SEMUA menu.
+// Upload Logo, Tanda Tangan, dan Stempel telah dipindahkan ke menu Edit Tampilan untuk SEMUA menu.
 // Pemanggilan ImageUpload di dalam form kini mengembalikan null agar form tetap bersih dan fokus pada teks data.
 export function ImageUpload(_props: {
   label?: string; value?: string; onChange?: (v: string) => void; notify?: Notify;

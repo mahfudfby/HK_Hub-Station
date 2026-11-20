@@ -15,6 +15,7 @@ import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { cssFamily, useGoogleFonts, type WebFont } from '../../shared/lib/fonts';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import FormSection from '../../shared/components/FormSection';
+import TemplateRibbon from '../../shared/components/TemplateRibbon';
 
 // Resi / label pengiriman untuk printer thermal 80mm (gaya label marketplace, tanpa merek).
 // Lebar 288px × skala 2 = PNG 576px = lebar titik cetak printer 80mm. Barcode Code 128 dibuat otomatis dari nomor.
@@ -381,7 +382,7 @@ export default function Resi80() {
   const fileName = `resi-${(r.noResi || 'pengiriman').replace(/[^\w-]+/g, '-').toLowerCase()}`;
   const { exporting, run } = useLetterExport(() => ref.current!.firstElementChild as HTMLElement, fileName, notify,
     (page): Paper => (g.roll ? { w: g.mm.w, h: Math.ceil((g.mm.w * page.offsetHeight) / g.W) } : g.mm), 2);
-  // Pilihan ukuran kertas (halaman Edit Canvas): semua kertas bersama, termasuk dot-matrix & thermal
+  // Pilihan ukuran kertas (halaman Edit Tampilan): semua kertas bersama, termasuk dot-matrix & thermal
   const ukuranPicker = (
     <>
       <PaperPicker paper={r.kertas in PAPERS ? r.kertas : 'T80x100'} landscape={r.landscape} onPaper={(v) => set('kertas', v)} onLandscape={(v) => set('landscape', v)} />
@@ -411,11 +412,12 @@ export default function Resi80() {
     <>
       <DocOptions nomor={{ value: r.pakaiNomor, onChange: (v) => set('pakaiNomor', v) }} kosong={{ value: r.kosong, onChange: (v) => set('kosong', v) }} />
       <TextSizeSlider value={r.skala} onChange={(v) => set('skala', v)} effective={k} />
-      <Field label="Template resi">
+      <div className="space-y-2">
+        <TemplateRibbon label="GANTI TEMPLATE" />
         <select className={inputCls} value={tplOf(r.template).id} onChange={(e) => set('template', e.target.value)}>
           {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
         </select>
-      </Field>
+      </div>
       {ukuranPicker}
     </>
   );

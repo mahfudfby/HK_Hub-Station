@@ -1065,7 +1065,7 @@ const App = () => {
         );
     }
 
-    // Halaman Edit Canvas: ukuran teks, gaya nota, galeri logo, unduh/cetak (+ preview yang sama)
+    // Halaman Edit Tampilan: ukuran teks, gaya nota, galeri logo, unduh/cetak (+ preview yang sama)
     const previewCard = (
         <div className="mb-6 p-4 bg-white rounded-xl shadow-2xl border-t-4 border-indigo-600">
             <h2 className="text-xl font-bold mb-3 text-indigo-700">{canvas ? 'Preview' : '3. Preview'}</h2>
@@ -1193,7 +1193,7 @@ const App = () => {
                 }
             `}</style>
 
-            {/* Edit Canvas di desktop: dua kolom (alat kiri, pratinjau kanan yang tetap diam) */}
+            {/* Edit Tampilan di desktop: dua kolom (alat kiri, pratinjau kanan yang tetap diam) */}
             <div className={`w-full max-w-md ${canvas ? 'lg:max-w-6xl' : ''}`}>
                 <Link to="/" className="btn-home mb-3">&larr; HK-HUB Menu Utama</Link>
                 {/* Header */}
@@ -1323,7 +1323,7 @@ const App = () => {
                             </div>
                         </div>
 
-                        {/* Galeri Foto per kategori juga di form Edit Data User (sama dengan di Edit Canvas) */}
+                        {/* Galeri Foto per kategori juga di form Edit Data User (sama dengan di Edit Tampilan) */}
                         <GaleriLipat className="rounded-xl border border-gray-200 p-3">{galeriIsi}</GaleriLipat>
 
                         <div>
