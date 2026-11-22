@@ -32,6 +32,7 @@ export const IMAGE_LABEL: Record<string, string> = {
   ttdHrd: 'Tanda tangan HRD',
   ttd1: 'Tanda tangan pihak 1',
   ttd2: 'Tanda tangan pihak 2',
+  qr: 'QR Code',
 };
 
 const CATS = [
@@ -44,7 +45,7 @@ const CATS = [
 export const catOfKey = (k: string) =>
   /logo|foto/i.test(k) ? 'logo' : /stempel|cap/i.test(k) ? 'stempel' : /ttd|sign/i.test(k) ? 'ttd' : '';
 
-const labelOf = (k: string) =>
+const baseLabelOf = (k: string) =>
   IMAGE_LABEL[k] ?? k.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
 
 const isImageKey = (k: string) => k in IMAGE_LABEL || catOfKey(k) !== '';
@@ -111,7 +112,9 @@ export default function SharedGallery({
   onApply,
   onPicked,
   showEmpty = false,
+  labels,
 }: {
+  labels?: Record<string, string>; // nama slot khusus menu (menimpa label bawaan)
   keys: readonly string[];
   data: object;
   onApply: (picked: Record<string, unknown>) => void;
@@ -120,6 +123,7 @@ export default function SharedGallery({
 }) {
   const [shared, setShared] = useState<SharedImage[] | null>(null);
   const imageKeys = keys.filter(isImageKey);
+  const labelOf = (k: string) => labels?.[k] ?? baseLabelOf(k);
   const [target, setTarget] = useState('');
   const [ciut, setCiut] = useState<Record<string, boolean>>({});
   const [sel, setSel] = useState<{ img: SharedImage; label: string } | null>(null);
@@ -304,11 +308,15 @@ export default function SharedGallery({
     setHapusBusy(true);
     setGalat('');
     try {
-      await fetch('/api/cloudinary-delete', {
+      const res = await fetch('/api/cloudinary-delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: img.url }),
-      }).catch(() => null);
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d?.error || `Server menolak (${res.status}).`);
+      }
 
       const dipakai = imageKeys.filter((x) => current[x] === img.url);
       if (dipakai.length) onApply(Object.fromEntries(dipakai.map((x) => [x, ''])));
@@ -317,10 +325,8 @@ export default function SharedGallery({
       tutup();
       closeContextMenu();
     } catch (e: any) {
-      await removeSharedImage(img.url);
-      onPicked?.('Foto dilepas dari galeri.');
-      tutup();
-      closeContextMenu();
+      setGalat(`Gagal menghapus: ${e?.message || 'periksa koneksi lalu coba lagi.'}`);
+      onPicked?.(`Foto belum terhapus: ${e?.message || 'periksa koneksi.'}`);
     } finally {
       setHapusBusy(false);
     }
@@ -392,9 +398,9 @@ export default function SharedGallery({
                 className="flex flex-col justify-between rounded-xl border border-gray-200 dark:border-gray-700 p-3 bg-gray-50/60 dark:bg-gray-900/40"
               >
                 <div>
-                  <span className="block text-xs font-bold text-gray-800 dark:text-gray-200 mb-2 truncate">
-                    {label}
-                  </span>
+                  {k.startsWith('logo')
+                    ? <span className="pita-emas mb-2 max-w-full truncate !text-xs">{label}</span>
+                    : <span className="block text-xs font-bold text-gray-800 dark:text-gray-200 mb-2 truncate">{label}</span>}
 
                   {/* Thumbnail / Upload Area */}
                   {isBusy ? (
