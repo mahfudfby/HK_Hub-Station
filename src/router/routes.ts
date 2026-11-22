@@ -103,6 +103,13 @@ export const routes = [
     desc: 'Faktur dengan PPN, terbilang & tanda tangan; pilih gaya, ukuran kertas & orientasi.',
   },
   {
+    path: '/kwitansi/*',
+    cat: 'invoice',
+    component: lazy(() => import('../pages/kwitansi')),
+    title: 'Kwitansi Pembayaran Resmi',
+    desc: 'Kwitansi tanda terima uang resmi dengan terbilang otomatis, bonggol kasir, opsi meterai tempel & 20 tata letak. Ekspor PDF, PNG & Print.',
+  },
+  {
     path: '/invoice-toko-online/*',
     cat: 'invoice',
     component: lazy(() => import('../pages/invoice-toko-online')),
