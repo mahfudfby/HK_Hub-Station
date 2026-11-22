@@ -139,6 +139,14 @@ const page = (p: LayoutProps, extra?: CSSProperties): CSSProperties => ({
   display: 'flex', flexDirection: 'column', ...extra,
 });
 
+// Logo ikut geser (x/y), ukuran (s) & transparansi (a); tanpa logo = tidak ada elemen sama sekali
+function Logo({ d, k, h, style }: { d: LayoutDoc; k: number; h: number; style?: CSSProperties }) {
+  if (!d.logo) return null;
+  const o = d.logoOffset;
+  const z = (o?.s ?? 100) / 100;
+  return <img src={d.logo} alt="Logo" style={{ position: 'relative', left: o?.x ?? 0, top: o?.y ?? 0, height: h * k * z, maxWidth: h * 1.3 * k * z, objectFit: 'contain', opacity: (o?.a ?? 100) / 100, flexShrink: 0, display: 'block', ...style }} />;
+}
+
 // 01 Klasik: kop tengah + garis ganda, nomor kiri & tanggal kanan, tanda tangan kanan
 function Klasik(p: LayoutProps) {
   const { doc: d, k } = p;
@@ -146,7 +154,7 @@ function Klasik(p: LayoutProps) {
   return (
     <div style={page(p)}>
       <div style={{ position: 'relative', textAlign: 'center', minHeight: d.logo ? 64 * k : undefined }}>
-        {d.logo && <img src={d.logo} alt="Logo" style={{ position: 'absolute', left: d.logoOffset?.x ?? 0, top: d.logoOffset?.y ?? 0, height: 64 * k * ((d.logoOffset?.s ?? 100) / 100), maxWidth: 72 * k, objectFit: 'contain', opacity: (d.logoOffset?.a ?? 100) / 100 }} />}
+        {d.logo && <Logo d={d} k={k} h={64} style={{ position: 'absolute' }} />}
         <div style={{ padding: d.logo ? `0 ${76 * k}px` : 0 }}>
           <div style={{ fontWeight: 700, fontSize: 20 * k, lineHeight: 1.15 }}>{d.kopName}</div>
           {d.kopLines.filter(Boolean).map((l, i) => <FitLine key={i} style={{ fontSize: (i === 0 ? 12 : 11) * k }}>{l}</FitLine>)}
@@ -197,14 +205,6 @@ const metaRows = (d: LayoutDoc, nomor = true): LayoutRow[] =>
 function useLook(body: string, fallback = 'sans-serif', head?: string, headFallback = 'serif') {
   useGoogleFonts([{ family: body }, head ? { family: head } : null]);
   return { a: useContext(Ctx).t.accent, ff: cssFamily(body, fallback), hf: head ? cssFamily(head, headFallback) : cssFamily(body, fallback) };
-}
-
-// Logo ikut geser (x/y), ukuran (s) & transparansi (a); tanpa logo = tidak ada elemen sama sekali
-function Logo({ d, k, h, style }: { d: LayoutDoc; k: number; h: number; style?: CSSProperties }) {
-  if (!d.logo) return null;
-  const o = d.logoOffset;
-  const z = (o?.s ?? 100) / 100;
-  return <img src={d.logo} alt="Logo" style={{ position: 'relative', left: o?.x ?? 0, top: o?.y ?? 0, height: h * k * z, maxWidth: h * 1.3 * k * z, objectFit: 'contain', opacity: (o?.a ?? 100) / 100, flexShrink: 0, display: 'block', ...style }} />;
 }
 
 function MetaGrid({ d, k, nomor = true, style }: { d: LayoutDoc; k: number; nomor?: boolean; style?: CSSProperties }) {

@@ -154,6 +154,7 @@ export default function Kwitansi() {
           { id: 'logo', label: 'Logo Lembaga' },
           { id: 'ttd', label: 'Tanda Tangan Kasir' },
           { id: 'stempel', label: 'Stempel Cap' },
+          ...(f.ttdPenyetor ? [{ id: 'ttdPenyetor', label: 'TTD Penyetor' }] : []),
         ]}
         active={geser}
         onActive={setGeser}
