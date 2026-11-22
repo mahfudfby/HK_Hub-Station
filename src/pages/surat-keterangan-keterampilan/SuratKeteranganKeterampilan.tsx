@@ -9,7 +9,7 @@ import UserData from '../../shared/components/UserData';
 import DocOptions, { Switch, TITIK } from '../../shared/components/DocOptions';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, type Notify } from '../../shared/components/LetterKit';
+import { ExportButton, Field, PaperPicker, fmtTanggal, inputCls, letterPage, type Notify } from '../../shared/components/LetterKit';
 import FormSection from '../../shared/components/FormSection';
 import { usePagesExport } from '../surat-kontrak-kerja/exportPages';
 import { useBgRemoved } from '../../shared/lib/removeBg';
@@ -77,6 +77,8 @@ const makeDefault = (): Form => {
 
 // Data User: identitas lembaga & pengesah (bukan isi sertifikat pemegang)
 const USER_KEYS = ['logo', 'posisi', 'lembaga', 'sub', 'kota', 'penetap', 'jabatan', 'pejabat', 'keterangan', 'logo2', 'nama2', 'jabatan2'] as const;
+// Slot gambar di Edit Tampilan (kolom unggah ada di komponen Galeri Foto)
+const SLOT_LABELS = { logo: 'Logo lembaga', logo2: 'Logo pengesah (halaman 2)', ttd: 'Tanda tangan penandatangan', ttd2: 'Tanda tangan pengesah (halaman 2)', foto: 'Foto pemegang sertifikat', qr: 'Gambar QR Code' };
 const NO_ITALIC = ['Roboto Slab', 'Oswald', 'Cinzel'];
 
 // ============================================================
@@ -115,7 +117,6 @@ export default function SuratKeteranganKeterampilan() {
   const ttd2 = useBgRemoved(f.ttd2, bg.ttd2, bgError);
   const foto = useBgRemoved(f.foto, bg.foto, bgError);
   const qr = useBgRemoved(f.qr, bg.qr, bgError);
-  const bgFor = (key: keyof typeof bg, shown: { src: string; busy: boolean }) => ({ bg: bg[key], onBg: (v: boolean) => setBg((p) => ({ ...p, [key]: v })), shown: shown.src, bgBusy: shown.busy });
   const busy = logo.busy || logo2.busy || ttd.busy || ttd2.busy || foto.busy || qr.busy;
 
   const set = <K extends keyof Form>(key: K, v: Form[K]) => setF((p) => ({ ...p, [key]: v }));
@@ -161,27 +162,12 @@ export default function SuratKeteranganKeterampilan() {
   const [geser, setGeser] = useState('ttd');
   const [canvas, setCanvas] = useCanvasMode();
 
-  const uploads = (
-    <div className="space-y-5">
-      <p className="text-sm font-bold text-gray-800">Gambar (Logo, Foto, QR, Tanda Tangan)</p>
-      <ImageUpload label="Logo lembaga" value={f.logo} onChange={(x) => set('logo', x)} notify={notify} {...bgFor('logo', logo)} />
-      {f.pakaiFoto && <ImageUpload label="Foto pemegang sertifikat" value={f.foto} onChange={(x) => set('foto', x)} notify={notify} {...bgFor('foto', foto)} />}
-      {f.pakaiQr && <ImageUpload label="Gambar QR Code" value={f.qr} onChange={(x) => set('qr', x)} notify={notify} {...bgFor('qr', qr)} />}
-      <ImageUpload label="Tanda tangan penandatangan" value={f.ttd} onChange={(x) => set('ttd', x)} notify={notify} {...bgFor('ttd', ttd)} />
-      {f.pakaiHal2 && (<>
-        <ImageUpload label="Logo pengesah (halaman 2)" value={f.logo2} onChange={(x) => set('logo2', x)} notify={notify} {...bgFor('logo2', logo2)} />
-        <ImageUpload label="Tanda tangan pengesah (opsional)" value={f.ttd2} onChange={(x) => set('ttd2', x)} notify={notify} {...bgFor('ttd2', ttd2)} />
-      </>)}
-    </div>
-  );
-
   const tampilan = (
     <>
       <DocOptions kosong={{ value: f.kosong, onChange: (x) => set('kosong', x) }} />
       <TextSizeSlider value={f.skala} effective={k} onChange={(x) => set('skala', x)} />
       <PositionPad targets={[{ id: 'logo', label: 'Logo' }, { id: 'ttd', label: `TTD ${f.pejabat || 'Pejabat'}` }]}
         active={geser} onActive={setGeser} value={f.posisi} onChange={(x) => set('posisi', x)} />
-      {uploads}
       <PaperPicker paper={f.paper} landscape={f.landscape} onPaper={(x) => set('paper', x)} onLandscape={(x) => set('landscape', x)} />
     </>
   );
@@ -208,7 +194,7 @@ export default function SuratKeteranganKeterampilan() {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
-                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+                galeri={<SharedGallery showEmpty labels={SLOT_LABELS} keys={['logo', 'ttd', ...(f.pakaiFoto ? ['foto'] : []), ...(f.pakaiQr ? ['qr'] : []), ...(f.pakaiHal2 ? ['logo2', 'ttd2'] : [])]} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
             ) : (<>
             <UserData storageKey="data-user:surat-keterangan-keterampilan" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
