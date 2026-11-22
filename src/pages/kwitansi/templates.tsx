@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { KwitansiData } from './types';
-import { getOffset } from '../../shared/components/PositionPad';
+import { fxOf, getOffset } from '../../shared/components/PositionPad';
 import { fmtTanggal } from '../../shared/components/LetterKit';
 import { num, rupiah, terbilangRupiah } from '../../shared/lib/money';
 import { Scissors, CheckCircle, ShieldCheck, QrCode } from 'lucide-react';
@@ -102,7 +102,7 @@ function BonggolKiri({ d }: { d: KwitansiData }) {
               src={d.ttd}
               alt="ttd"
               className="max-h-10 object-contain pointer-events-none"
-              style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+              style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
             />
           )}
         </div>
@@ -117,8 +117,11 @@ function BonggolKiri({ d }: { d: KwitansiData }) {
 // ============================================================
 function RenderKlasikBuku({ d }: TemplateRenderProps) {
   const oLogo = getOffset(d.posisi, 'logo');
+  const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   return (
     <div className="font-serif p-6 bg-white min-h-full flex gap-5 text-gray-900 leading-relaxed">
@@ -134,7 +137,7 @@ function RenderKlasikBuku({ d }: TemplateRenderProps) {
                   src={d.logo}
                   alt="Logo"
                   className="h-12 object-contain"
-                  style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px)` }}
+                  style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px) scale(${fxLogo.z})`, opacity: fxLogo.a }}
                 />
               )}
               {d.pakaiKop && (
@@ -224,10 +227,10 @@ function RenderKlasikBuku({ d }: TemplateRenderProps) {
               )}
               {d.stempel && (
                 <img
-                  src={d.stempel}
-                  alt="Stempel"
-                  className="absolute right-4 h-16 object-contain opacity-80 pointer-events-none z-10"
-                  style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                src={d.stempel}
+                alt="Stempel"
+                className="absolute right-4 h-16 object-contain pointer-events-none z-10"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
                 />
               )}
               {d.ttd && (
@@ -235,7 +238,7 @@ function RenderKlasikBuku({ d }: TemplateRenderProps) {
                   src={d.ttd}
                   alt="Tanda Tangan"
                   className="max-h-16 object-contain pointer-events-none z-20"
-                  style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                  style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
                 />
               )}
             </div>
@@ -254,8 +257,11 @@ function RenderKlasikBuku({ d }: TemplateRenderProps) {
 // ============================================================
 function RenderModernNavy({ d }: TemplateRenderProps) {
   const oLogo = getOffset(d.posisi, 'logo');
+  const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   return (
     <div className="font-sans p-6 bg-white min-h-full flex flex-col justify-between text-gray-900">
@@ -268,7 +274,7 @@ function RenderModernNavy({ d }: TemplateRenderProps) {
                 src={d.logo}
                 alt="Logo"
                 className="h-12 bg-white/10 p-1 rounded object-contain"
-                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px)` }}
+                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px) scale(${fxLogo.z})`, opacity: fxLogo.a }}
               />
             )}
             {d.pakaiKop && (
@@ -353,8 +359,8 @@ function RenderModernNavy({ d }: TemplateRenderProps) {
               <img
                 src={d.stempel}
                 alt="Stempel"
-                className="absolute right-4 h-16 object-contain opacity-80 pointer-events-none z-10"
-                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                className="absolute right-4 h-16 object-contain pointer-events-none z-10"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
               />
             )}
             {d.ttd && (
@@ -362,7 +368,7 @@ function RenderModernNavy({ d }: TemplateRenderProps) {
                 src={d.ttd}
                 alt="Tanda Tangan"
                 className="max-h-16 object-contain pointer-events-none z-20"
-                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
               />
             )}
           </div>
@@ -380,8 +386,11 @@ function RenderModernNavy({ d }: TemplateRenderProps) {
 // ============================================================
 function RenderVoucherKas({ d }: TemplateRenderProps) {
   const oLogo = getOffset(d.posisi, 'logo');
+  const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   return (
     <div className="font-sans p-6 bg-white min-h-full flex flex-col justify-between text-gray-900 border-2 border-gray-800">
@@ -394,7 +403,7 @@ function RenderVoucherKas({ d }: TemplateRenderProps) {
                 src={d.logo}
                 alt="Logo"
                 className="h-10 object-contain"
-                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px)` }}
+                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px) scale(${fxLogo.z})`, opacity: fxLogo.a }}
               />
             )}
             {d.pakaiKop && (
@@ -453,7 +462,7 @@ function RenderVoucherKas({ d }: TemplateRenderProps) {
             <div className="font-bold text-gray-700">Penyetor / Pembayar</div>
             <div className="h-12 flex items-center justify-center">
               {d.ttdPenyetor && (
-                <img src={d.ttdPenyetor} alt="ttd" className="max-h-12 object-contain" />
+                <img src={d.ttdPenyetor} alt="ttd" className="max-h-12 object-contain" style={{ transform: `translate(${oPenyetor.x}px, ${oPenyetor.y}px) scale(${fxPenyetor.z})`, opacity: fxPenyetor.a, mixBlendMode: 'multiply' }} />
               )}
             </div>
             <div className="border-t border-gray-400 pt-1 font-semibold">
@@ -471,10 +480,10 @@ function RenderVoucherKas({ d }: TemplateRenderProps) {
               )}
               {d.stempel && (
                 <img
-                  src={d.stempel}
-                  alt="stempel"
-                  className="absolute h-14 object-contain opacity-80"
-                  style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                src={d.stempel}
+                alt="stempel"
+                className="absolute h-14 object-contain"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
                 />
               )}
               {d.ttd && (
@@ -482,7 +491,7 @@ function RenderVoucherKas({ d }: TemplateRenderProps) {
                   src={d.ttd}
                   alt="ttd"
                   className="max-h-12 object-contain"
-                  style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                  style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
                 />
               )}
             </div>
@@ -507,8 +516,11 @@ function RenderVoucherKas({ d }: TemplateRenderProps) {
 // ============================================================
 function RenderEleganEmerald({ d }: TemplateRenderProps) {
   const oLogo = getOffset(d.posisi, 'logo');
+  const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   return (
     <div className="font-serif p-7 bg-white min-h-full flex flex-col justify-between border-4 border-double border-emerald-900 text-gray-900">
@@ -521,7 +533,7 @@ function RenderEleganEmerald({ d }: TemplateRenderProps) {
                 src={d.logo}
                 alt="Logo"
                 className="h-14 object-contain"
-                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px)` }}
+                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px) scale(${fxLogo.z})`, opacity: fxLogo.a }}
               />
             </div>
           )}
@@ -597,8 +609,8 @@ function RenderEleganEmerald({ d }: TemplateRenderProps) {
               <img
                 src={d.stempel}
                 alt="Stempel"
-                className="absolute right-4 h-16 object-contain opacity-80 pointer-events-none z-10"
-                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                className="absolute right-4 h-16 object-contain pointer-events-none z-10"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
               />
             )}
             {d.ttd && (
@@ -606,7 +618,7 @@ function RenderEleganEmerald({ d }: TemplateRenderProps) {
                 src={d.ttd}
                 alt="Tanda Tangan"
                 className="max-h-16 object-contain pointer-events-none z-20"
-                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
               />
             )}
           </div>
@@ -624,8 +636,11 @@ function RenderEleganEmerald({ d }: TemplateRenderProps) {
 // ============================================================
 function RenderVintageKantor({ d }: TemplateRenderProps) {
   const oLogo = getOffset(d.posisi, 'logo');
+  const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   return (
     <div className="font-mono p-6 bg-[#fbf9f4] min-h-full flex gap-4 text-gray-900 border-2 border-dashed border-gray-600 text-xs">
@@ -657,7 +672,7 @@ function RenderVintageKantor({ d }: TemplateRenderProps) {
                   src={d.logo}
                   alt="Logo"
                   className="h-10 object-contain grayscale mb-1"
-                  style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px)` }}
+                  style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px) scale(${fxLogo.z})`, opacity: fxLogo.a }}
                 />
               )}
               {d.pakaiKop && (
@@ -717,10 +732,10 @@ function RenderVintageKantor({ d }: TemplateRenderProps) {
               )}
               {d.stempel && (
                 <img
-                  src={d.stempel}
-                  alt="Stempel"
-                  className="absolute right-2 h-14 object-contain opacity-80 pointer-events-none"
-                  style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                src={d.stempel}
+                alt="Stempel"
+                className="absolute right-2 h-14 object-contain pointer-events-none"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
                 />
               )}
               {d.ttd && (
@@ -728,7 +743,7 @@ function RenderVintageKantor({ d }: TemplateRenderProps) {
                   src={d.ttd}
                   alt="Tanda Tangan"
                   className="max-h-14 object-contain pointer-events-none"
-                  style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                  style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
                 />
               )}
             </div>
@@ -746,8 +761,11 @@ function RenderVintageKantor({ d }: TemplateRenderProps) {
 // ============================================================
 function RenderMinimalisBersih({ d }: TemplateRenderProps) {
   const oLogo = getOffset(d.posisi, 'logo');
+  const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   return (
     <div className="font-sans p-8 bg-white min-h-full flex flex-col justify-between text-gray-800">
@@ -759,7 +777,7 @@ function RenderMinimalisBersih({ d }: TemplateRenderProps) {
                 src={d.logo}
                 alt="Logo"
                 className="h-10 object-contain"
-                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px)` }}
+                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px) scale(${fxLogo.z})`, opacity: fxLogo.a }}
               />
             )}
             {d.pakaiKop && (
@@ -813,8 +831,8 @@ function RenderMinimalisBersih({ d }: TemplateRenderProps) {
               <img
                 src={d.stempel}
                 alt="Stempel"
-                className="absolute right-2 h-14 object-contain opacity-80"
-                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                className="absolute right-2 h-14 object-contain"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
               />
             )}
             {d.ttd && (
@@ -822,7 +840,7 @@ function RenderMinimalisBersih({ d }: TemplateRenderProps) {
                 src={d.ttd}
                 alt="Tanda Tangan"
                 className="max-h-14 object-contain"
-                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
               />
             )}
           </div>
@@ -839,8 +857,11 @@ function RenderMinimalisBersih({ d }: TemplateRenderProps) {
 // ============================================================
 function RenderBendaharaDinas({ d }: TemplateRenderProps) {
   const oLogo = getOffset(d.posisi, 'logo');
+  const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   return (
     <div className="font-serif p-6 bg-white min-h-full flex flex-col justify-between text-gray-900">
@@ -854,7 +875,7 @@ function RenderBendaharaDinas({ d }: TemplateRenderProps) {
                   src={d.logo}
                   alt="Logo"
                   className="h-16 object-contain"
-                  style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px)` }}
+                  style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px) scale(${fxLogo.z})`, opacity: fxLogo.a }}
                 />
               )}
               <div>
@@ -924,8 +945,8 @@ function RenderBendaharaDinas({ d }: TemplateRenderProps) {
               <img
                 src={d.stempel}
                 alt="Stempel"
-                className="absolute right-4 h-16 object-contain opacity-85"
-                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                className="absolute right-4 h-16 object-contain"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
               />
             )}
             {d.ttd && (
@@ -933,7 +954,7 @@ function RenderBendaharaDinas({ d }: TemplateRenderProps) {
                 src={d.ttd}
                 alt="Tanda Tangan"
                 className="max-h-16 object-contain"
-                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
               />
             )}
           </div>
@@ -951,7 +972,9 @@ function RenderBendaharaDinas({ d }: TemplateRenderProps) {
 // ============================================================
 function RenderArsipGanda({ d }: TemplateRenderProps) {
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   const MiniReceipt = ({ label, isOriginal }: { label: string; isOriginal: boolean }) => (
     <div className={`p-4 rounded border ${isOriginal ? 'border-blue-900 bg-white' : 'border-gray-400 bg-amber-50/20'} flex flex-col justify-between h-[48%]`}>
@@ -992,8 +1015,8 @@ function RenderArsipGanda({ d }: TemplateRenderProps) {
               <img
                 src={d.stempel}
                 alt="stempel"
-                className="absolute right-2 h-10 object-contain opacity-75"
-                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                className="absolute right-2 h-10 object-contain"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
               />
             )}
             {d.ttd && (
@@ -1001,7 +1024,7 @@ function RenderArsipGanda({ d }: TemplateRenderProps) {
                 src={d.ttd}
                 alt="ttd"
                 className="max-h-9 object-contain"
-                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
               />
             )}
           </div>
@@ -1032,8 +1055,11 @@ function RenderArsipGanda({ d }: TemplateRenderProps) {
 // ============================================================
 function RenderMonokromBank({ d }: TemplateRenderProps) {
   const oLogo = getOffset(d.posisi, 'logo');
+  const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   return (
     <div className="font-mono p-6 bg-white min-h-full flex flex-col justify-between text-black border-2 border-black text-xs leading-normal">
@@ -1097,8 +1123,8 @@ function RenderMonokromBank({ d }: TemplateRenderProps) {
               <img
                 src={d.stempel}
                 alt="stempel"
-                className="absolute right-2 h-14 object-contain opacity-80"
-                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                className="absolute right-2 h-14 object-contain"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
               />
             )}
             {d.ttd && (
@@ -1106,7 +1132,7 @@ function RenderMonokromBank({ d }: TemplateRenderProps) {
                 src={d.ttd}
                 alt="ttd"
                 className="max-h-14 object-contain"
-                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
               />
             )}
           </div>
@@ -1124,8 +1150,11 @@ function RenderMonokromBank({ d }: TemplateRenderProps) {
 // ============================================================
 function RenderKorporatTegas({ d }: TemplateRenderProps) {
   const oLogo = getOffset(d.posisi, 'logo');
+  const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   return (
     <div className="font-sans p-6 bg-white min-h-full flex gap-5 text-gray-900">
@@ -1147,7 +1176,7 @@ function RenderKorporatTegas({ d }: TemplateRenderProps) {
                   src={d.logo}
                   alt="Logo"
                   className="h-12 object-contain"
-                  style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px)` }}
+                  style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px) scale(${fxLogo.z})`, opacity: fxLogo.a }}
                 />
               )}
               {d.pakaiKop && (
@@ -1204,10 +1233,10 @@ function RenderKorporatTegas({ d }: TemplateRenderProps) {
               )}
               {d.stempel && (
                 <img
-                  src={d.stempel}
-                  alt="Stempel"
-                  className="absolute right-2 h-14 object-contain opacity-80"
-                  style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                src={d.stempel}
+                alt="Stempel"
+                className="absolute right-2 h-14 object-contain"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
                 />
               )}
               {d.ttd && (
@@ -1215,7 +1244,7 @@ function RenderKorporatTegas({ d }: TemplateRenderProps) {
                   src={d.ttd}
                   alt="Tanda Tangan"
                   className="max-h-14 object-contain"
-                  style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                  style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
                 />
               )}
             </div>
@@ -1234,8 +1263,11 @@ function RenderKorporatTegas({ d }: TemplateRenderProps) {
 // ============================================================
 function RenderNotaPembayaran({ d }: TemplateRenderProps) {
   const oLogo = getOffset(d.posisi, 'logo');
+  const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   return (
     <div className="font-sans p-6 bg-white min-h-full flex flex-col justify-between text-gray-900 relative">
@@ -1247,7 +1279,7 @@ function RenderNotaPembayaran({ d }: TemplateRenderProps) {
                 src={d.logo}
                 alt="Logo"
                 className="h-12 object-contain"
-                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px)` }}
+                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px) scale(${fxLogo.z})`, opacity: fxLogo.a }}
               />
             )}
             {d.pakaiKop && (
@@ -1330,8 +1362,8 @@ function RenderNotaPembayaran({ d }: TemplateRenderProps) {
               <img
                 src={d.stempel}
                 alt="Stempel"
-                className="absolute right-2 h-14 object-contain opacity-80"
-                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                className="absolute right-2 h-14 object-contain"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
               />
             )}
             {d.ttd && (
@@ -1339,7 +1371,7 @@ function RenderNotaPembayaran({ d }: TemplateRenderProps) {
                 src={d.ttd}
                 alt="Tanda Tangan"
                 className="max-h-14 object-contain"
-                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
               />
             )}
           </div>
@@ -1357,8 +1389,11 @@ function RenderNotaPembayaran({ d }: TemplateRenderProps) {
 // ============================================================
 function RenderDuaKolomRapi({ d }: TemplateRenderProps) {
   const oLogo = getOffset(d.posisi, 'logo');
+  const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   return (
     <div className="font-sans p-7 bg-white min-h-full flex flex-col justify-between text-gray-900">
@@ -1369,7 +1404,7 @@ function RenderDuaKolomRapi({ d }: TemplateRenderProps) {
               src={d.logo}
               alt="Logo"
               className="h-11 object-contain"
-              style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px)` }}
+              style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px) scale(${fxLogo.z})`, opacity: fxLogo.a }}
             />
           )}
           {d.pakaiKop && (
@@ -1453,8 +1488,8 @@ function RenderDuaKolomRapi({ d }: TemplateRenderProps) {
               <img
                 src={d.stempel}
                 alt="Stempel"
-                className="absolute right-2 h-14 object-contain opacity-80"
-                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                className="absolute right-2 h-14 object-contain"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
               />
             )}
             {d.ttd && (
@@ -1462,7 +1497,7 @@ function RenderDuaKolomRapi({ d }: TemplateRenderProps) {
                 src={d.ttd}
                 alt="Tanda Tangan"
                 className="max-h-14 object-contain"
-                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
               />
             )}
           </div>
@@ -1480,8 +1515,11 @@ function RenderDuaKolomRapi({ d }: TemplateRenderProps) {
 // ============================================================
 function RenderBadgeLunas({ d }: TemplateRenderProps) {
   const oLogo = getOffset(d.posisi, 'logo');
+  const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   return (
     <div className="font-sans p-6 bg-white min-h-full flex flex-col justify-between text-gray-900 border-4 border-amber-500/80 rounded-xl relative overflow-hidden">
@@ -1500,7 +1538,7 @@ function RenderBadgeLunas({ d }: TemplateRenderProps) {
                 src={d.logo}
                 alt="Logo"
                 className="h-12 object-contain"
-                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px)` }}
+                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px) scale(${fxLogo.z})`, opacity: fxLogo.a }}
               />
             )}
             {d.pakaiKop && (
@@ -1564,8 +1602,8 @@ function RenderBadgeLunas({ d }: TemplateRenderProps) {
               <img
                 src={d.stempel}
                 alt="Stempel"
-                className="absolute right-2 h-14 object-contain opacity-80"
-                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                className="absolute right-2 h-14 object-contain"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
               />
             )}
             {d.ttd && (
@@ -1573,7 +1611,7 @@ function RenderBadgeLunas({ d }: TemplateRenderProps) {
                 src={d.ttd}
                 alt="Tanda Tangan"
                 className="max-h-14 object-contain"
-                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
               />
             )}
           </div>
@@ -1591,8 +1629,11 @@ function RenderBadgeLunas({ d }: TemplateRenderProps) {
 // ============================================================
 function RenderAksenEmas({ d }: TemplateRenderProps) {
   const oLogo = getOffset(d.posisi, 'logo');
+  const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   return (
     <div className="font-serif p-7 bg-[#1c1c1e] text-amber-100 min-h-full flex flex-col justify-between border-2 border-amber-500/60">
@@ -1604,7 +1645,7 @@ function RenderAksenEmas({ d }: TemplateRenderProps) {
                 src={d.logo}
                 alt="Logo"
                 className="h-12 object-contain"
-                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px)` }}
+                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px) scale(${fxLogo.z})`, opacity: fxLogo.a }}
               />
             )}
             {d.pakaiKop && (
@@ -1668,8 +1709,8 @@ function RenderAksenEmas({ d }: TemplateRenderProps) {
               <img
                 src={d.stempel}
                 alt="Stempel"
-                className="absolute right-2 h-14 object-contain opacity-80"
-                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                className="absolute right-2 h-14 object-contain"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
               />
             )}
             {d.ttd && (
@@ -1677,7 +1718,7 @@ function RenderAksenEmas({ d }: TemplateRenderProps) {
                 src={d.ttd}
                 alt="Tanda Tangan"
                 className="max-h-14 object-contain brightness-150"
-                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
               />
             )}
           </div>
@@ -1695,8 +1736,11 @@ function RenderAksenEmas({ d }: TemplateRenderProps) {
 // ============================================================
 function RenderKontemporerKartu({ d }: TemplateRenderProps) {
   const oLogo = getOffset(d.posisi, 'logo');
+  const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   return (
     <div className="font-sans p-6 bg-slate-100 min-h-full flex flex-col justify-between text-slate-800">
@@ -1708,7 +1752,7 @@ function RenderKontemporerKartu({ d }: TemplateRenderProps) {
                 src={d.logo}
                 alt="Logo"
                 className="h-10 object-contain"
-                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px)` }}
+                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px) scale(${fxLogo.z})`, opacity: fxLogo.a }}
               />
             )}
             {d.pakaiKop && (
@@ -1779,8 +1823,8 @@ function RenderKontemporerKartu({ d }: TemplateRenderProps) {
               <img
                 src={d.stempel}
                 alt="Stempel"
-                className="absolute right-2 h-14 object-contain opacity-80"
-                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                className="absolute right-2 h-14 object-contain"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
               />
             )}
             {d.ttd && (
@@ -1788,7 +1832,7 @@ function RenderKontemporerKartu({ d }: TemplateRenderProps) {
                 src={d.ttd}
                 alt="Tanda Tangan"
                 className="max-h-14 object-contain"
-                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
               />
             )}
           </div>
@@ -1806,8 +1850,11 @@ function RenderKontemporerKartu({ d }: TemplateRenderProps) {
 // ============================================================
 function RenderGridAkuntansi({ d }: TemplateRenderProps) {
   const oLogo = getOffset(d.posisi, 'logo');
+  const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   return (
     <div className="font-sans p-6 bg-white min-h-full flex flex-col justify-between text-gray-900 border-2 border-slate-700 text-xs">
@@ -1819,7 +1866,7 @@ function RenderGridAkuntansi({ d }: TemplateRenderProps) {
                 src={d.logo}
                 alt="Logo"
                 className="h-9 object-contain"
-                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px)` }}
+                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px) scale(${fxLogo.z})`, opacity: fxLogo.a }}
               />
             )}
             {d.pakaiKop && (
@@ -1887,8 +1934,8 @@ function RenderGridAkuntansi({ d }: TemplateRenderProps) {
               <img
                 src={d.stempel}
                 alt="Stempel"
-                className="absolute right-2 h-14 object-contain opacity-80"
-                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                className="absolute right-2 h-14 object-contain"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
               />
             )}
             {d.ttd && (
@@ -1896,7 +1943,7 @@ function RenderGridAkuntansi({ d }: TemplateRenderProps) {
                 src={d.ttd}
                 alt="Tanda Tangan"
                 className="max-h-14 object-contain"
-                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
               />
             )}
           </div>
@@ -1914,8 +1961,11 @@ function RenderGridAkuntansi({ d }: TemplateRenderProps) {
 // ============================================================
 function RenderArsitekturTeknis({ d }: TemplateRenderProps) {
   const oLogo = getOffset(d.posisi, 'logo');
+  const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   return (
     <div className="font-mono p-6 bg-white min-h-full flex flex-col justify-between text-gray-900 border border-gray-400 relative">
@@ -1981,8 +2031,8 @@ function RenderArsitekturTeknis({ d }: TemplateRenderProps) {
               <img
                 src={d.stempel}
                 alt="stempel"
-                className="absolute right-2 h-12 object-contain opacity-80"
-                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                className="absolute right-2 h-12 object-contain"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
               />
             )}
             {d.ttd && (
@@ -1990,7 +2040,7 @@ function RenderArsitekturTeknis({ d }: TemplateRenderProps) {
                 src={d.ttd}
                 alt="ttd"
                 className="max-h-12 object-contain"
-                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
               />
             )}
           </div>
@@ -2007,8 +2057,11 @@ function RenderArsitekturTeknis({ d }: TemplateRenderProps) {
 // ============================================================
 function RenderSerahTerimaDana({ d }: TemplateRenderProps) {
   const oLogo = getOffset(d.posisi, 'logo');
+  const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   return (
     <div className="font-serif p-7 bg-white min-h-full flex flex-col justify-between text-gray-900 leading-normal">
@@ -2063,7 +2116,7 @@ function RenderSerahTerimaDana({ d }: TemplateRenderProps) {
           <div className="font-semibold">Yang Menyerahkan,</div>
           <div className="h-16 flex items-center justify-center">
             {d.ttdPenyetor && (
-              <img src={d.ttdPenyetor} alt="ttd penyetor" className="max-h-14 object-contain" />
+              <img src={d.ttdPenyetor} alt="ttd penyetor" className="max-h-14 object-contain" style={{ transform: `translate(${oPenyetor.x}px, ${oPenyetor.y}px) scale(${fxPenyetor.z})`, opacity: fxPenyetor.a, mixBlendMode: 'multiply' }} />
             )}
           </div>
           <div className="font-bold underline">{d.namaPenyetor || d.terimaDari}</div>
@@ -2082,8 +2135,8 @@ function RenderSerahTerimaDana({ d }: TemplateRenderProps) {
               <img
                 src={d.stempel}
                 alt="stempel"
-                className="absolute right-4 h-14 object-contain opacity-80"
-                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                className="absolute right-4 h-14 object-contain"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
               />
             )}
             {d.ttd && (
@@ -2091,7 +2144,7 @@ function RenderSerahTerimaDana({ d }: TemplateRenderProps) {
                 src={d.ttd}
                 alt="ttd"
                 className="max-h-14 object-contain"
-                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
               />
             )}
           </div>
@@ -2108,8 +2161,11 @@ function RenderSerahTerimaDana({ d }: TemplateRenderProps) {
 // ============================================================
 function RenderKopLebarResmi({ d }: TemplateRenderProps) {
   const oLogo = getOffset(d.posisi, 'logo');
+  const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   return (
     <div className="font-sans bg-white min-h-full flex flex-col justify-between text-gray-900">
@@ -2121,7 +2177,7 @@ function RenderKopLebarResmi({ d }: TemplateRenderProps) {
               src={d.logo}
               alt="Logo"
               className="h-14 bg-white p-1 rounded object-contain"
-              style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px)` }}
+              style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px) scale(${fxLogo.z})`, opacity: fxLogo.a }}
             />
           )}
           {d.pakaiKop && (
@@ -2183,10 +2239,10 @@ function RenderKopLebarResmi({ d }: TemplateRenderProps) {
               )}
               {d.stempel && (
                 <img
-                  src={d.stempel}
-                  alt="Stempel"
-                  className="absolute right-2 h-14 object-contain opacity-80"
-                  style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                src={d.stempel}
+                alt="Stempel"
+                className="absolute right-2 h-14 object-contain"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
                 />
               )}
               {d.ttd && (
@@ -2194,7 +2250,7 @@ function RenderKopLebarResmi({ d }: TemplateRenderProps) {
                   src={d.ttd}
                   alt="Tanda Tangan"
                   className="max-h-14 object-contain"
-                  style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                  style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
                 />
               )}
             </div>
@@ -2213,8 +2269,11 @@ function RenderKopLebarResmi({ d }: TemplateRenderProps) {
 // ============================================================
 function RenderDigitalModern({ d }: TemplateRenderProps) {
   const oLogo = getOffset(d.posisi, 'logo');
+  const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   const oStempel = getOffset(d.posisi, 'stempel');
+  const fxStempel = fxOf(oStempel, 'stempel');
 
   return (
     <div className="font-sans p-6 bg-white min-h-full flex flex-col justify-between text-gray-900 border border-slate-200 rounded-2xl shadow-xs">
@@ -2226,7 +2285,7 @@ function RenderDigitalModern({ d }: TemplateRenderProps) {
                 src={d.logo}
                 alt="Logo"
                 className="h-11 object-contain"
-                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px)` }}
+                style={{ transform: `translate(${oLogo.x}px, ${oLogo.y}px) scale(${fxLogo.z})`, opacity: fxLogo.a }}
               />
             )}
             {d.pakaiKop && (
@@ -2300,8 +2359,8 @@ function RenderDigitalModern({ d }: TemplateRenderProps) {
               <img
                 src={d.stempel}
                 alt="Stempel"
-                className="absolute right-2 h-14 object-contain opacity-80"
-                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px)` }}
+                className="absolute right-2 h-14 object-contain"
+                style={{ transform: `translate(${oStempel.x}px, ${oStempel.y}px) scale(${fxStempel.z})`, opacity: fxStempel.a, mixBlendMode: 'multiply' }}
               />
             )}
             {d.ttd && (
@@ -2309,7 +2368,7 @@ function RenderDigitalModern({ d }: TemplateRenderProps) {
                 src={d.ttd}
                 alt="Tanda Tangan"
                 className="max-h-14 object-contain"
-                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px)` }}
+                style={{ transform: `translate(${oTtd.x}px, ${oTtd.y}px) scale(${fxTtd.z})`, opacity: fxTtd.a, mixBlendMode: 'multiply' }}
               />
             )}
           </div>

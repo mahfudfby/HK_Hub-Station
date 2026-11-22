@@ -16,10 +16,17 @@ export const moveOffset = (o: Offsets | undefined, id: string, dx: number, dy: n
   return { ...(o ?? {}), [id]: { ...cur, x: clamp(cur.x + dx), y: clamp(cur.y + dy) } };
 };
 
-// Opacity bawaan per bagian (stempel sedikit transparan seperti sebelumnya)
-const DEFAULT_ALPHA: Record<string, number> = { stempel: 90 };
+// Opacity bawaan per bagian (stempel / cap sedikit transparan seperti sebelumnya)
+const defaultAlpha = (id: string): number => {
+  const lower = id.toLowerCase();
+  if (lower.includes('stempel') || lower.includes('cap')) return 90;
+  return 100;
+};
 /** z = pengali ukuran, a = opacity 0..1 */
-export const fxOf = (c: Offset | undefined, id: string) => ({ z: (c?.s ?? 100) / 100, a: (c?.a ?? DEFAULT_ALPHA[id] ?? 100) / 100 });
+export const fxOf = (c: Offset | undefined, id: string) => ({
+  z: (c?.s ?? 100) / 100,
+  a: (c?.a ?? defaultAlpha(id)) / 100,
+});
 console.assert(
   moveOffset({}, 'ttd', 3, -2).ttd.x === 3 && moveOffset({}, 'ttd', 3, -2).ttd.y === -2 && moveOffset({ a: { x: 219, y: 0 } }, 'a', 10, 0).a.x === LIMIT,
   'moveOffset',
@@ -99,7 +106,7 @@ export default function PositionPad({ targets, active, onActive, value, onChange
   const fx = fxOf(cur, active);
   const label = targets.find((t) => t.id === active)?.label ?? '';
   const setFx = (key: 's' | 'a', v: number) => onChange({ ...(value ?? {}), [active]: { ...cur, [key]: v } });
-  const changed = cur.x || cur.y || cur.s != null || cur.a != null;
+  const changed = cur.x !== 0 || cur.y !== 0 || cur.s != null || cur.a != null;
   const seg = (on: boolean) =>
     `px-3 py-2 rounded-lg border text-sm font-medium min-h-[44px] ${on ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`;
 
@@ -127,21 +134,51 @@ export default function PositionPad({ targets, active, onActive, value, onChange
           </div>
           <div className="flex items-center gap-2 text-xs text-gray-600">
             <span className="tabular-nums">x {Math.round(cur.x)} • y {Math.round(cur.y)}</span>
-            <button type="button" onClick={() => onChange({ ...(value ?? {}), [active]: { x: 0, y: 0 } })} disabled={!changed}
-              className="rounded-lg border border-gray-300 bg-white px-2 py-1 font-medium hover:bg-gray-50 disabled:opacity-50">Reset</button>
+            <button
+              type="button"
+              onClick={() => {
+                const next = { ...(value ?? {}) };
+                delete next[active];
+                onChange(next);
+              }}
+              disabled={!changed}
+              className="rounded-lg border border-gray-300 bg-white px-2 py-1 font-medium hover:bg-gray-50 disabled:opacity-50"
+            >
+              Reset
+            </button>
           </div>
         </div>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="block text-sm text-gray-700">
-          Ukuran {label} <span className="font-semibold tabular-nums">{Math.round(fx.z * 100)}%</span>
-          <input type="range" min={30} max={250} step={5} value={Math.round(fx.z * 100)} onChange={(e) => setFx('s', Number(e.target.value))}
-            className="mt-1 block w-full min-h-[32px]" />
+          <div className="flex justify-between items-center mb-1">
+            <span>Ukuran {label}</span>
+            <span className="font-semibold tabular-nums text-blue-600">{Math.round(fx.z * 100)}%</span>
+          </div>
+          <input
+            type="range"
+            min={10}
+            max={250}
+            step={1}
+            value={Math.round(fx.z * 100)}
+            onChange={(e) => setFx('s', Number(e.target.value))}
+            className="block w-full min-h-[32px] accent-blue-600 cursor-pointer"
+          />
         </label>
         <label className="block text-sm text-gray-700">
-          Opacity {label} <span className="font-semibold tabular-nums">{Math.round(fx.a * 100)}%</span>
-          <input type="range" min={10} max={100} step={5} value={Math.round(fx.a * 100)} onChange={(e) => setFx('a', Number(e.target.value))}
-            className="mt-1 block w-full min-h-[32px]" />
+          <div className="flex justify-between items-center mb-1">
+            <span>Opacity {label}</span>
+            <span className="font-semibold tabular-nums text-blue-600">{Math.round(fx.a * 100)}%</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={Math.round(fx.a * 100)}
+            onChange={(e) => setFx('a', Number(e.target.value))}
+            className="block w-full min-h-[32px] accent-blue-600 cursor-pointer"
+          />
         </label>
       </div>
     </div>
