@@ -61,6 +61,7 @@ function LunasBadge({ rotated = true }: { rotated?: boolean }) {
 // Komponen Pembantu: Bonggol Klasik Kasir
 function BonggolKiri({ d }: { d: KwitansiData }) {
   const oTtd = getOffset(d.posisi, 'ttd');
+  const fxTtd = fxOf(oTtd, 'ttd');
   return (
     <div className="w-[180px] shrink-0 pr-3 border-r-2 border-dashed border-gray-400 flex flex-col justify-between text-[11px] relative">
       <div className="absolute -right-2.5 top-1/2 -translate-y-1/2 bg-white px-0.5 text-gray-400">
@@ -389,6 +390,8 @@ function RenderVoucherKas({ d }: TemplateRenderProps) {
   const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
   const fxTtd = fxOf(oTtd, 'ttd');
+  const oPenyetor = getOffset(d.posisi, 'ttdPenyetor');
+  const fxPenyetor = fxOf(oPenyetor, 'ttdPenyetor');
   const oStempel = getOffset(d.posisi, 'stempel');
   const fxStempel = fxOf(oStempel, 'stempel');
 
@@ -2060,6 +2063,8 @@ function RenderSerahTerimaDana({ d }: TemplateRenderProps) {
   const fxLogo = fxOf(oLogo, 'logo');
   const oTtd = getOffset(d.posisi, 'ttd');
   const fxTtd = fxOf(oTtd, 'ttd');
+  const oPenyetor = getOffset(d.posisi, 'ttdPenyetor');
+  const fxPenyetor = fxOf(oPenyetor, 'ttdPenyetor');
   const oStempel = getOffset(d.posisi, 'stempel');
   const fxStempel = fxOf(oStempel, 'stempel');
 

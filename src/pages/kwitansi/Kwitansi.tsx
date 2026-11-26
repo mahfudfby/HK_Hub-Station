@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { RefreshCw, FileText, CheckCircle2 } from 'lucide-react';
 import AutoTextarea from '../../shared/components/AutoTextarea';
 import FitPreview from '../../shared/components/FitPreview';
-import NumberFormatInput from '../../shared/components/NumberFormatInput';
 import PositionPad from '../../shared/components/PositionPad';
 import { CanvasPanel, useCanvasMode } from '../../shared/components/CanvasMode';
 import SharedGallery from '../../shared/components/SharedGallery';
@@ -22,7 +21,7 @@ import FormSection from '../../shared/components/FormSection';
 import KontakFields from '../../shared/components/KontakFields';
 import TemplateRibbon from '../../shared/components/TemplateRibbon';
 import { randomDocNo } from '../../shared/lib/docNumber';
-import { num, terbilangRupiah } from '../../shared/lib/money';
+import { num, rupiah, terbilangRupiah } from '../../shared/lib/money';
 import {
   DEFAULT_KWITANSI,
   METODE_BAYAR,
@@ -45,7 +44,7 @@ export default function Kwitansi() {
 
   const [toast, setToast] = useState<ToastState>(null);
   const notify = (type: 'success' | 'error' | 'info' | 'loading', msg: string) => {
-    setToast({ type, msg });
+    setToast({ type, message: msg });
   };
 
   useEffect(() => {
@@ -265,11 +264,13 @@ export default function Kwitansi() {
                 </Field>
 
                 <Field label="Uang Sejumlah (Nominal Angka Rupiah)">
-                  <NumberFormatInput
+                  <input
+                    type="text"
+                    inputMode="numeric"
                     className={inputCls}
-                    value={f.jumlah}
-                    onChange={(v) => set('jumlah', v)}
-                    placeholder="15000000"
+                    value={f.jumlah ? rupiah(num(f.jumlah)) : ''}
+                    onChange={(e) => set('jumlah', e.target.value.replace(/\D/g, '').slice(0, 15))}
+                    placeholder="15.000.000"
                   />
                 </Field>
 
