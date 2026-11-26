@@ -9,12 +9,13 @@ import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import PositionPad, { fxOf, getOffset, type Offset, type Offsets } from '../../shared/components/PositionPad';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import DocOptions from '../../shared/components/DocOptions';
-import { DOTTED, ExportButton, Field, ImageUpload, inputCls, mmToPx, signSpace, PAPERS, PAPER_GROUPS, paperOf, orient, useLetterExport, type Notify, type Paper } from '../../shared/components/LetterKit';
+import { DOTTED, Field, ImageUpload, inputCls, mmToPx, signSpace, PAPERS, PAPER_GROUPS, paperOf, orient, useLetterExport, type Notify, type Paper } from '../../shared/components/LetterKit';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { num, rupiah } from '../../shared/lib/money';
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { cssFamily, useGoogleFonts, type WebFont } from '../../shared/lib/fonts';
 import FormSection from '../../shared/components/FormSection';
+import { ExportMenu } from '../../shared/components/ExportMenu';
 
 // Custom Invoices Toko Online: nota pesanan gaya marketplace untuk toko online milik pengguna.
 // Sengaja generik: tanpa logo/nama/alamat/NPWP marketplace mana pun; identitas diisi sendiri oleh penjual.
@@ -379,9 +380,7 @@ export default function InvoiceTokoOnline() {
   );
   const unduh = (
     <>
-      <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
+      <ExportMenu exporting={exporting} disabled={busy} onRun={run} />
       <button onClick={reset} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
     </>
   );

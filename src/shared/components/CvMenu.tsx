@@ -8,7 +8,7 @@ import FormSection from './FormSection';
 import { CanvasPanel, ModeTabs, useCanvasMode } from './CanvasMode';
 import { Toast, type ToastState } from './Feedback';
 import { TextSizeSlider } from './TextScale';
-import { ExportButton, Field, ImageUpload, PAPERS, inputCls, letterPage, type Notify } from './LetterKit';
+import { Field, ImageUpload, PAPERS, inputCls, letterPage, type Notify } from './LetterKit';
 import { BAGIAN, CV_DEFAULT, LBL, PALET, collectTexts, newId, printText, type Bagian, type Cv } from './CvKit';
 import { PageView, TEMPLATES_ATS, TEMPLATES_CREATIVE, buildFlows, type Env } from './CvTemplates';
 import { usePagination } from '../../pages/surat-kontrak-kerja/usePagination';
@@ -18,6 +18,7 @@ import { cached, translateAll } from '../lib/translate';
 import { buildCvDocx } from '../lib/cvDocx';
 import { saveFile } from '../lib/saveFile';
 import TemplateRibbon from './TemplateRibbon';
+import { ExportMenu } from './ExportMenu';
 
 // Menu CV bersama (Creative & ATS): isian bahasa Indonesia, hasil bisa otomatis diterjemahkan ke Inggris.
 // 20 template per menu (CvTemplates). Banyak halaman: tiap kolom dipecah sendiri oleh usePagination.
@@ -195,9 +196,7 @@ export default function CvMenu({ mode }: { mode: 'creative' | 'ats' }) {
   );
   const unduh = (
     <>
-      <ExportButton kind="PDF" color="bg-red-700" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="PNG" color="bg-blue-700" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
+      <ExportMenu exporting={exporting} disabled={busy} onRun={run} />
       <button type="button" onClick={cetakTeks} disabled={busy || printing || !!exporting} className="px-5 py-2 rounded-lg bg-emerald-700 text-white font-semibold disabled:opacity-60">
         {printing ? 'Menyiapkan…' : 'PDF Teks Asli (ATS)'}
       </button>
@@ -338,7 +337,7 @@ export default function CvMenu({ mode }: { mode: 'creative' | 'ats' }) {
 
               <FormSection title="Tampilan">{tampilan}</FormSection>
               <div className="flex flex-wrap gap-3">{unduh}</div>
-              {isAts && <p className="text-xs text-gray-700">PDF/PNG biasa berupa gambar. Untuk dikirim ke sistem ATS, pakai tombol “PDF Teks Asli (ATS)” lalu pilih “Simpan sebagai PDF”, supaya teksnya terbaca mesin.</p>}
+              {isAts && <p className="text-xs text-gray-700">PDF dan Gambar biasa berupa gambar. Untuk dikirim ke sistem ATS, pakai tombol “PDF Teks Asli (ATS)” lalu pilih “Simpan sebagai PDF”, supaya teksnya terbaca mesin.</p>}
             </>)}
           </div>
 

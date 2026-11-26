@@ -9,7 +9,7 @@ import UserData from '../../shared/components/UserData';
 import DocOptions, { Switch, TITIK } from '../../shared/components/DocOptions';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import { ExportButton, Field, PaperPicker, fmtTanggal, inputCls, letterPage, type Notify } from '../../shared/components/LetterKit';
+import { Field, PaperPicker, fmtTanggal, inputCls, letterPage, type Notify } from '../../shared/components/LetterKit';
 import FormSection from '../../shared/components/FormSection';
 import { usePagesExport } from '../surat-kontrak-kerja/exportPages';
 import { useBgRemoved } from '../../shared/lib/removeBg';
@@ -17,6 +17,7 @@ import { useGoogleFonts } from '../../shared/lib/fonts';
 import { TEMPLATES, getTpl } from './templates';
 import { BoxCtx, Hal1, Hal2, rootStyle, type Cert } from './Render';
 import TemplateRibbon from '../../shared/components/TemplateRibbon';
+import { ExportMenu } from '../../shared/components/ExportMenu';
 
 // Surat Keterangan Keterampilan: sertifikat keterampilan kerja 2 halaman (landscape).
 // Halaman 1 = sertifikat (kop, nama, kualifikasi, nomor registrasi, masa berlaku, QR, foto, penetapan);
@@ -173,9 +174,7 @@ export default function SuratKeteranganKeterampilan() {
   );
   const unduh = (
     <>
-      <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
+      <ExportMenu exporting={exporting} disabled={busy} onRun={run} />
       <button onClick={reset} className="px-5 min-h-[44px] rounded-lg bg-white border font-semibold">Reset Semua</button>
     </>
   );

@@ -250,4 +250,15 @@ html.dark body { background: #121212; color: #e6e6e6; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
 .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
 
-
+/* Tombol DOWNLOAD (ExportMenu): hijau menyala + teks ajakan mengambang */
+@keyframes unduh-nyala {
+  0%, 100% { box-shadow: 0 0 8px 1px rgba(34, 197, 94, 0.55); }
+  50% { box-shadow: 0 0 24px 7px rgba(34, 197, 94, 0.9); }
+}
+@keyframes unduh-ambang { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+button.unduh-menyala:not(:disabled) { animation: unduh-nyala 1.6s ease-in-out infinite; }
+.unduh-ambang { animation: unduh-ambang 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  button.unduh-menyala:not(:disabled) { animation: none; box-shadow: 0 0 16px 4px rgba(34, 197, 94, 0.75); }
+  .unduh-ambang { animation: none; }
+}

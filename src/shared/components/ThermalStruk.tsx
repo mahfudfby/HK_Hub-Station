@@ -6,7 +6,7 @@ import FitPreview from './FitPreview';
 import { CanvasPanel, ModeTabs, useCanvasMode } from './CanvasMode';
 import SharedGallery from './SharedGallery';
 import { Toast, type ToastState } from './Feedback';
-import { ExportButton, Field, ImageUpload, inputCls, paperOf, PaperPicker, useLetterExport, type Notify } from './LetterKit';
+import { Field, ImageUpload, inputCls, paperOf, PaperPicker, useLetterExport, type Notify } from './LetterKit';
 import { notaLayout } from './ThermalNota';
 import { useBgRemoved } from '../lib/removeBg';
 import { num, rupiah } from '../lib/money';
@@ -14,6 +14,7 @@ import { cssFamily, useGoogleFonts } from '../lib/fonts';
 import { TextSizeSlider, useFitScale } from './TextScale';
 import DocOptions, { TITIK_PENDEK } from './DocOptions';
 import FormSection from './FormSection';
+import { ExportMenu } from './ExportMenu';
 
 // Struk / karcis thermal 58mm gaya struk transaksi bergerbang: kop berlogo, lokasi, tanggal & kode, nomor seri,
 // rincian perjalanan/kendaraan, golongan + tarif (besar), pembayaran & sisa saldo.
@@ -280,10 +281,8 @@ export default function ThermalStruk({ kind }: { kind: StrukKind }) {
   );
   const unduh = (
     <>
-      <p className="w-full text-sm text-gray-600">Cetak ke printer thermal Bluetooth: unduh PNG lalu buka dengan aplikasi RawBT.</p>
-      <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={logo.busy} onRun={run} />
-      <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={logo.busy} onRun={run} />
-      <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={logo.busy} onRun={run} />
+      <p className="w-full text-sm text-gray-600">Cetak ke printer thermal Bluetooth: unduh Gambar lalu buka dengan aplikasi RawBT.</p>
+      <ExportMenu exporting={exporting} disabled={logo.busy} onRun={run} />
       <button onClick={transaksiBaru} className="px-5 py-2 rounded-lg bg-white border font-semibold">Transaksi Baru</button>
     </>
   );

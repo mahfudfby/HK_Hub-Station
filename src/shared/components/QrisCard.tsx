@@ -5,7 +5,7 @@ import { Spinner } from './Feedback';
 // ============================================================
 // SECTION: Config — gambar QRIS dari Cloudinary
 // ============================================================
-const QRIS_IMAGE_URL = 'https://res.cloudinary.com/dl4pyan8v/image/upload/v1791206224/HK_Qris_dyxbaq.jpg';
+export const QRIS_IMAGE_URL = 'https://res.cloudinary.com/dl4pyan8v/image/upload/v1791206224/HK_Qris_dyxbaq.jpg';
 
 // ============================================================
 // SECTION: Modal QRIS (top-level)

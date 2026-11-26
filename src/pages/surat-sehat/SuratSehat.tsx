@@ -10,7 +10,7 @@ import { useBgRemoved } from '../../shared/lib/removeBg';
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import {
-  DOTTED, Dots, ExportButton, Field, ImageUpload, PaperPicker, letterPage, dataStyle,
+  DOTTED, Dots, Field, ImageUpload, PaperPicker, letterPage, dataStyle,
   fmtTanggal, inputCls, signSpace, useLetterExport, type Notify,
 } from '../../shared/components/LetterKit';
 import { Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts, type Gaya } from '../../shared/components/LetterStyles';
@@ -20,6 +20,7 @@ import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/Ca
 import SharedGallery from '../../shared/components/SharedGallery';
 import DocOptions, { nomorTampil } from '../../shared/components/DocOptions';
 import FormSection from '../../shared/components/FormSection';
+import { ExportMenu } from '../../shared/components/ExportMenu';
 
 // Surat keterangan sehat (A5): hanya untuk akun admin. Kop diisi sendiri oleh dokter/klinik pemakai.
 
@@ -225,9 +226,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
   );
   const unduh = (
     <>
-      <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
+      <ExportMenu exporting={exporting} disabled={busy} onRun={run} />
       <button onClick={resetPasien} className="px-5 py-2 rounded-lg bg-white border font-semibold">Kosongkan Data Pasien</button>
       <button onClick={resetAll} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
     </>

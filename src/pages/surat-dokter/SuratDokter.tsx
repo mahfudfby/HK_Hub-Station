@@ -9,7 +9,7 @@ import FitPreview from '../../shared/components/FitPreview';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import {
-  DOTTED, Dots, ExportButton, Field, ImageUpload, PaperPicker, letterPage, dataStyle as data,
+  DOTTED, Dots, Field, ImageUpload, PaperPicker, letterPage, dataStyle as data,
   fmtTanggal, inputCls, orDots, signSpace, useLetterExport, type Notify,
 } from '../../shared/components/LetterKit';
 import { FitLine, Kop, Rule, SignName, StylePicker, Title, getGaya, useLetterFonts } from '../../shared/components/LetterStyles';
@@ -19,6 +19,7 @@ import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/Ca
 import SharedGallery from '../../shared/components/SharedGallery';
 import DocOptions from '../../shared/components/DocOptions';
 import FormSection from '../../shared/components/FormSection';
+import { ExportMenu } from '../../shared/components/ExportMenu';
 
 // Surat keterangan dokter: hanya untuk akun admin (login lewat tombol mengambang / halaman /login).
 
@@ -265,9 +266,6 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
     notify('info', 'Semua isian dikembalikan ke bawaan.');
   };
   const { exporting, run } = useLetterExport(() => letterRef.current!.firstElementChild as HTMLElement, fileName, notify, pg.paper);
-  const exportBtn = (kind: 'PDF' | 'PNG' | 'Print', color: string) => (
-    <ExportButton kind={kind} color={color} exporting={exporting} disabled={logo.busy || ttd.busy || stempel.busy} onRun={run} />
-  );
 
   const [geser, setGeser] = useState('ttd');
   const [canvas, setCanvas] = useCanvasMode();
@@ -283,9 +281,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
   );
   const unduh = (
     <>
-      {exportBtn('PDF', 'bg-red-600')}
-      {exportBtn('PNG', 'bg-blue-600')}
-      {exportBtn('Print', 'bg-slate-700')}
+      <ExportMenu exporting={exporting} disabled={logo.busy || ttd.busy || stempel.busy} onRun={run} />
       <button onClick={resetPasien} className="px-5 py-2 rounded-lg bg-white border font-semibold">Kosongkan Data Pasien</button>
       <button onClick={resetAll} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
     </>

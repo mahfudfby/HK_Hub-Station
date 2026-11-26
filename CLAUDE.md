@@ -92,7 +92,9 @@ Pengguna memilih template lewat dropdown, data tidak berubah saat ganti template
 - Struk parkir (`ThermalStruk kind="parkir"`): teks DURASI bisa dimatikan (`pakaiDurasi`, untuk parkir flat); tidak ada baris "Bayar";
   baris golongan+tarif diberi jarak satu baris di atas dan bawah. Berlaku untuk semua tampilan struk parkir.
 - **Wajib ekspor PDF, PNG, dan Print** (semua menu sudah punya ketiganya).
-  Surat: `useLetterExport` / `ExportButton` dari `shared/components/LetterKit`.
+  Surat: `useLetterExport` dari `shared/components/LetterKit` + `<ExportMenu exporting disabled onRun={run} />` dari
+  `shared/components/ExportMenu`: SATU tombol hijau menyala "DOWNLOAD Here !" berisi pilihan Gambar (PNG), PDF, Print.
+  Gambar & PDF selalu lewat pop-up QRIS + hitung mundur 4 titik; Print langsung. Jangan membuat tombol unduh terpisah.
   Thermal: `ThermalNota` / `ThermalStruk` (PNG 384px untuk 58mm, 576px untuk 80mm, siap RawBT).
 - Data form disimpan di `localStorage` dengan `const STORAGE_KEY = '<slug>:v1';`
   (naikkan `v2` bila bentuk data berubah).

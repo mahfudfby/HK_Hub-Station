@@ -10,7 +10,6 @@ import DocOptions, { Switch } from '../../shared/components/DocOptions';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import {
-  ExportButton,
   Field,
   PaperPicker,
   inputCls,
@@ -30,6 +29,7 @@ import {
   type KwitansiData,
 } from './types';
 import { TEMPLATES } from './templates';
+import { ExportMenu } from '../../shared/components/ExportMenu';
 
 export default function Kwitansi() {
   const [f, setF] = useState<KwitansiData>(() => {
@@ -195,26 +195,7 @@ export default function Kwitansi() {
           {canvas ? (
             <CanvasPanel
               unduh={
-                <>
-                  <ExportButton
-                    kind="PDF"
-                    color="bg-red-600 hover:bg-red-700"
-                    exporting={exporting}
-                    onRun={run}
-                  />
-                  <ExportButton
-                    kind="PNG"
-                    color="bg-emerald-600 hover:bg-emerald-700"
-                    exporting={exporting}
-                    onRun={run}
-                  />
-                  <ExportButton
-                    kind="Print"
-                    color="bg-blue-600 hover:bg-blue-700"
-                    exporting={exporting}
-                    onRun={run}
-                  />
-                </>
+                <ExportMenu exporting={exporting} onRun={run} />
               }
               tampilan={tampilan}
               galeri={

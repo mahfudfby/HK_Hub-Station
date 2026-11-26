@@ -7,7 +7,7 @@ import FitPreview from './FitPreview';
 import { CanvasPanel, ModeTabs, useCanvasMode } from './CanvasMode';
 import SharedGallery from './SharedGallery';
 import { Toast, type ToastState } from './Feedback';
-import { ExportButton, Field, ImageUpload, inputCls, mmToPx, orient, paperOf, PaperPicker, useLetterExport, type Notify } from './LetterKit';
+import { Field, ImageUpload, inputCls, mmToPx, orient, paperOf, PaperPicker, useLetterExport, type Notify } from './LetterKit';
 import { useBgRemoved } from '../lib/removeBg';
 import { num, rupiah } from '../lib/money';
 import { orRandomNo, randomDocNo } from '../lib/docNumber';
@@ -16,6 +16,7 @@ import { TextSizeSlider, useFitScale } from './TextScale';
 import DocOptions, { nomorTampil, TITIK } from './DocOptions';
 import FormSection from './FormSection';
 import TemplateRibbon from './TemplateRibbon';
+import { ExportMenu } from './ExportMenu';
 
 // Nota pembelian untuk printer thermal 58mm / 80mm.
 // Lebar nota × skala 2 = lebar titik cetak printer: 58mm → 192px → PNG 384px (±32 karakter/baris),
@@ -526,10 +527,8 @@ export default function ThermalNota({ mm }: { mm: ThermalWidth }) {
   );
   const unduh = (
     <>
-      <p className="w-full text-sm text-gray-600">Cetak ke printer thermal Bluetooth: unduh PNG lalu buka dengan aplikasi RawBT.</p>
-      <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={logo.busy} onRun={run} />
-      <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={logo.busy} onRun={run} />
-      <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={logo.busy} onRun={run} />
+      <p className="w-full text-sm text-gray-600">Cetak ke printer thermal Bluetooth: unduh Gambar lalu buka dengan aplikasi RawBT.</p>
+      <ExportMenu exporting={exporting} disabled={logo.busy} onRun={run} />
       <button onClick={transaksiBaru} className="px-5 py-2 rounded-lg bg-white border font-semibold">Transaksi Baru</button>
     </>
   );

@@ -7,7 +7,7 @@ import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/Ca
 import SharedGallery from '../../shared/components/SharedGallery';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import DocOptions from '../../shared/components/DocOptions';
-import { DOTTED, ExportButton, Field, ImageUpload, inputCls, fmtTanggal, useLetterExport, PaperPicker, PAPERS, paperOf, orient, type Notify, type Paper } from '../../shared/components/LetterKit';
+import { DOTTED, Field, ImageUpload, inputCls, fmtTanggal, useLetterExport, PaperPicker, PAPERS, paperOf, orient, type Notify, type Paper } from '../../shared/components/LetterKit';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { num, rupiah } from '../../shared/lib/money';
 import { code128 } from '../../shared/lib/code128';
@@ -16,6 +16,7 @@ import { cssFamily, useGoogleFonts, type WebFont } from '../../shared/lib/fonts'
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import FormSection from '../../shared/components/FormSection';
 import TemplateRibbon from '../../shared/components/TemplateRibbon';
+import { ExportMenu } from '../../shared/components/ExportMenu';
 
 // Resi / label pengiriman untuk printer thermal 80mm (gaya label marketplace, tanpa merek).
 // Lebar 288px × skala 2 = PNG 576px = lebar titik cetak printer 80mm. Barcode Code 128 dibuat otomatis dari nomor.
@@ -423,10 +424,8 @@ export default function Resi80() {
   );
   const unduh = (
     <>
-      <p className="w-full text-sm text-gray-600">Cetak ke printer thermal Bluetooth: unduh PNG lalu buka dengan aplikasi RawBT.</p>
-      <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={logo.busy} onRun={run} />
-      <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={logo.busy} onRun={run} />
-      <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={logo.busy} onRun={run} />
+      <p className="w-full text-sm text-gray-600">Cetak ke printer thermal Bluetooth: unduh Gambar lalu buka dengan aplikasi RawBT.</p>
+      <ExportMenu exporting={exporting} disabled={logo.busy} onRun={run} />
       <button onClick={kirimBaru} className="px-5 py-2 rounded-lg bg-white border font-semibold">Pengiriman Baru</button>
     </>
   );
