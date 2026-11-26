@@ -298,16 +298,18 @@ function OrderView({ d, cfg, c, fs, w, h, pad }: { d: Doc; cfg: Cfg; c: ReturnTy
 
   // ---------- Ringkasan ----------
   type SRow = { l: string; v: number; strong?: boolean; red?: boolean };
+  // Semua voucher dihapus pun baris diskon tetap tampil Rp0
+  const diskon = d.potongan.length ? d.potongan : [{ label: '', nilai: '' }];
   const rows: SRow[] = inv ? [
     { l: `Subtotal (${K ? '…' : c.qty} barang)`, v: c.subtotal },
-    ...d.potongan.map((p) => ({ l: p.label || 'Diskon', v: -num(p.nilai), red: true })),
+    ...diskon.map((p) => ({ l: p.label || 'Diskon', v: -num(p.nilai), red: true })),
     { l: 'Ongkos Kirim', v: num(d.ongkir) },
     { l: 'Asuransi Pengiriman', v: num(d.asuransi) },
     { l: 'Biaya Layanan / Admin', v: num(d.biayaLayanan) },
   ] : [
     { l: `Subtotal Harga Barang (${K ? '…' : c.qty} barang)`, v: c.subtotal },
     { l: 'Subtotal Produk', v: c.subtotal },
-    ...d.potongan.map((p) => ({ l: p.label || 'Voucher', v: -num(p.nilai), red: true })),
+    ...diskon.map((p) => ({ l: p.label || 'Voucher', v: -num(p.nilai), red: true })),
     { l: 'Total Ongkos Kirim', v: num(d.ongkir) },
     { l: 'Asuransi Pengiriman', v: num(d.asuransi) },
     { l: 'TOTAL BELANJA', v: c.belanja, strong: true },

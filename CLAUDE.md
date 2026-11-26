@@ -78,6 +78,9 @@ Pengguna memilih template lewat dropdown, data tidak berubah saat ganti template
 - **PENTING: `ImageUpload` di formulir mengembalikan `null`.** Tempat upload HANYA di `<SharedGallery showEmpty>` (Edit Tampilan).
   Setiap field gambar WAJIB masuk `keys` atau `slots={[{ id, label, value, set }]}` (tanda tangan kedua, saksi, penanda tangan
   tambahan; `id` diawali `ttd`/`stempel`). Menulis `ImageUpload` saja = field itu tidak bisa di-upload sama sekali.
+- **Nota, invoice, faktur: semua baris biaya (potongan/diskon, pajak/PPN, ongkir, asuransi, biaya layanan, biaya lain) WAJIB
+  tetap tampil di preview & ekspor walau nilainya 0.** Jangan menyembunyikan baris dengan syarat `nilai > 0 && …`.
+  Pengurang ditulis `0 - nilai` (bukan `-nilai`) agar nol tidak tercetak `-0`.
 - **Kolom upload gambar** (`ImageUpload` di `LetterKit`) sudah membawa: toggle Hapus BG, toggle **Greyscale** (`GreyToggle`),
   dan **auto-masuk Galeri Foto** real-time: setelah file dipilih, gambar diunggah ke Cloudinary di folder kategori
   (`galleryFolder(label, 'upload')`: logo / stempel / tanda-tangan / lainnya dari label kolom) lalu `addSharedImage()` memperbarui

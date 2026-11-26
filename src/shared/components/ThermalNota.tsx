@@ -370,10 +370,10 @@ function Receipt({ n, T, k }: { n: Nota; T: Layout; k: number }) {
   const sums = (
     <div style={t.sumRight && !K ? { marginLeft: '30%' } : undefined}>
       <Row l="Sub-Total" r={K ? TITIK : rupiah(c.total)} bold />
-      {(K ? num(n.pajak) > 0 : c.pajak > 0) && <Row l={`Pajak ${n.pajak}%`} r={K ? TITIK : rupiah(c.pajak)} />}
-      {K && <Row l="Diskon" r={TITIK} />}
-      {!K && c.diskon > 0 && <Row l={n.diskonMode === '%' ? `Diskon ${n.diskon}%` : 'Diskon'} r={`-${rupiah(c.diskon)}`} />}
-      {!K && c.biaya > 0 && <Row l={n.biayaLabel || 'Other'} r={rupiah(c.biaya)} />}
+      {/* Rincian biaya selalu tercetak, walau nilainya 0 */}
+      <Row l={K && !num(n.pajak) ? 'Pajak' : `Pajak ${num(n.pajak)}%`} r={K ? TITIK : rupiah(c.pajak)} />
+      <Row l={!K && n.diskonMode === '%' ? `Diskon ${num(n.diskon)}%` : 'Diskon'} r={K ? TITIK : `${c.diskon > 0 ? '-' : ''}${rupiah(c.diskon)}`} />
+      <Row l={n.biayaLabel || 'Other'} r={K ? TITIK : rupiah(c.biaya)} />
     </div>
   );
 
