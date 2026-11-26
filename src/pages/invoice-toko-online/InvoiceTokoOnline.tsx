@@ -221,15 +221,15 @@ function NotaView({ n, c, fs, w, h, pad }: { n: Nota; c: ReturnType<typeof calc>
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <div style={{ width: '48%' }}>
           <div style={{ ...boxStyle, padding: `${fs * 1.2}px ${fs * 1.6}px`, fontSize: fs * 0.9 }}>
-            {/* Daftar tetap: kosong tetap tampil Rp0; hanya "biaya lain" yang muncul bila diisi */}
+            {/* Daftar tetap: semua rincian biaya tampil walau Rp0 */}
             {[
-              ['Subtotal Pesanan', c.subtotal, true],
-              ['Ongkos Kirim', num(n.ongkir), true],
-              ['Biaya Layanan', num(n.biayaLayanan), true],
-              ['Proteksi Produk', num(n.proteksi), true],
-              [n.biayaLainLabel || 'Biaya Lain', num(n.biayaLain), !!n.biayaLain && !ks],
-              [n.diskonLabel || 'Diskon Voucher', -num(n.diskon), true],
-            ].filter((r) => r[2]).map(([l, v]) => (
+              ['Subtotal Pesanan', c.subtotal],
+              ['Ongkos Kirim', num(n.ongkir)],
+              ['Biaya Layanan', num(n.biayaLayanan)],
+              ['Proteksi Produk', num(n.proteksi)],
+              [n.biayaLainLabel || 'Biaya Lain', num(n.biayaLain)],
+              [n.diskonLabel || 'Diskon Voucher', -num(n.diskon)],
+            ].map(([l, v]) => (
               <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: fs * 0.65 }}>
                 <span>{l}</span><span style={{ whiteSpace: 'nowrap' }}>{rp(v as number)}</span>
               </div>

@@ -423,7 +423,6 @@ function tableStyle(d: Doc, fs: number) {
 
 function Items({ d, c, fs, short }: Ctx) {
   const s = tableStyle(d, fs);
-  const hasDisc = !d.kosong && d.items.some((it) => num(it.diskon) > 0);
   // Template kosongan: baris kosong bergaris untuk ditulis tangan
   const empty = d.kosong ? Array.from({ length: short ? 5 : 8 }, (_, i) => i) : [];
   const R: CSSProperties = { textAlign: 'right', whiteSpace: 'nowrap' };
@@ -435,14 +434,14 @@ function Items({ d, c, fs, short }: Ctx) {
           <th style={{ ...s.th, textAlign: 'left' }}>Deskripsi</th>
           <th style={{ ...s.th, ...R }}>Qty</th>
           <th style={{ ...s.th, ...R }}>Harga</th>
-          {hasDisc && <th style={{ ...s.th, ...R }}>Disc</th>}
+          <th style={{ ...s.th, ...R }}>Disc</th>
           <th style={{ ...s.th, ...R }}>Jumlah</th>
         </tr>
       </thead>
       <tbody>
         {empty.map((i) => {
           const td = { ...s.td, height: fs * 1.9, background: s.zebra && i % 2 ? s.zebra : undefined };
-          return <tr key={i}><td style={td} /><td style={td} /><td style={td} /><td style={td} /><td style={td} /></tr>;
+          return <tr key={i}><td style={td} /><td style={td} /><td style={td} /><td style={td} /><td style={td} /><td style={td} /></tr>;
         })}
         {!d.kosong && d.items.map((it, i) => {
           const td = { ...s.td, background: s.zebra && i % 2 ? s.zebra : undefined };
@@ -452,7 +451,7 @@ function Items({ d, c, fs, short }: Ctx) {
               <td style={td}>{it.nama}</td>
               <td style={{ ...td, ...R }}>{it.qty} {it.satuan}</td>
               <td style={{ ...td, ...R }}>{rupiah(num(it.harga))}</td>
-              {hasDisc && <td style={{ ...td, ...R }}>{num(it.diskon) ? `${it.diskon}%` : '-'}</td>}
+              <td style={{ ...td, ...R }}>{num(it.diskon)}%</td>
               <td style={{ ...td, ...R }}>{rupiah(c.lines[i])}</td>
             </tr>
           );
@@ -465,10 +464,10 @@ function Items({ d, c, fs, short }: Ctx) {
 function Totals({ d, c, fs, short }: Ctx) {
   const rows: [string, number][] = [
     ['Subtotal', c.subtotal],
-    ...(c.potongan && !d.kosong ? [['Potongan', -c.potongan] as [string, number]] : []),
+    ['Potongan', 0 - c.potongan], // rincian biaya selalu tampil, walau 0 (0 - x agar tidak jadi "-0")
     ...(c.potongan && num(d.ppn) && !d.kosong ? [['DPP', c.dpp] as [string, number]] : []),
-    ...(num(d.ppn) ? [[`PPN ${d.ppn}%`, c.ppn] as [string, number]] : []),
-    ...(c.ongkir && !d.kosong ? [['Ongkos Kirim', c.ongkir] as [string, number]] : []),
+    [d.kosong && !num(d.ppn) ? 'PPN' : `PPN ${num(d.ppn)}%`, c.ppn],
+    ['Ongkos Kirim', c.ongkir],
   ];
   const col = inkOf(d);
   const totalStyle: CSSProperties = {
@@ -484,7 +483,7 @@ function Totals({ d, c, fs, short }: Ctx) {
   const cell: CSSProperties = { padding: `${fs * 0.25}px ${fs * 0.5}px` };
   // Template kosongan: nominal dikosongkan, ruang tulis selebar ±11 huruf (titik ikut warna teks agar terlihat di baris TOTAL gelap)
   const rp = (v: number) => (d.kosong ? <>Rp <span style={{ display: 'inline-block', width: fs * 9, borderBottom: '1.5px dotted currentColor' }} /></> : v < 0 ? `-Rp ${rupiah(-v)}` : `Rp ${rupiah(v)}`);
-  const tunai = d.metode === 'Tunai' && num(d.diterima) > 0 && !d.kosong;
+  const tunai = d.metode === 'Tunai' && !d.kosong;
   return (
     <table style={{ borderCollapse: 'collapse', minWidth: '45%', marginLeft: 'auto' }}>
       <tbody>
