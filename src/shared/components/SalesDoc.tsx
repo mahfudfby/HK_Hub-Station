@@ -734,7 +734,9 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
-                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={d} onApply={(u) => setD((p) => ({ ...p, ...u }))} onPicked={(msg) => notify('success', msg)} />} />
+                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={d} slots={[
+                  ...(kind === 'faktur' ? [{ id: 'ttdPenerima', label: 'Tanda tangan — Penerima', value: d.ttdPenerima, set: (v) => set('ttdPenerima', v) }] : []),
+                ]} onApply={(u) => setD((p) => ({ ...p, ...u }))} onPicked={(msg) => notify('success', msg)} />} />
             ) : (<>
             <UserData storageKey={`data-user:${kind}`} keys={USER_KEYS} data={d} onApply={(u) => setD((p) => ({ ...p, ...u }))} />
             <FormSection title="Penjual">

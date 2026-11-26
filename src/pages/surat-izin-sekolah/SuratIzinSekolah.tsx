@@ -214,7 +214,12 @@ export default function SuratIzinSekolah() {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
-                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} slots={[
+                  ...(f.pakaiRt ? [{ id: 'ttdRt', label: `Tanda tangan — ${f.rtNama || 'Ketua RT'}`, value: f.ttdRt, set: (v) => set('ttdRt', v) }] : []),
+                  ...(f.pakaiRt ? [{ id: 'stempelRt', label: 'Stempel RT', value: f.stempelRt, set: (v) => set('stempelRt', v) }] : []),
+                  ...(f.pakaiRw ? [{ id: 'ttdRw', label: `Tanda tangan — ${f.rwNama || 'Ketua RW'}`, value: f.ttdRw, set: (v) => set('ttdRw', v) }] : []),
+                  ...(f.pakaiRw ? [{ id: 'stempelRw', label: 'Stempel RW', value: f.stempelRw, set: (v) => set('stempelRw', v) }] : []),
+                ]} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
             ) : (<>
             <UserData storageKey="data-user:surat-izin-sekolah" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 

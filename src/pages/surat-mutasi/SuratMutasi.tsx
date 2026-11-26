@@ -239,7 +239,10 @@ export default function SuratMutasi() {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
-                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} slots={[
+                  ...(f.ttdKaryawan ? [{ id: 'ttdYbs', label: `Tanda tangan — ${f.nama || 'yang bersangkutan'}`, value: f.ttdYbs, set: (v) => set('ttdYbs', v) }] : []),
+                  ...f.penandaLain.map((p, i) => ({ id: `ttdTtd_${p.id}`, label: `Tanda tangan — ${p.nama || p.jabatan || `penanda tangan ${i + 1}`}`, value: p.ttd, set: (v) => setSigner(i, { ttd: v }) })),
+                ]} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
             ) : (<>
             <UserData storageKey="data-user:surat-mutasi" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 

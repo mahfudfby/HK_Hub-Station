@@ -408,7 +408,10 @@ export default function SuratKontrakKerja() {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
-                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} slots={[
+                  { id: 'ttdK', label: `Tanda tangan — ${f.nama || 'Pihak Kedua'}`, value: f.ttdK, set: (v) => set('ttdK', v) },
+                  ...f.saksi.map((s, i) => ({ id: `ttdSaksi_${s.id}`, label: `Tanda tangan — ${s.nama || `Saksi ${i + 1}`}`, value: s.ttd, set: (v) => setF((p) => ({ ...p, saksi: p.saksi.map((x) => (x.id === s.id ? { ...x, ttd: v } : x)) })) })),
+                ]} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
             ) : (<>
             <UserData storageKey="data-user:surat-kontrak-kerja" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 

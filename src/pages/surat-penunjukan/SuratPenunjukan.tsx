@@ -221,7 +221,10 @@ export default function SuratPenunjukan() {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
-                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} slots={[
+                  ...(f.ttdDitunjuk ? [{ id: 'ttdTunjuk', label: `Tanda tangan — ${f.nama || 'yang ditunjuk'}`, value: f.ttdTunjuk, set: (v) => set('ttdTunjuk', v) }] : []),
+                  ...f.penandaLain.map((p, i) => ({ id: `ttdTtd_${p.id}`, label: `Tanda tangan — ${p.nama || p.jabatan || `penanda tangan ${i + 1}`}`, value: p.ttd, set: (v) => setSigner(i, { ttd: v }) })),
+                ]} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
             ) : (<>
             <UserData storageKey="data-user:surat-penunjukan" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 

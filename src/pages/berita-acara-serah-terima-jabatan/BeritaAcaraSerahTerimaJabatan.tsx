@@ -327,7 +327,11 @@ export default function BeritaAcaraSerahTerimaJabatan() {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
-                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} slots={[
+                  ...(f.pakai1 ? [{ id: 'ttd1', label: `Tanda tangan — ${f.p1Nama || 'Pihak Pertama'}`, value: f.ttd1, set: (x) => set('ttd1', x) }] : []),
+                  ...(f.pakai2 ? [{ id: 'ttd2', label: `Tanda tangan — ${f.p2Nama || 'Pihak Kedua'}`, value: f.ttd2, set: (x) => set('ttd2', x) }] : []),
+                  ...(f.pakaiSaksi ? f.saksi.map((x, i) => ({ id: `ttdSaksi_${x.id}`, label: `Tanda tangan — ${x.nama.trim() || `Saksi ${i + 1}`}`, value: x.ttd, set: (v) => setSaksi(i, { ttd: v }) })) : []),
+                ]} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
             ) : (<>
             <UserData storageKey="data-user:berita-acara-serah-terima-jabatan" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 

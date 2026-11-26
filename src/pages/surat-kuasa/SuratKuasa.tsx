@@ -255,7 +255,10 @@ export default function SuratKuasa() {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
-                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} slots={[
+                  { id: 'ttdPenerima', label: `Tanda tangan — ${f.penerima.nama || 'penerima kuasa'}`, value: f.ttdPenerima, set: (v) => set('ttdPenerima', v) },
+                  ...f.saksi.map((x, i) => ({ id: `ttdSaksi_${x.id}`, label: `Tanda tangan — ${x.nama || `Saksi ${i + 1}`}`, value: x.ttd, set: (v) => setSaksi(i, { ttd: v }) })),
+                ]} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
             ) : (<>
             <UserData storageKey="data-user:surat-kuasa" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 

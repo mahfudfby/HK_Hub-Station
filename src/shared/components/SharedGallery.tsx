@@ -20,6 +20,8 @@ import GreyToggle from './GreyToggle';
 // ============================================================
 // SECTION: Types & Constants
 // ============================================================
+// id slot WAJIB diawali 'ttd' atau 'stempel' agar masuk kategori galeri yang benar
+export type ImageSlot = { id: string; label: string; value: string; set: (v: string) => void };
 export type SharedImage = { url: string; kind: string; folder?: string }; // kind '' = kategori Lainnya
 export const IMAGE_LABEL: Record<string, string> = {
   logo: 'Logo',
@@ -107,14 +109,16 @@ export async function removeSharedImage(url: string) {
 // SECTION: SharedGallery Main Component
 // ============================================================
 export default function SharedGallery({
-  keys,
-  data,
-  onApply,
+  keys: baseKeys,
+  data: baseData,
+  onApply: baseApply,
+  slots = [],
   onPicked,
   showEmpty = false,
   labels,
 }: {
   labels?: Record<string, string>; // nama slot khusus menu (menimpa label bawaan)
+  slots?: ImageSlot[]; // slot di luar keys: tanda tangan kedua, saksi, penanda tangan tambahan
   keys: readonly string[];
   data: object;
   onApply: (picked: Record<string, unknown>) => void;
@@ -122,8 +126,18 @@ export default function SharedGallery({
   showEmpty?: boolean;
 }) {
   const [shared, setShared] = useState<SharedImage[] | null>(null);
+  const slotsRef = useRef(slots);
+  slotsRef.current = slots;
+  const keys = [...baseKeys, ...slots.map((x) => x.id)];
+  const data: object = { ...baseData, ...Object.fromEntries(slots.map((x) => [x.id, x.value])) };
+  const onApply = (picked: Record<string, unknown>) => {
+    const rest = { ...picked };
+    // Setter diambil dari render TERBARU: upload selesai belakangan, setter daftar saksi lama akan menimpa isian baru
+    for (const x of slotsRef.current) if (x.id in rest) { x.set(String(rest[x.id] ?? '')); delete rest[x.id]; }
+    if (Object.keys(rest).length) baseApply(rest);
+  };
   const imageKeys = keys.filter(isImageKey);
-  const labelOf = (k: string) => labels?.[k] ?? baseLabelOf(k);
+  const labelOf = (k: string) => slots.find((x) => x.id === k)?.label ?? labels?.[k] ?? baseLabelOf(k);
   const [target, setTarget] = useState('');
   const [ciut, setCiut] = useState<Record<string, boolean>>({});
   const [sel, setSel] = useState<{ img: SharedImage; label: string } | null>(null);

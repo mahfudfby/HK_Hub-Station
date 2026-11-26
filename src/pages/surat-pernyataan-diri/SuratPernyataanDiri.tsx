@@ -209,7 +209,10 @@ export default function SuratPernyataanDiri() {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
-                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} slots={[
+                  { id: 'ttdSaksi1', label: `Tanda tangan — ${f.saksi1 || 'Saksi 1'}`, value: f.ttdSaksi1, set: (v) => set('ttdSaksi1', v) },
+                  { id: 'ttdSaksi2', label: `Tanda tangan — ${f.saksi2 || 'Saksi 2'}`, value: f.ttdSaksi2, set: (v) => set('ttdSaksi2', v) },
+                ]} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
             ) : (<>
             <UserData storageKey="data-user:surat-pernyataan-diri" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
