@@ -372,8 +372,8 @@ function Receipt({ n, T, k }: { n: Nota; T: Layout; k: number }) {
       <Row l="Sub-Total" r={K ? TITIK : rupiah(c.total)} bold />
       {(K ? num(n.pajak) > 0 : c.pajak > 0) && <Row l={`Pajak ${n.pajak}%`} r={K ? TITIK : rupiah(c.pajak)} />}
       {K && <Row l="Diskon" r={TITIK} />}
-      {!K && c.biaya > 0 && <Row l={n.biayaLabel || 'Biaya lain'} r={rupiah(c.biaya)} />}
       {!K && c.diskon > 0 && <Row l={n.diskonMode === '%' ? `Diskon ${n.diskon}%` : 'Diskon'} r={`-${rupiah(c.diskon)}`} />}
+      {!K && c.biaya > 0 && <Row l={n.biayaLabel || 'Other'} r={rupiah(c.biaya)} />}
     </div>
   );
 
@@ -382,25 +382,25 @@ function Receipt({ n, T, k }: { n: Nota; T: Layout; k: number }) {
     K ? (
       // kosongan: label & titik-titik dua baris agar tidak meluber di 58mm
       <div style={{ fontWeight: 700, fontSize: fs(2), ...BAR[t.total], textAlign: t.total === 'center' ? 'center' : undefined }}>
-        <div>PEMBAYARAN</div>
+        <div>TOTAL BAYAR</div>
         <div style={{ textAlign: 'right' }}>Rp {grand}</div>
       </div>
     ) : t.total === 'big' ? (
       <div style={{ fontWeight: 700 }}>
-        <div>PEMBAYARAN</div>
+        <div>TOTAL BAYAR</div>
         <div style={{ fontSize: fs(7), lineHeight: 1.15, textAlign: 'right' }}>Rp {grand}</div>
       </div>
     ) : t.total === 'center' ? (
       <div style={{ textAlign: 'center', fontWeight: 700 }}>
-        <div style={{ letterSpacing: 2 }}>PEMBAYARAN</div>
+        <div style={{ letterSpacing: 2 }}>TOTAL BAYAR</div>
         <div style={{ fontSize: fs(8), lineHeight: 1.15 }}>Rp {grand}</div>
       </div>
     ) : (
-      <div style={{ fontSize: fs(2), ...BAR[t.total] }}><Row l="PEMBAYARAN" r={grand} bold /></div>
+      <div style={{ fontSize: fs(2), ...BAR[t.total] }}><Row l="TOTAL BAYAR" r={grand} bold /></div>
     );
 
-  const payRows: [string, string][] = K ? [['Metode', ''], ['Bayar', ''], ['Kembali', '']] : n.metode === 'Tunai'
-    ? [['Metode Bayar', 'Tunai'], ['Tunai', rupiah(c.bayar)], ['Kembali', rupiah(Math.max(0, c.kembali))]]
+  const payRows: [string, string][] = K ? [['Metode', ''], ['Bayar', ''], ['Kembalian', '']] : n.metode === 'Tunai'
+    ? [['Metode Bayar', 'Tunai'], ['Tunai', rupiah(c.bayar)], ['Kembalian', rupiah(Math.max(0, c.kembali))]]
     : [['Metode Bayar', n.metode], [n.nonTunai || 'Non-Tunai', grand]];
   const pay = t.pay === 'cols' ? (
     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${payRows.length}, 1fr)`, textAlign: 'center' }}>
@@ -440,11 +440,11 @@ function Receipt({ n, T, k }: { n: Nota; T: Layout; k: number }) {
       {line}
       {sums}
       {line}
+      {total}
+      {line}
       {pay}
       {line}
       {t.metaBottom && <>{meta}{line}</>}
-      {total}
-      {line}
       {foot}
       {n.footer && t.foot === 'sep' && line}
     </div>
