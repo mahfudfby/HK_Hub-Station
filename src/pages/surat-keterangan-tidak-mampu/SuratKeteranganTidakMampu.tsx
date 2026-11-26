@@ -181,7 +181,10 @@ export default function SuratKeteranganTidakMampu() {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
-                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} slots={[
+                  { id: 'ttdCamat', label: `Tanda tangan — ${f.camatNama || 'Camat'}`, value: f.ttdCamat, set: (v) => set('ttdCamat', v) },
+                  { id: 'stempelCamat', label: 'Stempel kecamatan', value: f.stempelCamat, set: (v) => set('stempelCamat', v) },
+                ]} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
             ) : (<>
             <UserData storageKey="data-user:surat-keterangan-tidak-mampu" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 

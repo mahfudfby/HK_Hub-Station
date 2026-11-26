@@ -175,7 +175,9 @@ export default function SuratPengunduranDiri() {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
-                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} slots={[
+                  { id: 'ttdAtasan', label: `Tanda tangan — ${f.atasanNama || 'Atasan'}`, value: f.ttdAtasan, set: (v) => set('ttdAtasan', v) },
+                ]} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
             ) : (<>
             <UserData storageKey="data-user:surat-pengunduran-diri" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 

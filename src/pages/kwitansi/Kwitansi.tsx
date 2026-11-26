@@ -219,7 +219,9 @@ export default function Kwitansi() {
               tampilan={tampilan}
               galeri={
                 <SharedGallery
+                  showEmpty
                   keys={['logo', 'ttd', 'stempel']}
+                  slots={[{ id: 'ttdPenyetor', label: `Tanda tangan — ${f.namaPenyetor || 'Penyetor'}`, value: f.ttdPenyetor, set: (v) => set('ttdPenyetor', v) }]}
                   data={{ logo: f.logo, ttd: f.ttd, stempel: f.stempel }}
                   onApply={(picked) => setF((prev) => ({ ...prev, ...picked }))}
                   onPicked={(msg) => notify('success', msg)}

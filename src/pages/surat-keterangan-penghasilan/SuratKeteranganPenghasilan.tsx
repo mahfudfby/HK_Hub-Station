@@ -181,7 +181,9 @@ export default function SuratKeteranganPenghasilan() {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
-                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} slots={[
+                  ...(f.pemohonOn ? [{ id: 'ttdPemohon', label: `Tanda tangan — ${f.warga[0]?.value || 'Pemohon'}`, value: f.ttdPemohon, set: (v) => set('ttdPemohon', v) }] : []),
+                ]} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
             ) : (<>
             <UserData storageKey="data-user:surat-keterangan-penghasilan" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 

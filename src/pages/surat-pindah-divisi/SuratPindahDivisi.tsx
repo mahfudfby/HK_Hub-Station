@@ -225,7 +225,10 @@ export default function SuratPindahDivisi() {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
-                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} slots={[
+                  ...(f.pakaiLama ? [{ id: 'ttdLama', label: `Tanda tangan — ${f.lamaNama || 'manajer divisi lama'}`, value: f.ttdLama, set: (x) => set('ttdLama', x) }] : []),
+                  ...(f.pakaiBaru ? [{ id: 'ttdBaru', label: `Tanda tangan — ${f.baruNama || 'manajer divisi baru'}`, value: f.ttdBaru, set: (x) => set('ttdBaru', x) }] : []),
+                ]} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
             ) : (<>
             <UserData storageKey="data-user:surat-pindah-divisi" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 

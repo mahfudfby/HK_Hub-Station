@@ -224,7 +224,9 @@ export default function SuratPromosiJabatan() {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
-                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} slots={[
+                  ...(f.ttdYbs ? [{ id: 'ttdKaryawan', label: `Tanda tangan — ${f.nama || 'yang bersangkutan'}`, value: f.ttdKaryawan, set: (v) => set('ttdKaryawan', v) }] : []),
+                ]} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
             ) : (<>
             <UserData storageKey="data-user:surat-promosi-jabatan" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 

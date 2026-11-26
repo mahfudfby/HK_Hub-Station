@@ -268,7 +268,12 @@ export default function SuratTugasLuarKota() {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
-                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} slots={[
+                  ...(f.pengesahan ? [{ id: 'ttdTiba', label: 'Tanda tangan — Pejabat (Tiba di)', value: f.ttdTiba, set: (v) => set('ttdTiba', v) }] : []),
+                  ...(f.pengesahan ? [{ id: 'stempelTiba', label: 'Cap — Tiba di', value: f.stempelTiba, set: (v) => set('stempelTiba', v) }] : []),
+                  ...(f.pengesahan ? [{ id: 'ttdBerangkat', label: 'Tanda tangan — Pejabat (Berangkat dari)', value: f.ttdBerangkat, set: (v) => set('ttdBerangkat', v) }] : []),
+                  ...(f.pengesahan ? [{ id: 'stempelBerangkat', label: 'Cap — Berangkat dari', value: f.stempelBerangkat, set: (v) => set('stempelBerangkat', v) }] : []),
+                ]} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
             ) : (<>
             <UserData storageKey="data-user:surat-tugas-luar-kota" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 

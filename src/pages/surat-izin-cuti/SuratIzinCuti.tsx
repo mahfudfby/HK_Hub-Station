@@ -232,7 +232,10 @@ export default function SuratIzinCuti() {
           <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
-                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
+                galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} slots={[
+                  ...(f.pakaiPemohon ? [{ id: 'ttdPemohon', label: `Tanda tangan — ${f.nama || 'Pemohon'} (nama mengikuti data karyawan)`, value: f.ttdPemohon, set: (x) => set('ttdPemohon', x) }] : []),
+                  ...(f.pakaiAtasan ? [{ id: 'ttdAtasan', label: `Tanda tangan — ${f.atasanNama || 'Atasan'}`, value: f.ttdAtasan, set: (x) => set('ttdAtasan', x) }] : []),
+                ]} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
             ) : (<>
             <UserData storageKey="data-user:surat-izin-cuti" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />
 
