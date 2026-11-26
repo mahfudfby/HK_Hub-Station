@@ -98,6 +98,8 @@ Pengguna memilih template lewat dropdown, data tidak berubah saat ganti template
   menyusut (`min-w-0`) agar kolom tidak saling menimpa.
 - Untuk masalah unduh/share di iPhone, ikuti skill `fix-ios-download-share` / `shared/lib/saveFile.ts`.
 - Penanda bagian kode: `// ===== SECTION: <Nama> =====` seperti file lain.
+- **Sebelum rilis wajib `npx tsc --noEmit -p .` bersih** (`npm run build` TIDAK memeriksa tipe: variabel tak terdefinisi lolos build
+  lalu membuat halaman blank). Uji menu juga dengan semua gambar (logo/ttd/stempel) terisi di semua template.
 
 ## Pakai ulang, jangan tulis ulang
 Contoh terbaik untuk ditiru: surat → `src/pages/surat-hutang-ringkas/`,

@@ -369,7 +369,7 @@ function Receipt({ n, T, k }: { n: Nota; T: Layout; k: number }) {
 
   const sums = (
     <div style={t.sumRight && !K ? { marginLeft: '30%' } : undefined}>
-      <Row l="TOTAL" r={K ? TITIK : rupiah(c.total)} bold />
+      <Row l="Sub-Total" r={K ? TITIK : rupiah(c.total)} bold />
       {(K ? num(n.pajak) > 0 : c.pajak > 0) && <Row l={`Pajak ${n.pajak}%`} r={K ? TITIK : rupiah(c.pajak)} />}
       {K && <Row l="Diskon" r={TITIK} />}
       {!K && c.biaya > 0 && <Row l={n.biayaLabel || 'Biaya lain'} r={rupiah(c.biaya)} />}
@@ -382,21 +382,21 @@ function Receipt({ n, T, k }: { n: Nota; T: Layout; k: number }) {
     K ? (
       // kosongan: label & titik-titik dua baris agar tidak meluber di 58mm
       <div style={{ fontWeight: 700, fontSize: fs(2), ...BAR[t.total], textAlign: t.total === 'center' ? 'center' : undefined }}>
-        <div>TOTAL PEMBAYARAN</div>
+        <div>PEMBAYARAN</div>
         <div style={{ textAlign: 'right' }}>Rp {grand}</div>
       </div>
     ) : t.total === 'big' ? (
       <div style={{ fontWeight: 700 }}>
-        <div>TOTAL PEMBAYARAN</div>
+        <div>PEMBAYARAN</div>
         <div style={{ fontSize: fs(7), lineHeight: 1.15, textAlign: 'right' }}>Rp {grand}</div>
       </div>
     ) : t.total === 'center' ? (
       <div style={{ textAlign: 'center', fontWeight: 700 }}>
-        <div style={{ letterSpacing: 2 }}>TOTAL PEMBAYARAN</div>
+        <div style={{ letterSpacing: 2 }}>PEMBAYARAN</div>
         <div style={{ fontSize: fs(8), lineHeight: 1.15 }}>Rp {grand}</div>
       </div>
     ) : (
-      <div style={{ fontSize: fs(2), ...BAR[t.total] }}><Row l="TOTAL PEMBAYARAN" r={grand} bold /></div>
+      <div style={{ fontSize: fs(2), ...BAR[t.total] }}><Row l="PEMBAYARAN" r={grand} bold /></div>
     );
 
   const payRows: [string, string][] = K ? [['Metode', ''], ['Bayar', ''], ['Kembali', '']] : n.metode === 'Tunai'
@@ -440,11 +440,11 @@ function Receipt({ n, T, k }: { n: Nota; T: Layout; k: number }) {
       {line}
       {sums}
       {line}
-      {total}
-      {line}
       {pay}
       {line}
       {t.metaBottom && <>{meta}{line}</>}
+      {total}
+      {line}
       {foot}
       {n.footer && t.foot === 'sep' && line}
     </div>
