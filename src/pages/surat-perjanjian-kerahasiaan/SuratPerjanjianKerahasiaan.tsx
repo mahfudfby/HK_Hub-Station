@@ -10,7 +10,7 @@ import UserData from '../../shared/components/UserData';
 import DocOptions, { TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, LETTER_FONT, PaperPicker, fmtTanggal, inputCls, letterPage, type Notify } from '../../shared/components/LetterKit';
+import { Field, ImageUpload, LETTER_FONT, PaperPicker, fmtTanggal, inputCls, letterPage, type Notify } from '../../shared/components/LetterKit';
 import { InfoRows, LayoutLetter, LayoutPicker, P, SignBlock, type LayoutDoc } from '../../shared/components/LetterLayouts';
 import { usePagesExport } from '../surat-kontrak-kerja/exportPages';
 import { usePagination } from '../surat-kontrak-kerja/usePagination';
@@ -19,6 +19,7 @@ import { ROMAN, orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import FormSection, { NarrativeField } from '../../shared/components/FormSection';
 import { LampiranField, lampiranTeks } from '../surat-kontrak-kerja/Lampiran';
 import KontakFields from '../../shared/components/KontakFields';
+import { ExportMenu } from '../../shared/components/ExportMenu';
 
 // Surat Perjanjian Kerahasiaan (NDA) Karyawan: pasal-pasal bisa diedit/ditambah/dihapus/diurutkan,
 // dokumen panjang berlanjut otomatis ke halaman berikut (paginasi milik Kontrak Kerja). Tata letak dari LetterLayouts.
@@ -276,9 +277,7 @@ export default function SuratPerjanjianKerahasiaan() {
   );
   const unduh = (
     <>
-      <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
+      <ExportMenu exporting={exporting} disabled={busy} onRun={run} />
       <button onClick={reset} className="px-5 min-h-[44px] rounded-lg bg-white border font-semibold">Reset Semua</button>
     </>
   );

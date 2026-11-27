@@ -7,6 +7,7 @@ import AutoTextarea from '../../shared/components/AutoTextarea';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import QrisCard from '../../shared/components/QrisCard';
+import { ExportMenu } from '../../shared/components/ExportMenu';
 import { galleryFolder, uploadImage } from '../../shared/lib/cloudinary';
 import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import { printImage } from '../../shared/lib/printImage';
@@ -1031,29 +1032,8 @@ export default function SlipGaji() {
     </>
   );
   const unduh = (
-    <>
-      <button
-        type="button" onClick={handleExport} disabled={exporting || printing || bgBusy}
-        className="slip-btn bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md inline-flex items-center gap-2"
-      >
-        {exporting === 'PNG' ? <span className="slip-spinner" aria-hidden="true" /> : <IconDownload />}
-        {exporting === 'PNG' ? 'Memproses... Harap tunggu.' : 'Export Slip Gaji sebagai PNG'}
-      </button>
-      <button
-        type="button" onClick={handleExportPdf} disabled={exporting || printing || bgBusy}
-        className="slip-btn bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md inline-flex items-center gap-2"
-      >
-        {exporting === 'PDF' ? <span className="slip-spinner" aria-hidden="true" /> : <IconDownload />}
-        {exporting === 'PDF' ? 'Memproses... Harap tunggu.' : 'Export Slip Gaji sebagai PDF'}
-      </button>
-      <button
-        type="button" onClick={handlePrint} disabled={exporting || printing || bgBusy}
-        className="slip-btn bg-slate-700 hover:bg-slate-800 text-white font-semibold py-3 px-6 rounded-lg shadow-md inline-flex items-center gap-2"
-      >
-        {printing && <span className="slip-spinner" aria-hidden="true" />}
-        {printing ? 'Menyiapkan cetakan...' : 'Print'}
-      </button>
-    </>
+    <ExportMenu exporting={exporting || printing} disabled={bgBusy}
+      onRun={(k) => (k === 'PNG' ? handleExport() : k === 'PDF' ? handleExportPdf() : handlePrint())} />
   );
   // --- Render ---
   return (

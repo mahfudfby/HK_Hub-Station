@@ -9,13 +9,14 @@ import SharedGallery from '../../shared/components/SharedGallery';
 import UserData from '../../shared/components/UserData';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
+import { Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import { InfoRows, LayoutLetter, LayoutPicker, P, type LayoutDoc, type LayoutRow, type LayoutSigner } from '../../shared/components/LetterLayouts';
 import DocOptions, { TITIK, TITIK_PENDEK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import FormSection from '../../shared/components/FormSection';
 import KontakFields from '../../shared/components/KontakFields';
+import { ExportMenu } from '../../shared/components/ExportMenu';
 
 // Surat Keterangan Tidak Mampu (SKTM) dari Kelurahan: kop pemerintah, data warga, dasar pengantar RT/RW,
 // keperluan & masa berlaku; ditandatangani Lurah (opsional diketahui Camat).
@@ -160,9 +161,7 @@ export default function SuratKeteranganTidakMampu() {
   );
   const unduh = (
     <>
-      <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
+      <ExportMenu exporting={exporting} disabled={busy} onRun={run} />
       <button onClick={reset} className="px-5 py-2 min-h-[44px] rounded-lg bg-white border font-semibold">Reset Semua</button>
     </>
   );

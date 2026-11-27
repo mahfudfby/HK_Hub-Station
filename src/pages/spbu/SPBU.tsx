@@ -3,6 +3,7 @@ import AutoTextarea from '../../shared/components/AutoTextarea';
 import FormSection from '../../shared/components/FormSection';
 import { firebaseConfig } from '../../shared/lib/firebase';
 import QrisCard from '../../shared/components/QrisCard';
+import { ExportMenu } from '../../shared/components/ExportMenu';
 import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/CanvasMode';
 import { Toast } from '../../shared/components/Feedback';
 import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
@@ -1093,24 +1094,8 @@ const App = () => {
     );
     const unduh = (
         <>
-                <button onClick={handleExportImage} disabled={!isLibReady || isProcessing || isAiGenerating}
-                    className={`flex-1 min-w-[140px] p-3 rounded-xl font-bold flex justify-center items-center space-x-1 transition ${!isLibReady || isProcessing || isAiGenerating ? 'bg-green-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white`}>
-                    {isProcessing || !isLibReady ? <div className="spinner mr-2"></div> : 
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>}
-                    <span>Export PNG</span>
-                </button>
-                <button onClick={handleExportPdf} disabled={!isLibReady || isProcessing || isAiGenerating}
-                    className={`flex-1 min-w-[140px] p-3 rounded-xl font-bold flex justify-center items-center space-x-1 transition ${!isLibReady || isProcessing || isAiGenerating ? 'bg-red-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'} text-white`}>
-                    {isProcessing || !isLibReady ? <div className="spinner mr-2"></div> :
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
-                    <span>Export PDF</span>
-                </button>
-                <button onClick={handlePrintReceipt} disabled={!isLibReady || isProcessing || isAiGenerating}
-                    className={`flex-1 min-w-[140px] p-3 rounded-xl font-bold flex justify-center items-center space-x-1 transition ${!isLibReady || isProcessing || isAiGenerating ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}>
-                    {isProcessing || !isLibReady ? <div className="spinner mr-2"></div> : 
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m0 0h6m-6 0v2a2 2 0 002 2h2a2 2 0 002-2v-2" /></svg>}
-                    <span>{native ? 'Cetak 58mm' : `Cetak ${paperDef.label.split(' (')[0]}`}</span>
-                </button>
+                <ExportMenu exporting={isProcessing || !isLibReady} disabled={isAiGenerating}
+                    onRun={(k) => (k === 'PNG' ? handleExportImage() : k === 'PDF' ? handleExportPdf() : handlePrintReceipt())} />
         </>
     );
     // Galeri selalu tampil & dipisah per kategori. Pilihan logo langsung terlihat di nota;
@@ -1221,7 +1206,7 @@ const App = () => {
                         {/* BAGIAN BARU: Petunjuk Cetak */}
                         <div className="mt-6 pt-4 border-t border-gray-200 text-sm space-y-2 text-gray-700">
                             <p className="font-extrabold text-lg text-indigo-700">*** SARAN CETAK YANG BAIK ***</p>
-                            <p>1. Ekspor nota menggunakan tombol **Export PNG** di atas.</p>
+                            <p>1. Ekspor nota menggunakan tombol **DOWNLOAD Here !** lalu pilih **Gambar** di atas.</p>
                             <p>2. Unduh Aplikasi **RawBT** atau Aplikasi Sejenis (Cari di Youtube: *Cara Cetak Gambar di Printer Thermal 58mm Bluetooth / Kabel*).</p>
                             
                             <p className="font-extrabold text-red-600 mt-4">***** CATATAN PENTING *****</p>

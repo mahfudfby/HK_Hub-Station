@@ -8,13 +8,14 @@ import SharedGallery from '../../shared/components/SharedGallery';
 import UserData from '../../shared/components/UserData';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
-import { ExportButton, Field, ImageUpload, PaperPicker, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
+import { Field, ImageUpload, PaperPicker, inputCls, letterPage, useLetterExport, type Notify } from '../../shared/components/LetterKit';
 import DocOptions, { TITIK } from '../../shared/components/DocOptions';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { Lembar, useTplFonts, type Isi } from './Lipat3';
 import { TEMPLATES, getTpl } from './templates';
 import FormSection from '../../shared/components/FormSection';
 import TemplateRibbon from '../../shared/components/TemplateRibbon';
+import { ExportMenu } from '../../shared/components/ExportMenu';
 
 // Undangan Yasinan & Tahlilan lipat 3 dalam 1 halaman. Kertas landscape = 3 kolom tegak; kertas vertikal = 3 baris mendatar.
 // Menu berdiri sendiri; 20 template sendiri (templates.ts), bukan LetterLayouts karena bentuknya brosur lipat.
@@ -167,9 +168,7 @@ export default function UndanganYasinan() {
   );
   const unduh = (
     <>
-      <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
+      <ExportMenu exporting={exporting} disabled={busy} onRun={run} />
       <button onClick={reset} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
     </>
   );

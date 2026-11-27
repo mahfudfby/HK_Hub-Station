@@ -167,14 +167,3 @@ export function useLetterExport(getPage: () => HTMLElement, fileName: string, no
   };
   return { exporting, run };
 }
-
-export function ExportButton({ kind, color, exporting, disabled, onRun }: {
-  kind: ExportKind; color: string; exporting: '' | ExportKind; disabled?: boolean; onRun: (k: ExportKind) => void;
-}) {
-  return (
-    <button onClick={() => onRun(kind)} disabled={!!exporting || disabled}
-      className={`px-5 py-2 rounded-lg text-white font-semibold flex items-center gap-2 disabled:opacity-60 ${color}`}>
-      {exporting === kind && <Spinner />} {kind === 'Print' ? 'Print' : `Unduh ${kind}`}
-    </button>
-  );
-}

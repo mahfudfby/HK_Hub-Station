@@ -10,7 +10,7 @@ import { TextSizeSlider, useFitScale } from './TextScale';
 import PositionPad, { fxOf, getOffset, type Offset, type Offsets } from './PositionPad';
 import { Toast, type ToastState } from './Feedback';
 import DocOptions, { nomorTampil } from './DocOptions';
-import { Dots, ExportButton, Field, ImageUpload, inputCls, fmtTanggal, mmToPx, signSpace, PAPERS, PAPER_GROUPS, paperOf, orient, useLetterExport, type Notify, type Paper } from './LetterKit';
+import { Dots, Field, ImageUpload, inputCls, fmtTanggal, mmToPx, signSpace, PAPERS, PAPER_GROUPS, paperOf, orient, useLetterExport, type Notify, type Paper } from './LetterKit';
 import { useBgRemoved } from '../lib/removeBg';
 import { num, rupiah, terbilangRupiah } from '../lib/money';
 import { orRandomNo, randomDocNo } from '../lib/docNumber';
@@ -18,6 +18,7 @@ import { cssFamily, loadGoogleFont, useGoogleFonts, type WebFont } from '../lib/
 import FormSection from './FormSection';
 import KontakFields from './KontakFields';
 import TemplateRibbon from './TemplateRibbon';
+import { ExportMenu } from './ExportMenu';
 
 // Generator Invoice & Faktur Penjualan: satu mesin, beberapa template gaya, ukuran kertas & orientasi bebas.
 
@@ -715,9 +716,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
   );
   const unduh = (
     <>
-      <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
+      <ExportMenu exporting={exporting} disabled={busy} onRun={run} />
       <button onClick={reset} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
     </>
   );

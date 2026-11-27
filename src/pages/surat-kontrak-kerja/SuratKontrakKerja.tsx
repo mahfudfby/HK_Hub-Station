@@ -10,7 +10,7 @@ import UserData from '../../shared/components/UserData';
 import DocOptions, { TITIK, isian, nomorTampil } from '../../shared/components/DocOptions';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import { TextSizeSlider } from '../../shared/components/TextScale';
-import { Dots, ExportButton, Field, ImageUpload, LETTER_FONT, PaperPicker, dataStyle, fmtTanggal, inputCls, letterPage, type Notify } from '../../shared/components/LetterKit';
+import { Dots, Field, ImageUpload, LETTER_FONT, PaperPicker, dataStyle, fmtTanggal, inputCls, letterPage, type Notify } from '../../shared/components/LetterKit';
 import { InfoRows, LayoutLetter, LayoutPicker, P, SignBlock, type LayoutDoc } from '../../shared/components/LetterLayouts';
 import { usePagesExport } from './exportPages';
 import { usePagination } from './usePagination';
@@ -20,6 +20,7 @@ import { num, rupiah, terbilangRupiah } from '../../shared/lib/money';
 import FormSection, { NarrativeField } from '../../shared/components/FormSection';
 import { LampiranField, lampiranTeks } from './Lampiran';
 import KontakFields from '../../shared/components/KontakFields';
+import { ExportMenu } from '../../shared/components/ExportMenu';
 
 // Surat Kontrak Kerja (PKWT): perjanjian kerja waktu tertentu dengan pasal-pasal yang bisa diedit,
 // termasuk daftar tugas & tanggung jawab (preset per posisi). Tata letak dari LetterLayouts.
@@ -385,9 +386,7 @@ export default function SuratKontrakKerja() {
   );
   const unduh = (
     <>
-      <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
+      <ExportMenu exporting={exporting} disabled={busy} onRun={run} />
       <button onClick={reset} className="px-5 min-h-[44px] rounded-lg bg-white border font-semibold">Reset Semua</button>
     </>
   );

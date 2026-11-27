@@ -9,13 +9,14 @@ import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/Ca
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import PositionPad, { fxOf, getOffset, type Offsets } from '../../shared/components/PositionPad';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
-import { ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, mmToPx, orient, paperOf, signSpace, useLetterExport, type Notify, type Paper } from '../../shared/components/LetterKit';
+import { Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, mmToPx, orient, paperOf, signSpace, useLetterExport, type Notify, type Paper } from '../../shared/components/LetterKit';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { num, rupiah } from '../../shared/lib/money';
 import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import FormSection from '../../shared/components/FormSection';
 import KontakFields from '../../shared/components/KontakFields';
 import TemplateRibbon from '../../shared/components/TemplateRibbon';
+import { ExportMenu } from '../../shared/components/ExportMenu';
 
 // Bahan bersama dua menu berdiri sendiri: Invoice Toko Online (/invoice-olshop) & Receipt Pesanan Toko Online (/receipt-olshop).
 // Dokumen milik penjual sendiri: identitas toko (logo + nama) diisi pengguna; tanpa merek/logo marketplace mana pun.
@@ -518,9 +519,7 @@ export default function OrderPage({ cfg }: { cfg: Cfg }) {
   );
   const unduh = (
     <>
-      <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
+      <ExportMenu exporting={exporting} disabled={busy} onRun={run} />
       <button onClick={reset} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
     </>
   );

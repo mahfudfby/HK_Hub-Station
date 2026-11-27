@@ -11,7 +11,7 @@ import { orRandomNo, randomDocNo } from '../../shared/lib/docNumber';
 import { cssFamily, useGoogleFonts, type WebFont } from '../../shared/lib/fonts';
 import { Toast, type ToastState } from '../../shared/components/Feedback';
 import {
-  ExportButton, Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, signSpace, useLetterExport, type Notify,
+  Field, ImageUpload, PaperPicker, fmtTanggal, inputCls, letterPage, signSpace, useLetterExport, type Notify,
 } from '../../shared/components/LetterKit';
 import { TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import PositionPad, { fxOf, getOffset, type Offsets } from '../../shared/components/PositionPad';
@@ -19,6 +19,7 @@ import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/Ca
 import SharedGallery from '../../shared/components/SharedGallery';
 import DocOptions, { nomorTampil } from '../../shared/components/DocOptions';
 import FormSection from '../../shared/components/FormSection';
+import { ExportMenu } from '../../shared/components/ExportMenu';
 
 // Copy resep / salinan resep (A5): hanya untuk akun login. Kop diisi sendiri oleh apotek / instalasi farmasi pemakai.
 // Semua isian data memakai font tulisan tangan Latin (Google Fonts) supaya menyerupai tulisan tangan di atas formulir cetak.
@@ -341,9 +342,7 @@ function Editor({ user, notify }: { user: User; notify: Notify }) {
   );
   const unduh = (
     <>
-      <ExportButton kind="PDF" color="bg-red-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="PNG" color="bg-blue-600" exporting={exporting} disabled={busy} onRun={run} />
-      <ExportButton kind="Print" color="bg-slate-700" exporting={exporting} disabled={busy} onRun={run} />
+      <ExportMenu exporting={exporting} disabled={busy} onRun={run} />
       <button onClick={resetPasien} className="px-5 py-2 rounded-lg bg-white border font-semibold">Kosongkan Data Pasien</button>
       <button onClick={resetAll} className="px-5 py-2 rounded-lg bg-white border font-semibold">Reset Semua</button>
       <p className="w-full text-xs text-gray-500">Salinan resep diterbitkan oleh apoteker pengelola apotek / instalasi farmasi. Pastikan isinya sesuai resep asli.</p>
