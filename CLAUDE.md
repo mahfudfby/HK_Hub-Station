@@ -74,6 +74,14 @@ Pengguna memilih template lewat dropdown, data tidak berubah saat ganti template
   supaya tidak ada dua template yang cuma beda warna.
 - Beda warna/font saja **tidak dihitung** sebagai varian; yang dihitung adalah beda penataan & posisi.
 
+## WCAG, TypeScript, dan layout padat (berlaku semua halaman)
+- **TypeScript `strict: true`**; semua kode di `src/` wajib `.ts`/`.tsx` (tanpa `.js`/`.jsx`).
+- **WCAG 2.2 AA:** satu-satunya `<main>` ada di `App.tsx` → halaman memakai `<div>`, jangan menambah `<main>`.
+  Tiap halaman punya satu `<h1>`; tiap isian/`<select>` punya label atau `aria-label`; `aria-label` tombol memuat teks yang terlihat;
+  teks UI kontras ≥ 4,5:1 (di latar putih/abu minimal `text-gray-600`, jangan `text-gray-400`); pop-up memakai `<dialog>` + `showModal()`.
+- **Layout padat & rata** (tiru menu yang ada): pembungkus halaman `px-2 py-3 sm:px-4`, grid form+preview `gap-3 items-start`,
+  panel kiri `p-2 sm:p-3 space-y-3`, judul `text-xl sm:text-2xl mb-3`. Kartu bagian memakai `FormSection`, isian memakai `inputCls`.
+
 ## Aturan isi menu
 - **PENTING: `ImageUpload` di formulir mengembalikan `null`.** Tempat upload HANYA di `<SharedGallery showEmpty>` (Edit Tampilan).
   Setiap field gambar WAJIB masuk `keys` atau `slots={[{ id, label, value, set }]}` (tanda tangan kedua, saksi, penanda tangan

@@ -131,7 +131,7 @@ export default function Kwitansi() {
               }`}
             >
               <span className="truncate">{t.name}</span>
-              <span className="text-[10px] text-gray-500 dark:text-gray-400 font-normal line-clamp-1 mt-0.5">
+              <span className="text-[10px] text-gray-600 dark:text-gray-300 font-normal line-clamp-1 mt-0.5">
                 {t.desc}
               </span>
             </button>
@@ -169,7 +169,7 @@ export default function Kwitansi() {
 
       {/* Header Halaman */}
       <div className="mb-6">
-        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
+        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
           <span>Invoice & Faktur</span>
           <span>/</span>
           <span className="text-gray-900 dark:text-gray-100 font-semibold">Kwitansi Pembayaran Resmi</span>
@@ -202,7 +202,7 @@ export default function Kwitansi() {
                 <SharedGallery
                   showEmpty
                   keys={['logo', 'ttd', 'stempel']}
-                  slots={[{ id: 'ttdPenyetor', label: `Tanda tangan — ${f.namaPenyetor || 'Penyetor'}`, value: f.ttdPenyetor, set: (v) => set('ttdPenyetor', v) }]}
+                  slots={[{ id: 'ttdPenyetor', label: `Tanda tangan — ${f.namaPenyetor || 'Penyetor'}`, value: f.ttdPenyetor, set: (v: string) => set('ttdPenyetor', v) }]}
                   data={{ logo: f.logo, ttd: f.ttd, stempel: f.stempel }}
                   onApply={(picked) => setF((prev) => ({ ...prev, ...picked }))}
                   onPicked={(msg) => notify('success', msg)}

@@ -133,7 +133,7 @@ export default function MaterialHeader({
             type="button"
             onClick={onOpenQris}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-md shadow-red-500/20 active:scale-95 transition-all"
-            aria-label="Buka Scan QRIS"
+            aria-label="Donasi QRIS: buka kode scan"
           >
             <QrCode size={16} />
             <span>Donasi QRIS</span>

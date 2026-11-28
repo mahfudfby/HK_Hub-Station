@@ -203,21 +203,21 @@ export default function SuratIzinSekolah() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
+    <div className="min-h-screen bg-slate-100 px-2 py-3 sm:px-4">
       <div className="max-w-7xl mx-auto">
-        <Link to="/" className="btn-home mb-3">&larr; HK-HUB Menu Utama</Link>
-        <h1 className="text-2xl font-bold text-center mb-4">Surat Izin Tidak Masuk Sekolah</h1>
+        <Link to="/" className="btn-home mb-2">&larr; HK-HUB Menu Utama</Link>
+        <h1 className="text-xl sm:text-2xl font-bold text-center mb-3">Surat Izin Tidak Masuk Sekolah</h1>
         <ModeTabs canvas={canvas} onChange={setCanvas} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
+          <div className="bg-white rounded-2xl shadow p-2 sm:p-3 space-y-3 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
                 galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} slots={[
-                  ...(f.pakaiRt ? [{ id: 'ttdRt', label: `Tanda tangan — ${f.rtNama || 'Ketua RT'}`, value: f.ttdRt, set: (v) => set('ttdRt', v) }] : []),
-                  ...(f.pakaiRt ? [{ id: 'stempelRt', label: 'Stempel RT', value: f.stempelRt, set: (v) => set('stempelRt', v) }] : []),
-                  ...(f.pakaiRw ? [{ id: 'ttdRw', label: `Tanda tangan — ${f.rwNama || 'Ketua RW'}`, value: f.ttdRw, set: (v) => set('ttdRw', v) }] : []),
-                  ...(f.pakaiRw ? [{ id: 'stempelRw', label: 'Stempel RW', value: f.stempelRw, set: (v) => set('stempelRw', v) }] : []),
+                  ...(f.pakaiRt ? [{ id: 'ttdRt', label: `Tanda tangan — ${f.rtNama || 'Ketua RT'}`, value: f.ttdRt, set: (v: string) => set('ttdRt', v) }] : []),
+                  ...(f.pakaiRt ? [{ id: 'stempelRt', label: 'Stempel RT', value: f.stempelRt, set: (v: string) => set('stempelRt', v) }] : []),
+                  ...(f.pakaiRw ? [{ id: 'ttdRw', label: `Tanda tangan — ${f.rwNama || 'Ketua RW'}`, value: f.ttdRw, set: (v: string) => set('ttdRw', v) }] : []),
+                  ...(f.pakaiRw ? [{ id: 'stempelRw', label: 'Stempel RW', value: f.stempelRw, set: (v: string) => set('stempelRw', v) }] : []),
                 ]} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
             ) : (<>
             <UserData storageKey="data-user:surat-izin-sekolah" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />

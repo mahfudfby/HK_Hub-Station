@@ -128,7 +128,7 @@ export default function Login() {
   const inputCls = 'mt-1 w-full rounded-lg border bg-white p-2 text-gray-900';
 
   return (
-    <main className="min-h-screen bg-gray-100 text-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-100 text-gray-900 flex items-center justify-center p-4">
       <form onSubmit={loginEmail} className="w-full max-w-sm rounded-2xl border border-gray-300 bg-white p-6 space-y-4 shadow-xl">
         <Link to="/" className="btn-home">&larr; HK-HUB Menu Utama</Link>
         <h1 className="text-xl font-bold">Login Admin</h1>
@@ -175,6 +175,6 @@ export default function Login() {
         </button>
       </form>
       <Toast toast={toast} onClose={closeToast} />
-    </main>
+    </div>
   );
 }

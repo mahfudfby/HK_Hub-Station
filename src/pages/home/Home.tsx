@@ -262,7 +262,7 @@ export default function Home() {
   }, [categoryGroups]);
 
   return (
-    <main className="relative min-h-screen bg-gray-50/70 dark:bg-gray-950 px-4 py-8 text-gray-900 dark:text-gray-100 sm:px-6 sm:py-12 transition-colors duration-200">
+    <div className="relative min-h-screen bg-gray-50/70 dark:bg-gray-950 px-4 py-8 text-gray-900 dark:text-gray-100 sm:px-6 sm:py-12 transition-colors duration-200">
       <AmbientBackground />
 
       <div className="relative z-10 mx-auto w-full max-w-7xl">
@@ -351,6 +351,6 @@ export default function Home() {
       {/* QRIS Modal & Toast */}
       {qrisOpen && <QrisModal onClose={() => setQrisOpen(false)} />}
       {toast && <Toast toast={toast} onClose={() => setToast(null)} />}
-    </main>
+    </div>
   );
 }

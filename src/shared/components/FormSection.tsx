@@ -25,9 +25,9 @@ export default function FormSection({ title, lockable = false, children, classNa
   const btn = 'flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-xs transition-colors';
   return (
     <div className={full ? 'fixed inset-0 z-50 overflow-auto bg-black/60 backdrop-blur-xs p-3 md:p-8' : ''} onClick={full ? (e) => e.target === e.currentTarget && setFull(false) : undefined}>
-      <section className={`relative rounded-2xl border border-gray-200/90 dark:border-gray-800 bg-white dark:bg-gray-800/90 p-4 sm:p-5 shadow-xs transition-shadow duration-150 hover:shadow-sm space-y-3.5 ${full ? 'mx-auto max-w-5xl rounded-3xl bg-white p-6 shadow-2xl md:p-8' : ''} ${className}`}
+      <section className={`relative rounded-2xl border border-gray-200/90 dark:border-gray-800 bg-white dark:bg-gray-800/90 p-3 shadow-xs transition-shadow duration-150 hover:shadow-sm space-y-2 ${full ? 'mx-auto max-w-5xl rounded-3xl bg-white p-6 shadow-2xl md:p-8' : ''} ${className}`}
         role={full ? 'dialog' : undefined} aria-modal={full || undefined} aria-label={full && typeof title === 'string' ? title : undefined}>
-        <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-gray-100 dark:border-gray-700/60">
+        <div className="flex items-center justify-between gap-3 pb-2 border-b border-gray-100 dark:border-gray-700/60">
           <div className="flex items-center gap-2">
             <span className="h-4 w-1 rounded-full bg-primary-600 dark:bg-primary-500" aria-hidden="true" />
             <h2 className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100 tracking-tight">{title}</h2>
@@ -46,7 +46,7 @@ export default function FormSection({ title, lockable = false, children, classNa
             </button>
           </div>
         </div>
-        <div className="space-y-3.5 pt-1">
+        <div className="space-y-2.5">
           <LockCtx.Provider value={lockable && locked}>{children}</LockCtx.Provider>
         </div>
       </section>
@@ -82,7 +82,7 @@ export function NarrativeField({ label, value, onChange, vars = {}, onVar, rows 
           return (
             <input key={i} value={vars[key]} onChange={(e) => onVar(key, e.target.value)} aria-label={key} placeholder={key}
               size={Math.max(6, Math.min(40, (vars[key] || key).length + 1))}
-              className="mx-0.5 inline-block rounded border border-blue-300 bg-white px-1.5 py-0.5 align-baseline text-sm" />
+              className="mx-0.5 inline-block max-w-[calc(100%-0.25rem)] rounded border border-blue-300 bg-white px-1.5 py-0.5 align-baseline text-sm" />
           );
         })}
       </p>

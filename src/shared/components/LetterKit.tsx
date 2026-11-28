@@ -36,12 +36,12 @@ export const orDots = (v: string, w?: string) =>
   v ? <span style={{ fontStyle: 'italic', borderBottom: DOTTED, padding: `0 6px ${GAP}` }}>{v}</span> : <Dots w={w} />;
 
 // ---------------- Form ----------------
-export const inputCls = 'w-full min-h-[42px] px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 shadow-xs transition-all duration-150 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-hidden';
+export const inputCls = 'w-full min-h-[40px] px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 shadow-xs transition-all duration-150 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-hidden';
 export function Field({ label, children, ribbon = false }: { label: string; children: ReactNode; ribbon?: boolean }) {
   return (
     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
       {ribbon ? <span className="pita-emas">{label}</span> : label}
-      <div className="mt-1.5">{children}</div>
+      <div className="mt-1">{children}</div>
     </label>
   );
 }

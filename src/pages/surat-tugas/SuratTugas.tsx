@@ -318,18 +318,18 @@ export default function SuratTugas() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
+    <div className="min-h-screen bg-slate-100 px-2 py-3 sm:px-4">
       <div className="max-w-7xl mx-auto">
-        <Link to="/" className="btn-home mb-3">&larr; HK-HUB Menu Utama</Link>
-        <h1 className="text-2xl font-bold text-center mb-4">Surat Penugasan Perusahaan</h1>
+        <Link to="/" className="btn-home mb-2">&larr; HK-HUB Menu Utama</Link>
+        <h1 className="text-xl sm:text-2xl font-bold text-center mb-3">Surat Penugasan Perusahaan</h1>
         <ModeTabs canvas={canvas} onChange={setCanvas} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
+          <div className="bg-white rounded-2xl shadow p-2 sm:p-3 space-y-3 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
                 galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} slots={[
-                  ...f.penandaLain.map((p, i) => ({ id: `ttdTtd_${p.id}`, label: `Tanda tangan — ${signerName(p, i)}`, value: p.ttd, set: (v) => setSigner(i, { ttd: v }) })),
+                  ...f.penandaLain.map((p, i) => ({ id: `ttdTtd_${p.id}`, label: `Tanda tangan — ${signerName(p, i)}`, value: p.ttd, set: (v: string) => setSigner(i, { ttd: v }) })),
                 ]} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
             ) : (<>
             <UserData storageKey="data-user:surat-tugas" keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} />

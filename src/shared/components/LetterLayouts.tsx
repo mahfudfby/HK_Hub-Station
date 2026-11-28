@@ -896,7 +896,7 @@ export function LayoutPicker({ value, onChange }: { value: string; onChange: (id
   return (
     <div className="space-y-2">
       <TemplateRibbon label="GANTI TEMPLATE" />
-      <select className={inputCls} value={getLayout(value).id} onChange={(e) => onChange(e.target.value)}>
+      <select aria-label="Template" className={inputCls} value={getLayout(value).id} onChange={(e) => onChange(e.target.value)}>
         {LETTER_LAYOUTS.map((l) => <option key={l.id} value={l.id}>{l.name} — {l.desc}</option>)}
       </select>
     </div>

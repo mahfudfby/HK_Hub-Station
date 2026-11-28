@@ -193,6 +193,9 @@ html.dark body { background: #121212; color: #e6e6e6; }
 .dark .text-gray-600:where(:not([data-fit-preview] *)), .dark .text-slate-600:where(:not([data-fit-preview] *)) { color: #bdbdbd; }
 .dark .text-gray-500:where(:not([data-fit-preview] *)), .dark .text-slate-500:where(:not([data-fit-preview] *)), .dark .text-gray-400:where(:not([data-fit-preview] *)) { color: #a3a3a3; }
 .dark .text-blue-600:where(:not([data-fit-preview] *)), .dark .text-blue-700:where(:not([data-fit-preview] *)), .dark .text-blue-800:where(:not([data-fit-preview] *)), .dark .text-blue-900:where(:not([data-fit-preview] *)), .dark .text-indigo-700:where(:not([data-fit-preview] *)), .dark .text-indigo-800:where(:not([data-fit-preview] *)), .dark .text-indigo-900:where(:not([data-fit-preview] *)), .dark .text-primary-600:where(:not([data-fit-preview] *)), .dark .text-primary-700:where(:not([data-fit-preview] *)), .dark .text-sky-900:where(:not([data-fit-preview] *)) { color: #9FA8DA; }
+/* aksen tingkat 400 hanya ±3:1 di latar gelap → dinaikkan ke tingkat 200 (WCAG 1.4.3) */
+html.dark :is([class*="dark:text-primary-400"], [class*="dark:text-blue-400"], [class*="dark:text-indigo-400"]):where(:not([data-fit-preview] *)) { color: #AEB6E0; }
+html.dark [class*="dark:text-red-400"]:where(:not([data-fit-preview] *)) { color: #EF9A9A; }
 .dark .text-red-500:where(:not([data-fit-preview] *)), .dark .text-red-600:where(:not([data-fit-preview] *)), .dark .text-red-700:where(:not([data-fit-preview] *)), .dark .text-red-800:where(:not([data-fit-preview] *)), .dark .text-red-900:where(:not([data-fit-preview] *)) { color: #EF9A9A; }
 .dark .text-green-800:where(:not([data-fit-preview] *)), .dark .text-emerald-900:where(:not([data-fit-preview] *)) { color: #A5D6A7; }
 .dark .text-amber-700:where(:not([data-fit-preview] *)) { color: #FFCC80; }

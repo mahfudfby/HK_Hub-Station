@@ -701,7 +701,7 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
       {posPad}
       <div className="space-y-2">
         <TemplateRibbon label="GANTI TEMPLATE" />
-        <select className={inputCls} value={tplOf(d.template).id} onChange={(e) => set('template', e.target.value)}>
+        <select aria-label="Template" className={inputCls} value={tplOf(d.template).id} onChange={(e) => set('template', e.target.value)}>
           {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
         </select>
       </div>
@@ -722,18 +722,18 @@ export default function SalesDoc({ kind }: { kind: DocKind }) {
   );
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
+    <div className="min-h-screen bg-slate-100 px-2 py-3 sm:px-4">
       <div className="max-w-7xl mx-auto">
-        <Link to="/" className="btn-home mb-3">&larr; HK-HUB Menu Utama</Link>
-        <h1 className="text-2xl font-bold text-center mb-4">Generator {kind === 'invoice' ? 'Invoice' : 'Faktur Penjualan'}</h1>
+        <Link to="/" className="btn-home mb-2">&larr; HK-HUB Menu Utama</Link>
+        <h1 className="text-xl sm:text-2xl font-bold text-center mb-3">Generator {kind === 'invoice' ? 'Invoice' : 'Faktur Penjualan'}</h1>
         <ModeTabs canvas={canvas} onChange={setCanvas} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
+          <div className="bg-white rounded-2xl shadow p-2 sm:p-3 space-y-3 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
                 galeri={<SharedGallery showEmpty keys={USER_KEYS} data={d} slots={[
-                  ...(kind === 'faktur' ? [{ id: 'ttdPenerima', label: 'Tanda tangan — Penerima', value: d.ttdPenerima, set: (v) => set('ttdPenerima', v) }] : []),
+                  ...(kind === 'faktur' ? [{ id: 'ttdPenerima', label: 'Tanda tangan — Penerima', value: d.ttdPenerima, set: (v: string) => set('ttdPenerima', v) }] : []),
                 ]} onApply={(u) => setD((p) => ({ ...p, ...u }))} onPicked={(msg) => notify('success', msg)} />} />
             ) : (<>
             <UserData storageKey={`data-user:${kind}`} keys={USER_KEYS} data={d} onApply={(u) => setD((p) => ({ ...p, ...u }))} />

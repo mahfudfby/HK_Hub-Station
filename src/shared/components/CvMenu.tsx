@@ -183,12 +183,12 @@ export default function CvMenu({ mode }: { mode: 'creative' | 'ats' }) {
       <TextSizeSlider value={f.skala} effective={k} onChange={(v) => set('skala', v)} />
       <div className="space-y-2">
         <TemplateRibbon label="GANTI TEMPLATE" />
-        <select className={inputCls} value={T.id} onChange={(e) => set('gaya', e.target.value)}>
+        <select aria-label="Template CV" className={inputCls} value={T.id} onChange={(e) => set('gaya', e.target.value)}>
           {TPL.map((t) => <option key={t.id} value={t.id}>{t.name} — {t.desc}</option>)}
         </select>
       </div>
       <Field label="Ukuran kertas (margin tepi 1,5 cm)">
-        <select className={inputCls} value={pg.paper.w === PAPERS.A4.w ? 'A4' : f.paper} onChange={(e) => set('paper', e.target.value)}>
+        <select aria-label="Ukuran kertas" className={inputCls} value={pg.paper.w === PAPERS.A4.w ? 'A4' : f.paper} onChange={(e) => set('paper', e.target.value)}>
           {KERTAS.map((id) => <option key={id} value={id}>{PAPERS[id].label}</option>)}
         </select>
       </Field>
@@ -211,14 +211,14 @@ export default function CvMenu({ mode }: { mode: 'creative' | 'ats' }) {
   const toggle = (b: Bagian) => set('sembunyi', f.sembunyi.includes(b) ? f.sembunyi.filter((x) => x !== b) : [...f.sembunyi, b]);
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
+    <div className="min-h-screen bg-slate-100 px-2 py-3 sm:px-4">
       <div className="max-w-7xl mx-auto">
-        <Link to="/" className="btn-home mb-3">&larr; HK-HUB Menu Utama</Link>
-        <h1 className="text-2xl font-bold text-center mb-4">{judul}</h1>
+        <Link to="/" className="btn-home mb-2">&larr; HK-HUB Menu Utama</Link>
+        <h1 className="text-xl sm:text-2xl font-bold text-center mb-3">{judul}</h1>
         <ModeTabs canvas={canvas} onChange={setCanvas} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
+          <div className="bg-white rounded-2xl shadow p-2 sm:p-3 space-y-3 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
                 galeri={<SharedGallery showEmpty keys={USER_KEYS} data={f} onApply={(u) => setF((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />
