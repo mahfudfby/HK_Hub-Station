@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Download, FileText, Image, Printer } from 'lucide-react';
 import { Spinner } from './Feedback';
@@ -22,25 +22,35 @@ function QrisTunggu({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
     return () => clearTimeout(t);
   }, [sisa]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onCancel();
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onCancel]);
+  // <dialog> bawaan: fokus terkurung di pop-up, Escape membatalkan, fokus kembali setelah ditutup (WCAG 2.1.2 & 2.4.3)
+  const ref = useRef<HTMLDialogElement>(null);
+  // layout effect: ditutup saat elemen masih di halaman, agar fokus benar-benar kembali
+  useLayoutEffect(() => {
+    const d = ref.current;
+    d?.showModal();
+    return () => d?.close();
+  }, []);
 
   return createPortal(
-    <div role="dialog" aria-modal="true" aria-label="Menyiapkan unduhan" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-[260px] rounded-2xl bg-white p-4 text-center shadow-2xl">
+    <dialog ref={ref} aria-label="Menyiapkan unduhan" onCancel={(e) => { e.preventDefault(); onCancel(); }}
+      className="w-[calc(100%-2rem)] max-w-[260px] rounded-2xl bg-transparent p-0 backdrop:bg-black/70">
+      <div className="rounded-2xl bg-white p-3 text-center shadow-2xl">
         <img src={QRIS_IMAGE_URL} alt="Kode QRIS" className="mx-auto max-h-[45vh] min-h-[140px] w-full rounded-lg object-contain" />
         <p className="unduh-ambang mt-3 whitespace-nowrap text-[13px] font-extrabold text-green-800 [text-shadow:none]">Jangan Lupa Ber-terimakasih</p>
-        <div className="mt-3 flex justify-center gap-3" aria-hidden="true">
+        <div className="mt-2 flex justify-center gap-3" aria-hidden="true">
           {Array.from({ length: DETIK }, (_, i) => (
-            <span key={i} className={`h-4 w-4 rounded-full border-2 border-green-500 ${i < sisa ? 'bg-green-500' : 'bg-transparent'}`} />
+            <span key={i} className={`h-4 w-4 rounded-full border-2 border-green-700 ${i < sisa ? 'bg-green-700' : 'bg-transparent'}`} />
           ))}
         </div>
-        <p role="status" className="mt-2 text-sm font-medium text-gray-700 [text-shadow:none]">Unduhan dimulai dalam {sisa} detik</p>
+        {/* teks hitung mundur tidak diumumkan tiap detik; pengumuman sekali lewat label di bawah */}
+        <p className="mt-2 text-sm font-medium text-gray-700 [text-shadow:none]">Unduhan dimulai dalam {sisa} detik</p>
+        <p role="status" className="sr-only">Unduhan dimulai otomatis dalam {DETIK} detik</p>
+        <button type="button" onClick={onCancel} autoFocus
+          className="mt-2 min-h-[44px] w-full rounded-lg border border-gray-400 bg-white text-sm font-bold text-gray-800 [text-shadow:none]">
+          Batal
+        </button>
       </div>
-    </div>,
+    </dialog>,
     document.body,
   );
 }
@@ -52,17 +62,19 @@ export function ExportMenu({ exporting, disabled, onRun }: {
   const [open, setOpen] = useState(false);
   const [tunggu, setTunggu] = useState<'' | ExportKind>('');
   const sibuk = !!exporting;
+  const tombol = useRef<HTMLButtonElement>(null);
 
   const pilih = (kind: ExportKind) => {
     setOpen(false);
+    tombol.current?.focus(); // fokus tidak hilang saat menu ditutup (pop-up mengembalikannya ke sini)
     // Print langsung: jendela cetak sebagian browser hanya boleh dibuka dari klik pengguna
     if (kind === 'Print') onRun(kind);
     else setTunggu(kind);
   };
 
   return (
-    <div className="w-full">
-      <button type="button" onClick={() => setOpen((v) => !v)} disabled={sibuk || disabled} aria-expanded={open}
+    <div className="w-full" onKeyDown={(e) => { if (e.key === 'Escape' && open) { setOpen(false); tombol.current?.focus(); } }}>
+      <button ref={tombol} type="button" onClick={() => setOpen((v) => !v)} disabled={sibuk || disabled} aria-expanded={open}
         className="unduh-menyala flex min-h-[60px] w-full items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-green-700 px-3 py-4 text-lg font-extrabold text-white sm:text-xl hover:bg-green-800 disabled:opacity-60 [text-shadow:none]">
         {sibuk ? <Spinner /> : <Download size={24} aria-hidden="true" />}
         {sibuk ? 'Memproses…' : 'DOWNLOAD Here !'}

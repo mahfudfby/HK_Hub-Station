@@ -2,9 +2,10 @@ import UserData from '../../shared/components/UserData';
 import FormSection from '../../shared/components/FormSection';
 import { CanvasPanel, ModeTabs, useCanvasMode } from '../../shared/components/CanvasMode';
 import SharedGallery from '../../shared/components/SharedGallery';
+import type { ToastType } from '../../shared/components/Feedback';
 import NumberFormatInput from '../../shared/components/NumberFormatInput';
 import AutoTextarea from '../../shared/components/AutoTextarea';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type MutableRefObject, type ReactNode, type RefObject } from 'react';
 import { Link } from 'react-router-dom';
 import QrisCard from '../../shared/components/QrisCard';
 import { ExportMenu } from '../../shared/components/ExportMenu';
@@ -13,16 +14,43 @@ import { canvasToBlob, saveFile } from '../../shared/lib/saveFile';
 import { printImage } from '../../shared/lib/printImage';
 import FitPreview, { unfitPreview } from '../../shared/components/FitPreview';
 import { isStaleChunkError, reloadForNewVersion } from '../../shared/lib/staleChunk';
-import PositionPad, { fxOf, getOffset } from '../../shared/components/PositionPad';
+import PositionPad, { fxOf, getOffset, type Offset, type Offsets } from '../../shared/components/PositionPad';
 import BgToggle from '../../shared/components/BgToggle';
 import GreyToggle from '../../shared/components/GreyToggle';
 import { ScaleBox, TextSizeSlider, useFitScale } from '../../shared/components/TextScale';
 import { PaperPicker, PAPERS, paperOf, orient, mmToPx } from '../../shared/components/LetterKit';
 import { useBgRemoved } from '../../shared/lib/removeBg';
 import { randomDocNo } from '../../shared/lib/docNumber';
-import { cssFamily, fontsReady, useGoogleFonts } from '../../shared/lib/fonts';
+import { cssFamily, fontsReady, useGoogleFonts, type WebFont } from '../../shared/lib/fonts';
 import DocOptions, { TITIK, TITIK_PENDEK, nomorTampil } from '../../shared/components/DocOptions';
 import './SlipGaji.css';
+
+// ============================================================
+// SECTION: Types
+// ============================================================
+type Template = {
+  id: string; name: string; desc: string; font?: string; gf?: WebFont; dash?: boolean; accent?: string; soft?: string;
+  header: 'right' | 'left' | 'center' | 'band' | 'box';
+  title: 'lines' | 'bar' | 'big' | 'pill';
+  info: 'cols' | 'table' | 'pills';
+  body: 'tables' | 'ruled' | 'zebra' | 'cards';
+  total: 'classic' | 'bar' | 'box' | 'big';
+};
+type Form = ReturnType<typeof buildInitialForm>;
+// slipID undefined = nomor disembunyikan pada slip
+type FormTampil = Omit<Form, 'slipID'> & { slipID?: string };
+type Calc = ReturnType<typeof computeSlip>;
+// template kosongan: semua nominal null (diisi tulis tangan)
+type CalcTampil = { [K in keyof Calc]: number | null };
+type Style = { t: Template; A: string; soft: string; dash: boolean; colored: boolean };
+type Page = { W: number; H?: number; narrow: boolean };
+type ToastItem = { id: number; type: 'success' | 'error'; message: string };
+type FieldEvent = { target: { name: string; value: string } };
+type OnField = (e: FieldEvent) => void;
+type OnFile = (e: ChangeEvent<HTMLInputElement>) => void;
+type Grey = { value: string; onChange: (v: string) => void; notify: (type: ToastType, message: string) => void };
+type ImageProps = { bg: boolean; onBg: (v: boolean) => void; bgBusy: boolean; grey: Grey };
+type ImageKey = 'logo' | 'signature' | 'manager';
 
 // ============================================================
 // SECTION: Constants (BPJS, PTKP, ukuran gambar)
@@ -35,7 +63,7 @@ const JP_RATE_WORKER = 0.01; // JP Karyawan (1.0%)
 const BPJS_KES_RATE_WORKER = 0.01; // BPJS Kesehatan Karyawan (1.0%)
 
 // Data PTKP Tahunan (Penghasilan Tidak Kena Pajak)
-const PTKP_DATA = {
+const PTKP_DATA: Record<string, number> = {
   'TK/0': 54000000,
   'K/0': 58500000,
   'K/1': 63000000,
@@ -74,8 +102,8 @@ const NARROW_PX = 600;
 // header: right|left|center|band|box · title: lines|bar|big|pill · info: cols|table|pills
 // body: tables|ruled|zebra|cards · total: classic|bar|box|big · dash: garis putus-putus tanpa blok warna (dot-matrix)
 // ============================================================
-const gf = (family, weights, fallback = 'sans-serif') => ({ font: cssFamily(family, fallback), gf: { family, weights } });
-const SLIP_TEMPLATES = [
+const gf = (family: string, weights: number[], fallback = 'sans-serif') => ({ font: cssFamily(family, fallback), gf: { family, weights } });
+const SLIP_TEMPLATES: Template[] = [
   { id: 'klasik', name: 'Klasik', desc: 'Arimo, tabel bergaris', header: 'right', title: 'lines', info: 'cols', body: 'tables', total: 'classic' },
   { id: 'dot-matrix', name: 'Dot Matrix', desc: 'Cousine, garis putus', font: cssFamily('Cousine', 'monospace'), dash: true, header: 'right', title: 'lines', info: 'cols', body: 'ruled', total: 'classic' },
   { id: 'mesin-ketik', name: 'Mesin Ketik', desc: 'Courier Prime, hitam putih', ...gf('Courier Prime', [400, 700], 'monospace'), dash: true, header: 'left', title: 'big', info: 'table', body: 'ruled', total: 'box' },
@@ -108,7 +136,7 @@ const todayLocal = () => {
 const buildInitialForm = () => ({
   template: 'klasik',
   skala: 100, // ukuran teks dokumen (%)
-  posisi: {}, // geseran tanda tangan (px dokumen)
+  posisi: {} as Offsets, // geseran tanda tangan (px dokumen)
   companyName: 'PT. Nama Perusahaan Anda',
   addressLine1: 'Jl. Contoh Raya No. 12',
   addressLine2: 'Kec. Sudirman, Jakarta Pusat',
@@ -138,7 +166,7 @@ const buildInitialForm = () => ({
 // ============================================================
 // SECTION: Helpers — Format & Kalkulasi (BPJS, PPh 21)
 // ============================================================
-const formatRupiah = (number) => {
+const formatRupiah = (number: number) => {
   if (isNaN(number) || number === null || number === 0) return 'Rp. 0';
   const formatted = Number(number).toLocaleString('id-ID', {
     minimumFractionDigits: 0,
@@ -148,28 +176,28 @@ const formatRupiah = (number) => {
 };
 
 // Nominal untuk slip: null (template kosongan) → "Rp." + garis titik-titik untuk ditulis tangan
-const rp = (v) => (v == null ? <span className="whitespace-nowrap">Rp. <span className="slip-blank" /></span> : formatRupiah(v));
+const rp = (v: number | null) => (v == null ? <span className="whitespace-nowrap">Rp. <span className="slip-blank" /></span> : formatRupiah(v));
 
 // Tampilan slip: No. Slip mengikuti sakelar nomor; template kosongan mengosongkan data karyawan, periode & semua nominal.
 // Kop perusahaan, label komponen gaji, nama & jabatan manager tetap. Isian form tidak berubah.
-const slipTampil = (form, calc) => {
+const slipTampil = (form: Form, calc: Calc): { form: FormTampil; calc: CalcTampil } => {
   const f = { ...form, slipID: nomorTampil(form.slipID, form.pakaiNomor, form.kosong) };
   if (!form.kosong) return { form: f, calc };
   return {
     form: { ...f, slipMonth: TITIK, name: TITIK, position: TITIK, bankAccountNumber: TITIK, bankName: TITIK, status: TITIK_PENDEK },
-    calc: Object.fromEntries(Object.keys(calc).map((key) => [key, null])),
+    calc: Object.fromEntries(Object.keys(calc).map((key) => [key, null])) as CalcTampil,
   };
 };
 
-const formatPlain = (number) => formatRupiah(number).replace('Rp. ', '');
+const formatPlain = (number: number) => formatRupiah(number).replace('Rp. ', '');
 
-function getPTKP(status) {
+function getPTKP(status: string) {
   const cleaned = status.toUpperCase().trim();
   return PTKP_DATA[cleaned] || PTKP_DATA['TK/0'];
 }
 
 // Tarif progresif PPh 21 Tahunan
-function calculateProgressiveTax(pkp) {
+function calculateProgressiveTax(pkp: number) {
   if (pkp <= 0) return 0;
   let pph21 = 0;
   let remaining = pkp;
@@ -203,7 +231,7 @@ function calculateProgressiveTax(pkp) {
   return Math.round(pph21);
 }
 
-function calculateBPJSDeductions(salary) {
+function calculateBPJSDeductions(salary: number) {
   if (salary <= 0) return { bpjsKes: 0, jht: 0, jp: 0 };
   const baseJP = Math.min(salary, MAX_SALARY_JP);
   const baseKes = Math.min(salary, MAX_SALARY_KES);
@@ -214,7 +242,7 @@ function calculateBPJSDeductions(salary) {
   };
 }
 
-function calculatePPH21(grossIncome, deductionJHT, deductionJP, status) {
+function calculatePPH21(grossIncome: number, deductionJHT: number, deductionJP: number, status: string) {
   const biayaJabatan = Math.min(grossIncome * 0.05, 500000);
   const netMonthly = grossIncome - (biayaJabatan + deductionJHT + deductionJP);
   const netAnnual = Math.max(0, netMonthly * 12);
@@ -224,8 +252,8 @@ function calculatePPH21(grossIncome, deductionJHT, deductionJP, status) {
   return Math.round(calculateProgressiveTax(pkpAnnual) / 12);
 }
 
-function computeSlip(form) {
-  const num = (v) => Number(v) || 0;
+function computeSlip(form: Form) {
+  const num = (v: string) => Number(v) || 0;
   const basicSalary = num(form.basicSalary);
   const allowance = num(form.allowance);
   const overtime = num(form.overtime);
@@ -250,10 +278,10 @@ function computeSlip(form) {
   };
 }
 
-function formatTransferDate(value) {
+function formatTransferDate(value: string) {
   if (!value) return '...';
   try {
-    const [y, m, d] = value.split('-');
+    const [y, m, d] = value.split('-').map(Number);
     return new Date(y, m - 1, d).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
   } catch (e) {
     return 'Tanggal tidak valid';
@@ -261,8 +289,8 @@ function formatTransferDate(value) {
 }
 
 // Resize gambar (tanpa upscale) mempertahankan rasio, prioritas tinggi lalu lebar
-function resizeImage(file, maxWidth, maxHeight) {
-  return new Promise((resolve, reject) => {
+function resizeImage(file: File, maxWidth: number, maxHeight: number) {
+  return new Promise<{ dataUrl: string; blob: Blob }>((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('file tidak dapat dibaca.'));
     reader.onload = (e) => {
@@ -278,11 +306,11 @@ function resizeImage(file, maxWidth, maxHeight) {
         const canvas = document.createElement('canvas');
         canvas.width = w;
         canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
         const dataUrl = canvas.toDataURL('image/png');
-        canvas.toBlob((blob) => resolve({ dataUrl, blob }), 'image/png');
+        canvas.toBlob((blob) => (blob ? resolve({ dataUrl, blob }) : reject(new Error('gambar gagal diproses.'))), 'image/png');
       };
-      img.src = e.target.result;
+      img.src = e.target!.result as string;
     };
     reader.readAsDataURL(file);
   });
@@ -313,7 +341,7 @@ function IconDownload() {
   );
 }
 
-function Toast({ id, type, message, onClose }) {
+function Toast({ id, type, message, onClose }: ToastItem & { onClose: (id: number) => void }) {
   const [leaving, setLeaving] = useState(false);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -342,7 +370,7 @@ function Toast({ id, type, message, onClose }) {
   );
 }
 
-function ToastStack({ toasts, onClose }) {
+function ToastStack({ toasts, onClose }: { toasts: ToastItem[]; onClose: (id: number) => void }) {
   return (
     <div className="slip-toast-wrap">
       {toasts.map((t) => (
@@ -352,7 +380,9 @@ function ToastStack({ toasts, onClose }) {
   );
 }
 
-function TextField({ id, label, name, value, onChange, placeholder, type = 'text', wrapClass = '' }) {
+function TextField({ id, label, name, value, onChange, placeholder, type = 'text', wrapClass = '' }: {
+  id: string; label: string; name: string; value: string; onChange: OnField; placeholder?: string; type?: string; wrapClass?: string;
+}) {
   return (
     <div className={`input-group ${wrapClass}`}>
       <label htmlFor={id} className="text-sm font-medium text-gray-700">{label}</label>
@@ -371,7 +401,7 @@ function TextField({ id, label, name, value, onChange, placeholder, type = 'text
   );
 }
 
-function FileField({ id, label, onChange, wrapClass = '', bg, onBg, bgBusy, grey }) {
+function FileField({ id, label, onChange, wrapClass = '', bg, onBg, bgBusy, grey }: ImageProps & { id: string; label: string; onChange: OnFile; wrapClass?: string }) {
   return (
     <div className={`input-group ${wrapClass}`}>
       <label htmlFor={id} className="text-sm font-medium text-gray-700">{label}</label>
@@ -395,7 +425,7 @@ function FileField({ id, label, onChange, wrapClass = '', bg, onBg, bgBusy, grey
   );
 }
 
-function MoneyField({ id, label, name, value, onChange, itemClass }) {
+function MoneyField({ id, label, name, value, onChange, itemClass }: { id: string; label: string; name: string; value: string; onChange: OnField; itemClass: string }) {
   return (
     <div className={itemClass}>
       <label htmlFor={id} className="w-1/2 text-sm text-gray-700">{label}</label>
@@ -407,7 +437,7 @@ function MoneyField({ id, label, name, value, onChange, itemClass }) {
   );
 }
 
-function ReadOnlyMoney({ id, label, value }) {
+function ReadOnlyMoney({ id, label, value }: { id: string; label: string; value: string }) {
   return (
     <div className="deduction-item">
       <label htmlFor={id} className="w-1/2 text-gray-700 text-sm">{label}</label>
@@ -419,7 +449,7 @@ function ReadOnlyMoney({ id, label, value }) {
   );
 }
 
-function SlipLine({ label, value }) {
+function SlipLine({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex">
       <span className="w-40">{label}</span>
@@ -428,7 +458,7 @@ function SlipLine({ label, value }) {
     </div>
   );
 }
-function SignBlock({ heading, image, alt, name, title, offset }) {
+function SignBlock({ heading, image, alt, name, title, offset }: { heading: string; image: string; alt: string; name: string; title: string; offset: Offset }) {
   // ukuran & opacity dari joystick (bawaan: 70px, opacity 0.8 seperti CSS)
   const fx = fxOf(offset, 'ttd');
   return (
@@ -444,7 +474,7 @@ function SignBlock({ heading, image, alt, name, title, offset }) {
     </div>
   );
 }
-function InfoRow({ label, value, highlight = false }) {
+function InfoRow({ label, value, highlight = false }: { label: string; value: ReactNode; highlight?: boolean }) {
   return (
     <div className="flex">
       <span className="w-24 font-semibold">{label}</span>
@@ -457,7 +487,7 @@ function InfoRow({ label, value, highlight = false }) {
 // ============================================================
 // SECTION: Komponen Form (Perusahaan, Karyawan, Penerimaan, Potongan)
 // ============================================================
-function CompanyForm({ form, onChange, onLogoChange, logoBg }) {
+function CompanyForm({ form, onChange, onLogoChange, logoBg }: { form: Form; onChange: OnField; onLogoChange: OnFile; logoBg: ImageProps }) {
   return (
     <FormSection title="Detail Perusahaan">
       <TextField id="inputCompanyName" label="Nama Perusahaan" name="companyName" value={form.companyName} onChange={onChange} />
@@ -469,7 +499,7 @@ function CompanyForm({ form, onChange, onLogoChange, logoBg }) {
   );
 }
 
-function EmployeeForm({ form, onChange, statusText, signatureField }) {
+function EmployeeForm({ form, onChange, statusText, signatureField }: { form: Form; onChange: OnField; statusText: string; signatureField: ReactNode }) {
   return (
     <FormSection title="Detail Karyawan &amp; Transfer">
       <div className="input-group">
@@ -502,7 +532,7 @@ function EmployeeForm({ form, onChange, statusText, signatureField }) {
   );
 }
 
-function EarningsForm({ form, onChange }) {
+function EarningsForm({ form, onChange }: { form: Form; onChange: OnField }) {
   return (
     <FormSection title="Penerimaan (Earnings)">
       <div className="space-y-2">
@@ -517,7 +547,7 @@ function EarningsForm({ form, onChange }) {
   );
 }
 
-function DeductionsForm({ form, onChange, calc }) {
+function DeductionsForm({ form, onChange, calc }: { form: Form; onChange: OnField; calc: Calc }) {
   return (
     <FormSection title="Potongan (Deductions)">
       <div className="space-y-2">
@@ -534,12 +564,12 @@ function DeductionsForm({ form, onChange, calc }) {
 // ============================================================
 // SECTION: Komponen Preview Slip (area yang di-export ke PNG)
 // ============================================================
-function LogoMark({ logo, h }) {
+function LogoMark({ logo, h }: { logo: string; h?: number }) {
   if (logo) return <img src={logo} crossOrigin="anonymous" alt="Logo Perusahaan" className="slip-logo" style={h ? { height: h } : undefined} />;
   return <div className="slip-logo-text font-extrabold" style={{ color: '#b91c1c', ...(h ? { fontSize: Math.round(h * 0.6), lineHeight: `${h}px` } : {}) }}>LOGO</div>;
 }
 
-function CompanyText({ form, ink, oneLine }) {
+function CompanyText({ form, ink, oneLine }: { form: FormTampil; ink?: string; oneLine?: boolean }) {
   const c = ink ? { color: ink } : undefined;
   const addr = 'text-[9px] text-gray-600 leading-tight slip-pre';
   return (
@@ -558,7 +588,7 @@ function CompanyText({ form, ink, oneLine }) {
   );
 }
 
-function SlipHeader({ t, form, logo, A }) {
+function SlipHeader({ t, form, logo, A }: Style & { form: FormTampil; logo: string }) {
   if (t.header === 'left') return (
     <div className="flex items-center gap-3 border-b-2 pb-1 mb-2" style={{ borderColor: A }}>
       <div className="flex-shrink-0"><LogoMark logo={logo} /></div>
@@ -591,7 +621,7 @@ function SlipHeader({ t, form, logo, A }) {
   );
 }
 
-function SlipTitle({ t, form, A, dash }) {
+function SlipTitle({ t, form, A, dash }: Style & { form: FormTampil }) {
   const month = form.slipMonth.toUpperCase();
   if (t.title === 'bar') return (
     <div className="text-center mb-2">
@@ -620,11 +650,11 @@ function SlipTitle({ t, form, A, dash }) {
   );
 }
 
-function SlipInfo({ t, form, A, soft, dash }) {
+function SlipInfo({ t, form, A, soft, dash }: Style & { form: FormTampil }) {
   const left = [['ID', form.slipID], ['NAMA', form.name], ['JABATAN', form.position]].filter(([, v]) => v !== undefined);
   const right = [['NO. REK', form.bankAccountNumber], ['NAMA BANK', form.bankName], ['STS PAJAK', form.status]];
   if (t.info === 'table') {
-    const cell = { border: `1px solid ${A}`, padding: '0 4px', textAlign: 'left' };
+    const cell: CSSProperties = { border: `1px solid ${A}`, padding: '0 4px', textAlign: 'left' };
     const head = { ...cell, background: dash ? undefined : soft, width: '13%' };
     return (
       <table className="w-full mb-2 border-collapse">
@@ -672,8 +702,8 @@ function SlipInfo({ t, form, A, soft, dash }) {
   );
 }
 
-function SlipBody({ t, calc, A, soft, dash, colored }) {
-  const groups = [
+function SlipBody({ t, calc, A, soft, dash, colored }: Style & { calc: CalcTampil }) {
+  const groups: [string, [string, number | null][]][] = [
     ['PENERIMAAN', [['Gaji Pokok', calc.basicSalary], ['Tunjangan', calc.allowance], ['Lembur', calc.overtime], ['Transport', calc.transport], ['Uang Makan', calc.mealAllowance], ['Bonus', calc.bonus]]],
     ['POTONGAN', [['Pinjaman Karyawan', calc.loanDeduction], ['BPJS Kes. + JP', calc.bpjsKesAndJP], ['JHT', calc.jht], ['PPh 21', calc.pph21], ['Lain-lain (Manual)', calc.otherDeduction]]],
   ];
@@ -725,7 +755,7 @@ function SlipBody({ t, calc, A, soft, dash, colored }) {
   );
 }
 
-function TotalsLine({ calc, A }) {
+function TotalsLine({ calc, A }: { calc: CalcTampil; A: string }) {
   return (
     <div className="flex font-bold border-t-2 pt-0.5 mt-1" style={{ borderColor: A }}>
       <div className="w-1/2 flex justify-between px-1 border-r" style={{ borderColor: A }}><span>TOTAL PENERIMAAN</span><span>{rp(calc.totalEarnings)}</span></div>
@@ -734,7 +764,7 @@ function TotalsLine({ calc, A }) {
   );
 }
 
-function SlipTotals({ t, calc, A, dash }) {
+function SlipTotals({ t, calc, A, dash }: Style & { calc: CalcTampil }) {
   const thp = rp(calc.takeHomePay);
   if (t.total === 'bar') return (
     <>
@@ -763,7 +793,7 @@ function SlipTotals({ t, calc, A, dash }) {
     </>
   );
   // klasik; versi dash = garis putus-putus tanpa blok abu
-  const rule = (h) => (dash ? { background: 'transparent', height: 0, borderTop: `${h}px dashed #000` } : undefined);
+  const rule = (h: number) => (dash ? { background: 'transparent', height: 0, borderTop: `${h}px dashed #000` } : undefined);
   const half = dash ? '' : 'bg-gray-200';
   return (
     <>
@@ -789,7 +819,10 @@ function SlipTotals({ t, calc, A, dash }) {
   );
 }
 
-function SlipPreview({ slipRef, form, calc, logo, signature, managerSignature, t, k, page }) {
+function SlipPreview({ slipRef, form, calc, logo, signature, managerSignature, t, k, page }: {
+  slipRef: RefObject<HTMLDivElement>; form: FormTampil; calc: CalcTampil; logo: string; signature: string; managerSignature: string;
+  t: Template; k: number; page: Page;
+}) {
   const A = t.accent || '#000';
   const dash = !!t.dash;
   const soft = t.soft || '#f3f4f6';
@@ -831,7 +864,7 @@ function SlipPreview({ slipRef, form, calc, logo, signature, managerSignature, t
   );
 }
 
-function TemplatePicker({ value, onChange, id = 'inputTemplate' }) {
+function TemplatePicker({ value, onChange, id = 'inputTemplate' }: { value: string; onChange: OnField; id?: string }) {
   return (
     <div className={`input-group ${id === 'inputTemplate' ? 'mb-8' : ''}`}>
       <label htmlFor={id} className="text-sm font-bold text-gray-700">Template Slip</label>
@@ -857,25 +890,25 @@ export default function SlipGaji() {
   const [signature, setSignature] = useState('');
   const [managerSignature, setManagerSignature] = useState('');
   const [bg, setBg] = useState({ logo: false, signature: false, manager: false });
-  const bgError = (m) => pushToast('error', m);
+  const bgError = (m: string) => pushToast('error', m);
   const logoShown = useBgRemoved(logo, bg.logo, bgError);
   const signatureShown = useBgRemoved(signature, bg.signature, bgError);
   const managerShown = useBgRemoved(managerSignature, bg.manager, bgError);
   const bgBusy = logoShown.busy || signatureShown.busy || managerShown.busy;
-  const greyOf = { logo: [logo, setLogo], signature: [signature, setSignature], manager: [managerSignature, setManagerSignature] };
-  const bgProps = (key, shown) => ({ bg: bg[key], onBg: (v) => setBg((p) => ({ ...p, [key]: v })), bgBusy: shown.busy, grey: { value: greyOf[key][0], onChange: greyOf[key][1], notify: pushToast } });
-  const [exporting, setExporting] = useState(''); // '' | 'PNG' | 'PDF'
+  const greyOf = { logo: [logo, setLogo], signature: [signature, setSignature], manager: [managerSignature, setManagerSignature] } as const;
+  const bgProps = (key: ImageKey, shown: { busy: boolean }): ImageProps => ({ bg: bg[key], onBg: (v) => setBg((p) => ({ ...p, [key]: v })), bgBusy: shown.busy, grey: { value: greyOf[key][0], onChange: greyOf[key][1], notify: (type, message) => pushToast(type === 'error' ? 'error' : 'success', message) } });
+  const [exporting, setExporting] = useState<'' | 'PNG' | 'PDF'>('');
   const [printing, setPrinting] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [toasts, setToasts] = useState([]);
-  const slipRef = useRef(null);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const slipRef = useRef<HTMLDivElement>(null);
   const toastId = useRef(0);
 
   const calc = useMemo(() => computeSlip(form), [form]);
   const shown = useMemo(() => slipTampil(form, calc), [form, calc]);
   const tpl = SLIP_TEMPLATES.find((x) => x.id === form.template) || SLIP_TEMPLATES[0];
   const [paperSel, setPaperSel] = useState(loadPaper);
-  const pilihPaper = (next) => {
+  const pilihPaper = (next: ReturnType<typeof loadPaper>) => {
     setPaperSel(next);
     try { localStorage.setItem(PAPER_KEY, JSON.stringify(next)); } catch { /* mode privat */ }
   };
@@ -889,23 +922,23 @@ export default function SlipGaji() {
   const statusText = (STATUS_OPTIONS.find((o) => o.value === form.status) || STATUS_OPTIONS[0]).label;
 
   // --- Handler: Toast ---
-  const pushToast = useCallback((type, message) => {
+  const pushToast = useCallback((type: ToastItem['type'], message: string) => {
     toastId.current += 1;
     const id = toastId.current;
     setToasts((prev) => [...prev, { id, type, message }]);
   }, []);
-  const removeToast = useCallback((id) => {
+  const removeToast = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
   // --- Handler: Input form ---
-  const handleChange = useCallback((e) => {
+  const handleChange = useCallback((e: FieldEvent) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   }, []);
 
   // --- Handler: Upload & resize gambar (logo / tanda tangan) ---
-  const handleImage = async (event, setter, maxW, maxH, label, folder) => {
+  const handleImage = async (event: ChangeEvent<HTMLInputElement>, setter: (v: string) => void, maxW: number, maxH: number, label: string, folder: string) => {
     const file = event.target.files && event.target.files[0];
     if (!file) {
       setter('');
@@ -924,23 +957,23 @@ export default function SlipGaji() {
         const { url } = await uploadImage(blob, galleryFolder(folder, 'slip-gaji')); // Cloudinary = penyimpanan utama
         setter(url);
         pushToast('success', `${label} berhasil diunggah ke Cloudinary.`);
-      } catch (cloudErr) {
+      } catch (cloudErr: any) {
         pushToast('error', `${label} dipakai secara lokal (Cloudinary gagal: ${cloudErr.message}).`);
       }
-    } catch (err) {
+    } catch (err: any) {
       pushToast('error', `Gagal mengunggah ${label}: ${err.message}`);
     } finally {
       setUploading(false);
     }
   };
-  const handleLogoChange = (e) => handleImage(e, setLogo, LOGO_MAX_WIDTH, LOGO_MAX_HEIGHT, 'Logo perusahaan', 'logo');
-  const handleSignatureChange = (e) => handleImage(e, setSignature, SIGNATURE_MAX_WIDTH, SIGNATURE_MAX_HEIGHT, 'Tanda tangan', 'tanda-tangan');
-  const handleManagerSignatureChange = (e) => handleImage(e, setManagerSignature, SIGNATURE_MAX_WIDTH, SIGNATURE_MAX_HEIGHT, 'Tanda tangan manager', 'tanda-tangan');
+  const handleLogoChange: OnFile = (e) => handleImage(e, setLogo, LOGO_MAX_WIDTH, LOGO_MAX_HEIGHT, 'Logo perusahaan', 'logo');
+  const handleSignatureChange: OnFile = (e) => handleImage(e, setSignature, SIGNATURE_MAX_WIDTH, SIGNATURE_MAX_HEIGHT, 'Tanda tangan', 'tanda-tangan');
+  const handleManagerSignatureChange: OnFile = (e) => handleImage(e, setManagerSignature, SIGNATURE_MAX_WIDTH, SIGNATURE_MAX_HEIGHT, 'Tanda tangan manager', 'tanda-tangan');
 
   const captureSlip = async () => {
     await fontsReady(); // font dokumen (termasuk Google Font template) wajib termuat agar tata letak sama di semua perangkat
     const { default: html2canvas } = await import('html2canvas');
-    return html2canvas(slipRef.current, {
+    return html2canvas(slipRef.current!, {
       scale: 3, // tetap (bukan devicePixelRatio): ukuran hasil sama di semua perangkat (bawaan 2736×1584 px)
       windowWidth: 1280,
       onclone: unfitPreview,
@@ -948,7 +981,7 @@ export default function SlipGaji() {
       useCORS: true,
       backgroundColor: '#ffffff',
       width: page.W,
-      height: slipRef.current.offsetHeight,
+      height: slipRef.current!.offsetHeight,
     });
   };
   const slipFileName = () => `slip_gaji_${form.name.replace(/\s/g, '_')}_${form.slipMonth.toUpperCase().replace(/\s/g, '_')}`;
@@ -961,7 +994,7 @@ export default function SlipGaji() {
       const canvas = await captureSlip();
       await printImage(canvas.toDataURL('image/png'), slipFileName(), { w: `${paperMm.w}mm`, h: paperDef.roll ? undefined : `${paperMm.h}mm` });
       pushToast('success', 'Jendela cetak dibuka.');
-    } catch (error) {
+    } catch (error: any) {
       if (isStaleChunkError(error) && reloadForNewVersion()) return pushToast('success', 'Aplikasi baru saja diperbarui. Memuat ulang… lalu coba lagi.');
       pushToast('error', `Gagal mencetak slip gaji: ${error && error.message ? error.message : 'proses render gambar gagal.'}`);
     } finally {
@@ -978,7 +1011,7 @@ export default function SlipGaji() {
       const fileName = `${slipFileName()}.png`;
       saveFile(await canvasToBlob(canvas), fileName);
       pushToast('success', `Slip gaji diekspor sebagai ${fileName}.`);
-    } catch (error) {
+    } catch (error: any) {
       if (isStaleChunkError(error) && reloadForNewVersion()) return pushToast('success', 'Aplikasi baru saja diperbarui. Memuat ulang… lalu coba lagi.');
       console.error('Error saat ekspor:', error);
       pushToast('error', `Gagal mengekspor slip gaji: ${error && error.message ? error.message : 'proses render gambar gagal.'}`);
@@ -1001,7 +1034,7 @@ export default function SlipGaji() {
       const fileName = `${slipFileName()}.pdf`;
       saveFile(pdf.output('blob'), fileName);
       pushToast('success', `Slip gaji diekspor sebagai ${fileName}.`);
-    } catch (error) {
+    } catch (error: any) {
       if (isStaleChunkError(error) && reloadForNewVersion()) return pushToast('success', 'Aplikasi baru saja diperbarui. Memuat ulang… lalu coba lagi.');
       console.error('Error saat ekspor PDF:', error);
       pushToast('error', `Gagal mengekspor PDF slip gaji: ${error && error.message ? error.message : 'proses render gagal.'}`);
@@ -1014,7 +1047,7 @@ export default function SlipGaji() {
   const [geser, setGeser] = useState('karyawan');
   const userKeys = ['posisi', 'companyName', 'addressLine1', 'addressLine2', 'addressLine3', 'managerName', 'managerTitle', 'logo', 'managerSignature'];
   const userData = { ...form, logo, managerSignature };
-  const applyUser = ({ logo: l, managerSignature: ms, ...rest }) => {
+  const applyUser = ({ logo: l, managerSignature: ms, ...rest }: Partial<Form> & { logo?: string; managerSignature?: string }) => {
     setForm((prev) => ({ ...prev, ...rest }));
     if (l !== undefined) setLogo(l);
     if (ms !== undefined) setManagerSignature(ms);
@@ -1037,12 +1070,12 @@ export default function SlipGaji() {
   );
   // --- Render ---
   return (
-    <div className="slip-app p-4 md:p-8">
+    <div className="slip-app px-2 py-3 sm:px-4">
       <ToastStack toasts={toasts} onClose={removeToast} />
 
       <div className="max-w-7xl mx-auto">
-        <Link to="/" className="btn-home mb-3">&larr; HK-HUB Menu Utama</Link>
-        <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
+        <Link to="/" className="btn-home mb-2">&larr; HK-HUB Menu Utama</Link>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 text-center">
           Aplikasi Pembuat Slip Gaji Terintegrasi (BPJS &amp; PPh 21)
         </h1>
         <ModeTabs canvas={canvas} onChange={setCanvas} />
@@ -1053,16 +1086,16 @@ export default function SlipGaji() {
         )}
         <div className="max-w-md mx-auto"><QrisCard /></div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-3 items-start">
           {/* Render — Formulir */}
-          <div className="slip-card bg-white p-6 md:p-8 shadow-lg rounded-xl h-fit">
+          <div className="slip-card bg-white p-2 sm:p-3 shadow-lg rounded-xl h-fit">
             {canvas ? (
-              <div className="space-y-6">
+              <div className="space-y-3">
                 <CanvasPanel tampilan={tampilan} unduh={unduh}
                   galeri={<SharedGallery showEmpty keys={userKeys} data={userData} onApply={applyUser} onPicked={(m) => pushToast('success', m)} />} />
               </div>
             ) : (<>
-            <div className="space-y-6">
+            <div className="space-y-3">
             <h2 className="text-xl font-semibold border-b pb-2 text-gray-700">Formulir Input Data Slip Gaji</h2>
             <UserData storageKey="data-user:slip-gaji" keys={userKeys} data={userData} onApply={applyUser} />
             <CompanyForm form={form} onChange={handleChange} onLogoChange={handleLogoChange} logoBg={bgProps('logo', logoShown)} />

@@ -173,7 +173,7 @@ export function StylePicker({ value, onChange }: { value: string; onChange: (id:
   return (
     <div className="space-y-2">
       <TemplateRibbon label="GANTI TEMPLATE" />
-      <select className={inputCls} value={getGaya(value).id} onChange={(e) => onChange(e.target.value)}>
+      <select aria-label="Template" className={inputCls} value={getGaya(value).id} onChange={(e) => onChange(e.target.value)}>
         {LETTER_STYLES.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
       </select>
     </div>

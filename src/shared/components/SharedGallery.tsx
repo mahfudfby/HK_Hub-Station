@@ -94,13 +94,13 @@ const loadShared = () =>
 const listeners = new Set<(v: SharedImage[]) => void>();
 
 export async function addSharedImage(img: SharedImage) {
-  const next = [img, ...(await loadShared()).filter((g) => g.url !== img.url)];
+  const next = [img, ...(await loadShared()).filter((g: SharedImage) => g.url !== img.url)];
   cache = Promise.resolve(next);
   listeners.forEach((f) => f(next));
 }
 
 export async function removeSharedImage(url: string) {
-  const next = (await loadShared()).filter((g) => g.url !== url);
+  const next = (await loadShared()).filter((g: SharedImage) => g.url !== url);
   cache = Promise.resolve(next);
   listeners.forEach((f) => f(next));
 }
@@ -128,7 +128,7 @@ export default function SharedGallery({
   const [shared, setShared] = useState<SharedImage[] | null>(null);
   const slotsRef = useRef(slots);
   slotsRef.current = slots;
-  const keys = [...baseKeys, ...slots.map((x) => x.id)];
+  const keys = [...new Set([...baseKeys, ...slots.map((x) => x.id)])]; // satu id = satu kotak, walau ada di keys dan slots
   const data: object = { ...baseData, ...Object.fromEntries(slots.map((x) => [x.id, x.value])) };
   const onApply = (picked: Record<string, unknown>) => {
     const rest = { ...picked };
@@ -475,7 +475,7 @@ export default function SharedGallery({
                     <label className="flex h-28 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary-500 dark:hover:border-primary-400 transition-colors p-3 text-center">
                       <Upload size={20} className="text-gray-400 mb-1" />
                       <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Pilih File</span>
-                      <span className="text-[10px] text-gray-400">PNG, JPG, SVG</span>
+                      <span className="text-[10px] text-gray-600 dark:text-gray-300">PNG, JPG, SVG</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -635,7 +635,7 @@ export default function SharedGallery({
 
             {/* Bagian 1: Pasang / Lepas ke slot yang tersedia */}
             <div className="space-y-1 mb-1">
-              <p className="px-2 pt-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              <p className="px-2 pt-1 text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
                 Pasang ke Dokumen:
               </p>
               {imageKeys.map((k) => {
@@ -677,7 +677,7 @@ export default function SharedGallery({
 
             {/* Bagian 2: Manipulasi Gambar */}
             <div className="space-y-1">
-              <p className="px-2 pt-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              <p className="px-2 pt-1 text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
                 Tindakan Foto:
               </p>
               {/* Opsi: Hapus BG */}

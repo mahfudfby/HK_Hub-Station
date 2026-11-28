@@ -507,7 +507,7 @@ export default function OrderPage({ cfg }: { cfg: Cfg }) {
         active={geser} onActive={setGeser} value={d.posisi} onChange={(v) => set('posisi', v)} />
       <div className="space-y-2">
         <TemplateRibbon label="GANTI TEMPLATE" />
-        <select className={inputCls} value={d.gaya || cfg.templates[0].id} onChange={(e) => set('gaya', e.target.value)}>
+        <select aria-label="Template" className={inputCls} value={d.gaya || cfg.templates[0].id} onChange={(e) => set('gaya', e.target.value)}>
           {cfg.templates.map((g, i) => <option key={g.id} value={g.id}>{i + 1}. {g.name}</option>)}
         </select>
       </div>
@@ -525,14 +525,14 @@ export default function OrderPage({ cfg }: { cfg: Cfg }) {
   );
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
+    <div className="min-h-screen bg-slate-100 px-2 py-3 sm:px-4">
       <div className="max-w-7xl mx-auto">
-        <Link to="/" className="btn-home mb-3">&larr; HK-HUB Menu Utama</Link>
-        <h1 className="text-2xl font-bold text-center mb-4">{cfg.title}</h1>
+        <Link to="/" className="btn-home mb-2">&larr; HK-HUB Menu Utama</Link>
+        <h1 className="text-xl sm:text-2xl font-bold text-center mb-3">{cfg.title}</h1>
         <ModeTabs canvas={canvas} onChange={setCanvas} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          <div className="bg-white rounded-2xl shadow p-5 space-y-6 min-w-0">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
+          <div className="bg-white rounded-2xl shadow p-2 sm:p-3 space-y-3 min-w-0">
             {canvas ? (
               <CanvasPanel tampilan={tampilan} unduh={unduh}
                 galeri={<SharedGallery showEmpty keys={USER_KEYS} data={d} onApply={(u) => setD((p) => ({ ...p, ...u }))} onPicked={(m) => notify('success', m)} />} />

@@ -85,7 +85,7 @@ export default function MaterialCard({ app, onToggleFavorite, onCopyLink }: Mate
               className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors ${
                 app.isFavorite
                   ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-500 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60'
-                  : 'text-gray-400 hover:text-amber-500 hover:bg-gray-100 dark:hover:bg-gray-700/80'
+                  : 'text-gray-500 hover:text-amber-600 hover:bg-gray-100 dark:hover:bg-gray-700/80'
               }`}
             >
               <Star size={15} fill={app.isFavorite ? 'currentColor' : 'none'} />
@@ -96,7 +96,7 @@ export default function MaterialCard({ app, onToggleFavorite, onCopyLink }: Mate
               onClick={handleCopy}
               aria-label={`Salin tautan ${app.title}`}
               title="Salin tautan"
-              className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/80 transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/80 transition-colors"
             >
               {copied ? <Check size={15} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={15} />}
             </button>
@@ -117,7 +117,7 @@ export default function MaterialCard({ app, onToggleFavorite, onCopyLink }: Mate
 
       {/* Footer CTA */}
       <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between">
-        <span className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 capitalize">
+        <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 capitalize">
           {app.cat}
         </span>
         <Link

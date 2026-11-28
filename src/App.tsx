@@ -24,6 +24,7 @@ function PageLoader() {
 export default function App() {
   return (
     <>
+      <main>
       <Suspense fallback={<PageLoader />}>
         <Routes>
           {routes.map(({ path, component: Page }) => (
@@ -32,9 +33,12 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
-      <ThemeToggle />
-      <AdminFab />
-      <ShareSheet />
+      </main>
+      <aside aria-label="Alat situs">
+        <ThemeToggle />
+        <AdminFab />
+        <ShareSheet />
+      </aside>
     </>
   );
 }

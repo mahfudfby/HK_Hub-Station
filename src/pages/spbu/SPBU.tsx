@@ -1180,7 +1180,7 @@ const App = () => {
 
             {/* Edit Tampilan di desktop: dua kolom (alat kiri, pratinjau kanan yang tetap diam) */}
             <div className={`w-full max-w-md ${canvas ? 'lg:max-w-6xl' : ''}`}>
-                <Link to="/" className="btn-home mb-3">&larr; HK-HUB Menu Utama</Link>
+                <Link to="/" className="btn-home mb-2">&larr; HK-HUB Menu Utama</Link>
                 {/* Header */}
                 <header className="text-center mb-6 border-b-4 border-indigo-600 pb-3 bg-white p-4 rounded-xl shadow-lg">
                     <h1 className="text-3xl font-extrabold text-gray-800">Generator Nota SPBU</h1>
